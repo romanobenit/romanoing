@@ -1,0 +1,412 @@
+// Prisma Schema - Studio Ing. Romano ERP
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ========================================
+// AUTENTICAZIONE E RUOLI
+// ========================================
+
+model Ruolo {
+  id          Int      @id @default(autoincrement())
+  codice      String   @unique // TITOLARE, SENIOR, JUNIOR, ESTERNO, COMMITTENTE
+  nome        String
+  descrizione String?
+  livello     Int      // 1=TITOLARE, 2=SENIOR, 3=JUNIOR, 4=ESTERNO, 5=COMMITTENTE
+  ambito      String   // 'interno' o 'esterno'
+  permessi    Json     // JSON con struttura permessi
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  utenti Utente[]
+
+  @@map("ruoli")
+}
+
+model Utente {
+  id            Int       @id @default(autoincrement())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  nome          String
+  cognome       String
+  ruoloId       Int       @map("ruolo_id")
+  clienteId     Int?      @map("cliente_id") // Solo per COMMITTENTE
+  attivo        Boolean   @default(true)
+  emailVerified DateTime? @map("email_verified")
+  image         String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  ruolo    Ruolo     @relation(fields: [ruoloId], references: [id])
+  cliente  Cliente?  @relation(fields: [clienteId], references: [id])
+  accounts Account[]
+  sessions Session[]
+
+  // Relazioni
+  incarichiResponsabile Incarico[]            @relation("ResponsabileIncarico")
+  documentiCaricati     Documento[]           @relation("DocumentoUploadedBy")
+  messaggiInviati       Messaggio[]           @relation("MessaggioMittente")
+  messaggiRicevuti      Messaggio[]           @relation("MessaggioDestinatario")
+  logAI                 LogAI[]
+  auditLog              AuditLog[]
+  preferenzeNotifiche   PreferenzeNotifiche?
+  documentiRichiesti    DocumentoRichiesto[]  @relation("DocumentoRichiestoBy")
+
+  @@index([email])
+  @@index([ruoloId])
+  @@index([clienteId])
+  @@map("utenti")
+}
+
+// NextAuth tables
+model Account {
+  id                Int     @id @default(autoincrement())
+  userId            Int     @map("user_id")
+  type              String
+  provider          String
+  providerAccountId String  @map("provider_account_id")
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user Utente @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+model Session {
+  id           Int      @id @default(autoincrement())
+  sessionToken String   @unique @map("session_token")
+  userId       Int      @map("user_id")
+  expires      DateTime
+
+  user Utente @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+  @@map("verification_tokens")
+}
+
+// ========================================
+// CLIENTI
+// ========================================
+
+model Cliente {
+  id                    Int      @id @default(autoincrement())
+  codice                String   @unique // CLI25001
+  tipo                  String   // 'privato', 'azienda', 'condominio', 'ente'
+  ragioneSociale        String?  @map("ragione_sociale")
+  nome                  String?
+  cognome               String?
+  codiceFiscale         String?  @unique @map("codice_fiscale")
+  partitaIva            String?  @unique @map("partita_iva")
+  email                 String
+  telefono              String?
+  indirizzo             String?
+  citta                 String?
+  provincia             String?
+  cap                   String?
+  statoAccessoPortale   String   @default("disabilitato") @map("stato_accesso_portale") // 'disabilitato', 'attivo', 'sospeso', 'in_attivazione'
+  note                  String?  @db.Text
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  // Relazioni
+  incarichi Incarico[]
+  utenti    Utente[]
+
+  @@index([email])
+  @@index([codiceFiscale])
+  @@index([partitaIva])
+  @@map("clienti")
+}
+
+// ========================================
+// BUNDLE E INCARICHI
+// ========================================
+
+model Bundle {
+  id          Int      @id @default(autoincrement())
+  codice      String   @unique // BDL-RISTR-BONUS
+  nome        String
+  descrizione String?  @db.Text
+  target      String   // 'privato', 'azienda', etc
+  prezzoMin   Decimal  @map("prezzo_min") @db.Decimal(10, 2)
+  prezzoMax   Decimal  @map("prezzo_max") @db.Decimal(10, 2)
+  durataMesi  Int      @map("durata_mesi")
+  servizi     Json     // Array di servizi inclusi
+  procedure   Json     // Array di POP coinvolte
+  milestone   Json     // Array di milestone con percentuali
+  attivo      Boolean  @default(true)
+  faseMvp     Int      @default(2) @map("fase_mvp") // 1=Fase1, 2=Fase2, 3=Fase3
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  incarichi Incarico[]
+
+  @@map("bundle")
+}
+
+enum StatoIncarico {
+  BOZZA
+  ATTIVO
+  IN_CORSO
+  SOSPESO
+  COMPLETATO
+  ANNULLATO
+}
+
+model Incarico {
+  id              Int           @id @default(autoincrement())
+  codice          String        @unique // INC25001
+  clienteId       Int           @map("cliente_id")
+  bundleId        Int?          @map("bundle_id")
+  responsabileId  Int           @map("responsabile_id")
+  oggetto         String
+  descrizione     String?       @db.Text
+  importoTotale   Decimal       @map("importo_totale") @db.Decimal(10, 2)
+  stato           StatoIncarico @default(BOZZA)
+  dataInizio      DateTime?     @map("data_inizio")
+  dataFine        DateTime?     @map("data_fine")
+  dataScadenza    DateTime?     @map("data_scadenza")
+  priorita        String        @default("normale") // 'bassa', 'normale', 'alta', 'urgente'
+  note            String?       @db.Text
+  metadati        Json?         // Dati custom per bundle specifici
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  cliente      Cliente      @relation(fields: [clienteId], references: [id])
+  bundle       Bundle?      @relation(fields: [bundleId], references: [id])
+  responsabile Utente       @relation("ResponsabileIncarico", fields: [responsabileId], references: [id])
+
+  // Relazioni
+  milestone          Milestone[]
+  documenti          Documento[]
+  messaggi           Messaggio[]
+  documentiRichiesti DocumentoRichiesto[]
+  logAI              LogAI[]
+
+  @@index([clienteId])
+  @@index([responsabileId])
+  @@index([stato])
+  @@index([dataInizio])
+  @@map("incarichi")
+}
+
+// ========================================
+// MILESTONE E PAGAMENTI
+// ========================================
+
+enum StatoMilestone {
+  NON_PAGATO
+  PAGATO
+  RIMBORSATO
+}
+
+model Milestone {
+  id              Int            @id @default(autoincrement())
+  incaricoId      Int            @map("incarico_id")
+  codice          String         // M0, M1, M2, M3
+  nome            String
+  descrizione     String?
+  percentuale     Decimal        @db.Decimal(5, 2)
+  importo         Decimal        @db.Decimal(10, 2)
+  stato           StatoMilestone @default(NON_PAGATO)
+  dataScadenza    DateTime?      @map("data_scadenza")
+  dataPagamento   DateTime?      @map("data_pagamento")
+  stripePaymentId String?        @map("stripe_payment_id")
+  note            String?
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  incarico Incarico @relation(fields: [incaricoId], references: [id], onDelete: Cascade)
+
+  @@unique([incaricoId, codice])
+  @@index([incaricoId])
+  @@index([stato])
+  @@map("milestone")
+}
+
+// ========================================
+// DOCUMENTI
+// ========================================
+
+enum StatoDocumento {
+  BOZZA
+  IN_LAVORAZIONE
+  IN_VERIFICA
+  APPROVATO
+  CONSEGNATO
+  ARCHIVIATO
+}
+
+model Documento {
+  id               Int            @id @default(autoincrement())
+  incaricoId       Int            @map("incarico_id")
+  nomeFile         String         @map("nome_file")
+  pathStorage      String         @map("path_storage") // Path in QNAP/Object Storage
+  mimeType         String?        @map("mime_type")
+  dimensione       BigInt?        // bytes
+  categoria        String?        // 'contratto', 'elaborato', 'relazione', etc
+  versione         Int            @default(1)
+  stato            StatoDocumento @default(BOZZA)
+  visibileCliente  Boolean        @default(false) @map("visibile_cliente")
+  dataConsegna     DateTime?      @map("data_consegna")
+  antivirusScanned Boolean        @default(false) @map("antivirus_scanned")
+  antivirusStatus  String?        @map("antivirus_status") // 'pending', 'clean', 'infected', 'error'
+  uploadedBy       Int            @map("uploaded_by")
+  note             String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  incarico     Incarico             @relation(fields: [incaricoId], references: [id], onDelete: Cascade)
+  uploader     Utente               @relation("DocumentoUploadedBy", fields: [uploadedBy], references: [id])
+  richieste    DocumentoRichiesto[]
+
+  @@index([incaricoId])
+  @@index([visibileCliente])
+  @@index([stato])
+  @@map("documenti")
+}
+
+enum StatoDocumentoRichiesto {
+  RICHIESTO
+  CARICATO
+  APPROVATO
+  RIFIUTATO
+}
+
+model DocumentoRichiesto {
+  id               Int                     @id @default(autoincrement())
+  incaricoId       Int                     @map("incarico_id")
+  nomeDocumento    String                  @map("nome_documento")
+  descrizione      String?
+  obbligatorio     Boolean                 @default(true)
+  stato            StatoDocumentoRichiesto @default(RICHIESTO)
+  documentoId      Int?                    @map("documento_id")
+  dataRichiesta    DateTime                @default(now()) @map("data_richiesta")
+  dataCaricamento  DateTime?               @map("data_caricamento")
+  richiestoBy      Int                     @map("richiesto_by")
+  createdAt        DateTime                @default(now())
+  updatedAt        DateTime                @updatedAt
+
+  incarico   Incarico   @relation(fields: [incaricoId], references: [id], onDelete: Cascade)
+  documento  Documento? @relation(fields: [documentoId], references: [id])
+  richiedente Utente    @relation("DocumentoRichiestoBy", fields: [richiestoBy], references: [id])
+
+  @@index([incaricoId])
+  @@index([stato])
+  @@map("documenti_richiesti")
+}
+
+// ========================================
+// MESSAGGISTICA
+// ========================================
+
+model Messaggio {
+  id              Int       @id @default(autoincrement())
+  incaricoId      Int       @map("incarico_id")
+  mittenteId      Int       @map("mittente_id")
+  destinatarioId  Int?      @map("destinatario_id") // null = tutti del team
+  testo           String    @db.Text
+  allegati        Json?     // Array di allegati
+  letto           Boolean   @default(false)
+  dataLettura     DateTime? @map("data_lettura")
+  createdAt       DateTime  @default(now())
+
+  incarico     Incarico @relation(fields: [incaricoId], references: [id], onDelete: Cascade)
+  mittente     Utente   @relation("MessaggioMittente", fields: [mittenteId], references: [id])
+  destinatario Utente?  @relation("MessaggioDestinatario", fields: [destinatarioId], references: [id])
+
+  @@index([incaricoId])
+  @@index([mittenteId])
+  @@index([destinatarioId])
+  @@index([letto])
+  @@map("messaggi")
+}
+
+// ========================================
+// LOG AI (POP-AI-01)
+// ========================================
+
+model LogAI {
+  id             Int      @id @default(autoincrement())
+  incaricoId     Int?     @map("incarico_id")
+  strumento      String   // 'Claude', 'ChatGPT', 'Grok', 'Ollama'
+  modello        String?  // 'gpt-4', 'claude-3-opus', etc
+  prompt         String   @db.Text
+  risposta       String   @db.Text
+  utilizzatoDa   Int      @map("utilizzato_da")
+  verificato     Boolean  @default(false)
+  verificatoDa   Int?     @map("verificato_da")
+  dataVerifica   DateTime? @map("data_verifica")
+  contesto       String?  @db.Text // Contesto di utilizzo
+  createdAt      DateTime @default(now())
+
+  incarico    Incarico? @relation(fields: [incaricoId], references: [id])
+  utilizzatore Utente   @relation(fields: [utilizzatoDa], references: [id])
+
+  @@index([incaricoId])
+  @@index([utilizzatoDa])
+  @@index([verificato])
+  @@map("log_ai")
+}
+
+// ========================================
+// AUDIT LOG
+// ========================================
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  utenteId  Int      @map("utente_id")
+  azione    String   // 'CREATE', 'UPDATE', 'DELETE', 'VIEW'
+  entita    String   // 'Incarico', 'Documento', etc
+  entitaId  Int      @map("entita_id")
+  dettagli  Json?    // Dati della modifica
+  ipAddress String?  @map("ip_address")
+  userAgent String?  @map("user_agent")
+  createdAt DateTime @default(now())
+
+  utente Utente @relation(fields: [utenteId], references: [id])
+
+  @@index([utenteId])
+  @@index([entita, entitaId])
+  @@index([createdAt])
+  @@map("audit_log")
+}
+
+// ========================================
+// PREFERENZE NOTIFICHE
+// ========================================
+
+model PreferenzeNotifiche {
+  id                          Int     @id @default(autoincrement())
+  utenteId                    Int     @unique @map("utente_id")
+  emailAttivo                 Boolean @default(true) @map("email_attivo")
+  notificaNuovoDocumento      Boolean @default(true) @map("notifica_nuovo_documento")
+  notificaMessaggio           Boolean @default(true) @map("notifica_messaggio")
+  notificaRichiestaPagamento  Boolean @default(true) @map("notifica_richiesta_pagamento")
+  notificaStatoIncarico       Boolean @default(true) @map("notifica_stato_incarico")
+  notificaRichiestaDocumento  Boolean @default(true) @map("notifica_richiesta_documento")
+
+  utente Utente @relation(fields: [utenteId], references: [id], onDelete: Cascade)
+
+  @@map("preferenze_notifiche")
+}

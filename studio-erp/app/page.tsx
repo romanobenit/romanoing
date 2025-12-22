@@ -1,0 +1,83 @@
+export default function Home() {
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-blue-50 to-white">
+      <header className="container mx-auto px-4 py-6">
+        <nav className="flex items-center justify-between">
+          <div className="flex items-center space-x-2">
+            <h1 className="text-2xl font-bold text-blue-900">
+              Studio Ing. Romano
+            </h1>
+          </div>
+          <div className="flex items-center space-x-4">
+            <a
+              href="/login"
+              className="px-4 py-2 text-blue-900 hover:text-blue-700"
+            >
+              Accedi
+            </a>
+            <a
+              href="/quiz"
+              className="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Inizia il Quiz
+            </a>
+          </div>
+        </nav>
+      </header>
+
+      <main className="container mx-auto px-4 py-16">
+        <div className="max-w-4xl mx-auto text-center">
+          <h2 className="text-5xl font-bold text-blue-900 mb-6">
+            Servizi di Ingegneria su Misura
+          </h2>
+          <p className="text-xl text-gray-600 mb-12">
+            Ristrutturazioni, sicurezza sismica, antincendio e molto altro.
+            <br />
+            Scopri il servizio perfetto per le tue esigenze.
+          </p>
+
+          <div className="grid md:grid-cols-3 gap-8 mt-16">
+            <div className="p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition">
+              <div className="text-4xl mb-4">🏗️</div>
+              <h3 className="text-xl font-bold mb-2">Ristrutturazione</h3>
+              <p className="text-gray-600">
+                Progettazione completa con pratiche bonus edilizi
+              </p>
+            </div>
+
+            <div className="p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition">
+              <div className="text-4xl mb-4">🏛️</div>
+              <h3 className="text-xl font-bold mb-2">Vulnerabilità Sismica</h3>
+              <p className="text-gray-600">
+                Valutazione e miglioramento sismico edifici
+              </p>
+            </div>
+
+            <div className="p-8 bg-white rounded-xl shadow-lg hover:shadow-xl transition">
+              <div className="text-4xl mb-4">🔥</div>
+              <h3 className="text-xl font-bold mb-2">Antincendio</h3>
+              <p className="text-gray-600">
+                Progettazione e pratiche prevenzione incendi
+              </p>
+            </div>
+          </div>
+
+          <div className="mt-16">
+            <a
+              href="/quiz"
+              className="inline-block px-8 py-4 bg-blue-600 text-white text-lg rounded-lg hover:bg-blue-700 shadow-lg hover:shadow-xl transition"
+            >
+              Inizia il Quiz - Scopri il tuo servizio
+            </a>
+          </div>
+        </div>
+      </main>
+
+      <footer className="container mx-auto px-4 py-8 mt-24 border-t">
+        <div className="text-center text-gray-600">
+          <p>© 2025 Studio Ing. Romano - Tutti i diritti riservati</p>
+        </div>
+      </footer>
+    </div>
+  );
+}
