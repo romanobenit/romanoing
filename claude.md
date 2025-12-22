@@ -38,12 +38,15 @@ Piattaforma integrata ERP + eCommerce per uno studio di ingegneria che combina:
 │  │  VPS CX22 (€4.51/mese)                              │   │
 │  │  - Next.js App                                       │   │
 │  │  - PostgreSQL                                        │   │
+│  │  - Redis (Rate limiting + WebSocket session)        │   │
+│  │  - ClamAV (Antivirus documenti)                     │   │
 │  │  - Nginx + SSL (Let's Encrypt)                      │   │
 │  └─────────────────────────────────────────────────────┘   │
 │  ┌─────────────────────────────────────────────────────┐   │
 │  │  Object Storage (€5/mese)                           │   │
 │  │  - Backup database                                   │   │
 │  │  - Replica documenti                                 │   │
+│  │  - 📌 MIGRAZIONE: Gradualmente storage primario     │   │
 │  └─────────────────────────────────────────────────────┘   │
 └─────────────────────────────────────────────────────────────┘
                             │
@@ -54,8 +57,22 @@ Piattaforma integrata ERP + eCommerce per uno studio di ingegneria che combina:
 │  - MinIO Container (API S3)                                 │
 │  - Storage documenti (RAID 5)                               │
 │  - Hybrid Backup Sync → Hetzner                            │
+│  📌 ROADMAP: Transizione a storage secondario/backup       │
 └─────────────────────────────────────────────────────────────┘
 ```
+
+### 📌 Strategia Migrazione Storage (QNAP → Cloud-First)
+
+**Fase 1 (MVP)**: QNAP primario + Hetzner Object Storage backup
+**Fase 2**: Documenti nuovi → Hetzner Object Storage (primario), QNAP replica
+**Fase 3**: Migrazione documenti esistenti → Hetzner Object Storage
+**Fase 4**: QNAP solo backup locale + disaster recovery
+
+**Vantaggi**:
+- Riduzione dipendenza hardware locale
+- Maggiore resilienza
+- Accesso più veloce da VPS
+- Costi contenuti (~€10-15/mese per 250GB)
 
 ---
 
@@ -256,12 +273,15 @@ Il committente riceve le credenziali in due modi:
 
 ## 📦 I 6 Bundle Pilota
 
-### 1. Ristrutturazione con Bonus (`BDL-RISTR-BONUS`)
+> **Nota MVP**: I bundle contrassegnati con 🚀 sono inclusi nella **Fase 1 MVP**
+
+### 1. Ristrutturazione con Bonus (`BDL-RISTR-BONUS`) 🚀
 - **Target**: Privato
 - **Prezzo**: €8.000 - €18.000
 - **Durata**: 6-12 mesi
 - **Procedure**: POP-01, POP-02, POP-03, POP-04, POP-07
 - **Milestone**: M0 (30%), M1 (35%), M2 (20%), M3 (15%)
+- **Priorità MVP**: ✅ FASE 1
 
 ### 2. Due Diligence Immobiliare (`BDL-DUE-DILIGENCE`)
 - **Target**: Privato/Investitore
@@ -269,13 +289,15 @@ Il committente riceve le credenziali in due modi:
 - **Durata**: 2-4 settimane
 - **Procedure**: POP-01, POP-02, POP-03, POP-07
 - **Milestone**: M0 (50%), M1 (50%)
+- **Priorità MVP**: ⏸️ FASE 2
 
-### 3. Vulnerabilità Sismica (`BDL-VULN-SISMICA`)
+### 3. Vulnerabilità Sismica (`BDL-VULN-SISMICA`) 🚀
 - **Target**: Condominio/Ente/Azienda
 - **Prezzo**: €5.000 - €25.000
 - **Durata**: 2-4 mesi
 - **Procedure**: POP-01, POP-02, POP-03, POP-07, POP-10
 - **Milestone**: M0 (30%), M1 (30%), M2 (40%)
+- **Priorità MVP**: ✅ FASE 1
 
 ### 4. Ampliamento Produttivo (`BDL-AMPLIAMENTO`)
 - **Target**: PMI/Artigiano/Azienda Agricola
@@ -283,6 +305,7 @@ Il committente riceve le credenziali in due modi:
 - **Durata**: 8-18 mesi
 - **Procedure**: POP-01, POP-02, POP-03, POP-04, POP-05, POP-06, POP-07, POP-10
 - **Milestone**: M0 (25%), M1 (30%), M2 (25%), M3 (20%)
+- **Priorità MVP**: ⏸️ FASE 2
 
 ### 5. Collaudo Statico (`BDL-COLLAUDO`)
 - **Target**: Impresa/Committente
@@ -290,13 +313,15 @@ Il committente riceve le credenziali in due modi:
 - **Durata**: 1-3 mesi
 - **Procedure**: POP-05, POP-07
 - **Milestone**: M0 (40%), M1 (30%), M2 (30%)
+- **Priorità MVP**: ⏸️ FASE 2
 
-### 6. Antincendio (`BDL-ANTINCENDIO`)
+### 6. Antincendio (`BDL-ANTINCENDIO`) 🚀
 - **Target**: Attività commerciale/Industriale
 - **Prezzo**: €2.000 - €8.000
 - **Durata**: 2-4 mesi
 - **Procedure**: POP-01, POP-02, POP-03, POP-07
 - **Milestone**: M0 (40%), M1 (40%), M2 (20%)
+- **Priorità MVP**: ✅ FASE 1
 
 ---
 
@@ -420,9 +445,12 @@ CREATE TABLE preferenze_notifiche (
 );
 
 -- Aggiunte a tabelle esistenti
-ALTER TABLE clienti ADD COLUMN ha_accesso_portale BOOLEAN DEFAULT false;
+ALTER TABLE clienti ADD COLUMN stato_accesso_portale VARCHAR(20) DEFAULT 'disabilitato' CHECK (stato_accesso_portale IN ('disabilitato', 'attivo', 'sospeso', 'in_attivazione'));
 ALTER TABLE documenti ADD COLUMN visibile_cliente BOOLEAN DEFAULT false;
 ALTER TABLE documenti ADD COLUMN data_consegna TIMESTAMP;
+ALTER TABLE documenti ADD COLUMN mime_type VARCHAR(100);
+ALTER TABLE documenti ADD COLUMN antivirus_scanned BOOLEAN DEFAULT false;
+ALTER TABLE documenti ADD COLUMN antivirus_status VARCHAR(20) CHECK (antivirus_status IN ('pending', 'clean', 'infected', 'error'));
 ```
 
 ### Ruolo COMMITTENTE
@@ -495,6 +523,44 @@ interface JWTPayload {
 - /admin/*
 ```
 
+### Rate Limiting
+
+```typescript
+// Implementazione con Upstash Redis + @upstash/ratelimit
+
+// API Committente: 100 req/15min per IP/utente
+app/api/cliente/* → 100 requests / 15 minutes
+
+// API Upload documenti: 10 req/ora
+app/api/cliente/documenti/upload → 10 requests / hour
+
+// API Pagamenti: 5 req/ora
+app/api/cliente/pagamenti/* → 5 requests / hour
+
+// Libreria consigliata: next-rate-limit o Upstash Rate Limit
+```
+
+### Validazione File Upload Committente
+
+```typescript
+// Validazione MIME type + estensione
+const ALLOWED_MIME_TYPES = [
+  'application/pdf',
+  'image/jpeg',
+  'image/png',
+  'application/zip',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+];
+
+// Antivirus scan con ClamAV
+// 1. Upload temporaneo
+// 2. Scan con ClamAV
+// 3. Se clean → QNAP, se infected → reject + log
+// 4. Quarantena file sospetti
+
+// Libreria: clamscan (npm)
+```
+
 ### Flusso Autenticazione Committente
 
 ```
@@ -534,10 +600,19 @@ interface JWTPayload {
 ## 💬 Sistema Messaggistica
 
 ### Caratteristiche
+- **WebSocket real-time** per aggiornamenti istantanei (Next.js + Socket.io)
 - Chat tra committente e team (Titolare + collaboratori)
 - Notifiche email per nuovi messaggi
-- Allegati (max 10MB)
-- Indicatore letto/non letto
+- Allegati (max 10MB) con validazione MIME + antivirus scan
+- Indicatore letto/non letto in tempo reale
+- Typing indicators
+
+### Implementazione Tecnica
+```typescript
+// WebSocket connection per messaggi real-time
+// Fallback a polling ogni 30s se WebSocket non disponibile
+// Server: Next.js Custom Server o Pusher/Ably per semplicità MVP
+```
 
 ### Regole
 - Committente scrive solo al team del proprio incarico
@@ -709,15 +784,90 @@ NEXT_PUBLIC_APP_NAME="Studio Ing. Romano"
 
 ---
 
-## 📅 Roadmap Implementazione
+## 📅 Roadmap Implementazione MVP (Rivista)
 
-| Fase | Settimane | Contenuto |
-|------|-----------|-----------|
-| 1 | 1-2 | Infrastruttura + Auth (incluso COMMITTENTE) |
-| 2 | 3-4 | Frontend pubblico + Checkout |
-| 3 | 5-6 | **Area Committente completa** |
-| 4 | 7-8 | Backend + Admin |
-| 5 | 9-10 | Notifiche + Test + Go-live |
+### 🚀 FASE 1 - MVP Core (8-10 settimane)
+
+**Obiettivo**: Piattaforma funzionante con 3 bundle + Area Committente completa
+
+| Sprint | Settimane | Contenuto | Deliverable |
+|--------|-----------|-----------|-------------|
+| **1.1 - Infrastruttura** | 1-2 | - Setup Hetzner VPS + PostgreSQL<br>- NextAuth.js + ruoli (TITOLARE, COMMITTENTE)<br>- Rate limiting (Upstash)<br>- Database schema completo<br>- ClamAV setup | ✅ Ambiente dev/prod pronto |
+| **1.2 - Frontend Pubblico** | 3-4 | - Landing page<br>- Quiz esigenze → 3 bundle<br>- Pagine bundle (BDL-RISTR-BONUS, BDL-VULN-SISMICA, BDL-ANTINCENDIO)<br>- Checkout Stripe<br>- Webhook pagamento iniziale | ✅ eCommerce pubblico funzionante |
+| **1.3 - Area Committente Base** | 5-6 | - Dashboard committente<br>- Lista/Dettaglio incarichi<br>- Visualizzazione milestone<br>- Download documenti consegnati<br>- Profilo utente | ✅ Cliente vede i propri incarichi |
+| **1.4 - Area Committente Avanzata** | 6-7 | - Pagamento milestone con Stripe<br>- Messaggistica WebSocket real-time<br>- Upload documenti richiesti (validazione MIME + ClamAV)<br>- Notifiche email (SendGrid)<br>- Preferenze notifiche | ✅ Area Committente completa |
+| **1.5 - Backend Gestionale** | 8-9 | - Area Titolare (gestione incarichi)<br>- Creazione incarico manuale<br>- Gestione documenti (upload, consegna cliente)<br>- Monitoraggio messaggi<br>- Log AI (POP-AI-01) | ✅ Titolare gestisce incarichi |
+| **1.6 - Testing & Go-live** | 10 | - Test E2E (Playwright)<br>- Security audit<br>- Performance optimization<br>- Backup automatici<br>- Monitoring (Sentry/Uptime) | 🎯 **MVP IN PRODUZIONE** |
+
+**Scope Fase 1**:
+- ✅ 3 Bundle: Ristrutturazione, Vulnerabilità Sismica, Antincendio
+- ✅ Ruoli: TITOLARE + COMMITTENTE
+- ✅ Area Committente: tutte le funzionalità (dashboard, incarichi, documenti, pagamenti, messaggi, profilo)
+- ✅ Checkout online funzionante
+- ✅ Gestione incarichi manuali da Titolare
+- ✅ Messaggistica real-time
+- ✅ File upload sicuri (MIME + ClamAV)
+- ✅ Rate limiting API committente
+- ⏸️ NON inclusi: ruoli SENIOR/JUNIOR/ESTERNO, altri 3 bundle, check-list, fornitori
+
+---
+
+### 📦 FASE 2 - Espansione Bundle (4-6 settimane)
+
+**Obiettivo**: Aggiungere i restanti 3 bundle + ottimizzazioni
+
+| Sprint | Contenuto |
+|--------|-----------|
+| **2.1** | - Bundle: Due Diligence Immobiliare<br>- Bundle: Ampliamento Produttivo<br>- Bundle: Collaudo Statico |
+| **2.2** | - Ottimizzazione quiz esigenze (ML suggestion bundle)<br>- Analytics dashboard Titolare (fatturato, conversion)<br>- Reportistica incarichi (export Excel/PDF) |
+| **2.3** | - Migrazione storage: nuovi documenti → Hetzner Object Storage<br>- QNAP diventa storage secondario<br>- Testing carico bundle complessi |
+
+**Scope Fase 2**:
+- ✅ Tutti e 6 i bundle disponibili
+- ✅ Analytics per Titolare
+- ✅ Migrazione storage verso cloud-first
+- ⏸️ NON inclusi: collaboratori, check-list avanzate
+
+---
+
+### 👥 FASE 3 - Area Collaboratori (6-8 settimane)
+
+**Obiettivo**: Sistema multi-utente completo con tutti i ruoli
+
+| Sprint | Contenuto |
+|--------|-----------|
+| **3.1** | - Ruoli: SENIOR, JUNIOR, ESTERNO<br>- Matrice permessi completa<br>- Assegnazione collaboratori a incarichi<br>- Area collaboratore (dashboard, incarichi assegnati) |
+| **3.2** | - Check-list progetto (POP-03)<br>- Workflow approvazioni documenti<br>- Firma digitale documenti (Titolare)<br>- Gestione non conformità (POP-08) |
+| **3.3** | - Gestione fornitori (POP-10)<br>- Formazione collaboratori (POP-09)<br>- Audit log esteso<br>- Reportistica compliance ISO 9001/27001 |
+| **3.4** | - Testing multi-utente<br>- Performance optimization<br>- Security hardening<br>- Documentazione utente |
+
+**Scope Fase 3**:
+- ✅ Sistema completo con tutti i ruoli
+- ✅ Workflow ISO 9001/27001 completo
+- ✅ Check-list e approvazioni
+- ✅ Gestione fornitori e formazione
+
+---
+
+## 📊 Milestone di Lancio
+
+| Milestone | Data Target | Criterio Successo |
+|-----------|-------------|-------------------|
+| **M1 - MVP Live** | Fine Settimana 10 | 1° incarico reale pagato online |
+| **M2 - 10 Clienti** | +4 settimane | 10 committenti attivi con accesso portale |
+| **M3 - All Bundles** | +10 settimane | Tutti e 6 i bundle disponibili |
+| **M4 - Multi-utente** | +18 settimane | 1° collaboratore operativo nel sistema |
+
+---
+
+## 🎯 Metriche di Successo MVP (Fase 1)
+
+- ✅ Almeno 1 incarico venduto online al mese
+- ✅ Tasso conversione quiz → checkout > 15%
+- ✅ NPS committenti > 50
+- ✅ Uptime > 99%
+- ✅ Tempo risposta API < 500ms (p95)
+- ✅ Zero vulnerabilità critiche (security scan)
 
 ---
 
@@ -749,5 +899,19 @@ const milestone = await prisma.milestone.findFirst({
 
 ---
 
+---
+
+## 📋 Checklist Decisioni Tecniche Implementate
+
+- [x] **Database**: ENUM per stato_accesso_portale (disabilitato/attivo/sospeso/in_attivazione)
+- [x] **Messaggistica**: WebSocket real-time con fallback polling
+- [x] **File Upload**: Validazione MIME + ClamAV antivirus scan obbligatorio
+- [x] **Security**: Rate limiting API committente (100 req/15min)
+- [x] **Storage**: Migrazione graduale QNAP → Hetzner Object Storage (cloud-first)
+- [x] **Roadmap**: 3 fasi (MVP ridotto → Bundle completi → Collaboratori)
+
+---
+
 *Ultimo aggiornamento: Dicembre 2025*
-*Versione: MVP 1.0 con Area Committente*
+*Versione: MVP 1.0 - Roadmap Ottimizzata*
+*Focus: Time-to-Market ridotto con scope essenziale*
