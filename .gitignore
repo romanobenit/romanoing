@@ -1,0 +1,19 @@
+# Node modules nella root (errore)
+/node_modules/
+/package-lock.json
+/package.json
+
+# Editor e IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary
+*.tmp
+*.log
