@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 /**
  * GET /api/bundle
@@ -11,40 +11,32 @@ export async function GET(request: Request) {
     const faseMvp = searchParams.get('fase') || '1'
     const target = searchParams.get('target')
 
-    const where: any = {
-      attivo: true,
-      faseMvp: parseInt(faseMvp),
-    }
+    let sql = `
+      SELECT
+        id, codice, nome, descrizione, target,
+        prezzo_min as "prezzoMin",
+        prezzo_max as "prezzoMax",
+        durata_mesi as "durataMesi",
+        servizi, procedure, milestone,
+        fase_mvp as "faseMvp"
+      FROM bundle
+      WHERE attivo = true AND fase_mvp = $1
+    `
+    const params: any[] = [parseInt(faseMvp)]
 
     if (target) {
-      where.target = target
+      sql += ` AND target = $2`
+      params.push(target)
     }
 
-    const bundles = await prisma.bundle.findMany({
-      where,
-      orderBy: {
-        prezzoMin: 'asc',
-      },
-      select: {
-        id: true,
-        codice: true,
-        nome: true,
-        descrizione: true,
-        target: true,
-        prezzoMin: true,
-        prezzoMax: true,
-        durataMesi: true,
-        servizi: true,
-        procedure: true,
-        milestone: true,
-        faseMvp: true,
-      },
-    })
+    sql += ` ORDER BY prezzo_min ASC`
+
+    const result = await query(sql, params)
 
     return NextResponse.json({
       success: true,
-      data: bundles,
-      count: bundles.length,
+      data: result.rows,
+      count: result.rowCount,
     })
   } catch (error) {
     console.error('Errore API /api/bundle:', error)
