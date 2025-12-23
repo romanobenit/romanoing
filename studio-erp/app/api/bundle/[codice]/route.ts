@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import prisma from '@/lib/prisma'
+import { query } from '@/lib/db'
 
 /**
  * GET /api/bundle/[codice]
@@ -7,28 +7,27 @@ import prisma from '@/lib/prisma'
  */
 export async function GET(
   request: Request,
-  { params }: { params: { codice: string } }
+  { params }: { params: Promise<{ codice: string }> }
 ) {
   try {
-    const bundle = await prisma.bundle.findUnique({
-      where: {
-        codice: params.codice,
-      },
-      select: {
-        id: true,
-        codice: true,
-        nome: true,
-        descrizione: true,
-        target: true,
-        prezzoMin: true,
-        prezzoMax: true,
-        durataMesi: true,
-        servizi: true,
-        procedure: true,
-        milestone: true,
-        faseMvp: true,
-      },
-    })
+    const { codice } = await params
+
+    const sql = `
+      SELECT
+        id, codice, nome, descrizione, target,
+        prezzo_min as "prezzoMin",
+        prezzo_max as "prezzoMax",
+        durata_mesi as "durataMesi",
+        servizi, procedure, milestone,
+        fase_mvp as "faseMvp",
+        attivo
+      FROM bundle
+      WHERE codice = $1
+      LIMIT 1
+    `
+
+    const result = await query(sql, [codice])
+    const bundle = result.rows[0]
 
     if (!bundle) {
       return NextResponse.json(
