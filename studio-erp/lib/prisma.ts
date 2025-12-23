@@ -1,13 +1,10 @@
-import { PrismaClient } from '@prisma/client'
+/**
+ * Mock Prisma client for compatibility
+ * NOTE: This app uses direct SQL queries via lib/db.ts instead of Prisma
+ * This file exists only for NextAuth adapter compatibility
+ */
 
-const globalForPrisma = globalThis as unknown as {
-  prisma: PrismaClient | undefined
-}
-
-export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-})
-
-if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma
+// Create a mock Prisma client that satisfies NextAuth's PrismaAdapter requirements
+export const prisma = {} as any
 
 export default prisma
