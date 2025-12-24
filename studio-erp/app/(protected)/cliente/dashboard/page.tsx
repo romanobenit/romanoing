@@ -1,20 +1,58 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { FileText, Clock, CheckCircle, AlertCircle, Euro, Calendar } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { auth } from '@/lib/auth'
+import { query } from '@/lib/db'
 
-async function getIncarichiDashboard() {
-  const baseUrl = process.env.NEXTAUTH_URL || 'http://localhost:3000'
-  const res = await fetch(`${baseUrl}/api/cliente/incarichi`, {
-    cache: 'no-store',
-  })
+async function getIncarichiDashboard(clienteId: string) {
+  const sql = `
+    SELECT
+      i.id,
+      i.codice,
+      i.oggetto,
+      i.descrizione,
+      i.importo_totale as "importoTotale",
+      i.stato,
+      i.data_inizio as "dataInizio",
+      i.data_fine as "dataFine",
+      i.data_scadenza as "dataScadenza",
+      i.priorita,
+      i."createdAt",
+      b.nome as "bundleNome",
+      b.codice as "bundleCodice",
+      (
+        SELECT json_agg(
+          json_build_object(
+            'id', m.id,
+            'codice', m.codice,
+            'nome', m.nome,
+            'descrizione', m.descrizione,
+            'percentuale', m.percentuale,
+            'importo', m.importo,
+            'stato', m.stato,
+            'dataScadenza', m.data_scadenza,
+            'dataPagamento', m.data_pagamento
+          ) ORDER BY m.codice
+        )
+        FROM milestone m
+        WHERE m.incarico_id = i.id
+      ) as milestone,
+      (
+        SELECT COUNT(*)::int
+        FROM documenti d
+        WHERE d.incarico_id = i.id AND d.visibile_cliente = true
+      ) as "documentiCount"
+    FROM incarichi i
+    LEFT JOIN bundle b ON i.bundle_id = b.id
+    WHERE i.cliente_id = $1
+    ORDER BY i."createdAt" DESC
+  `
 
-  if (!res.ok) {
-    return { success: false, data: [] }
-  }
-
-  return res.json()
+  const result = await query(sql, [parseInt(clienteId)])
+  return result.rows
 }
 
 const STATO_LABELS = {
@@ -27,7 +65,13 @@ const STATO_LABELS = {
 }
 
 export default async function DashboardPage() {
-  const { data: incarichi } = await getIncarichiDashboard()
+  const session = await auth()
+
+  if (!session?.user?.clienteId) {
+    redirect('/login')
+  }
+
+  const incarichi = await getIncarichiDashboard(session.user.clienteId)
 
   // Statistiche
   const stats = {
