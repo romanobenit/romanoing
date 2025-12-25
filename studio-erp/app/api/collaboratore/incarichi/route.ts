@@ -1,0 +1,89 @@
+import { NextResponse } from 'next/server'
+import { auth } from '@/lib/auth'
+import { query } from '@/lib/db'
+
+export async function GET(request: Request) {
+  try {
+    const session = await auth()
+
+    // Verifica autenticazione
+    if (!session?.user) {
+      return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 })
+    }
+
+    // Verifica che sia un collaboratore
+    const ruoliCollaboratori = ['TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO']
+    if (!ruoliCollaboratori.includes(session.user.ruolo)) {
+      return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 403 })
+    }
+
+    // Query diversa per TITOLARE (vede tutto) vs altri ruoli (solo assegnati)
+    const sql =
+      session.user.ruolo === 'TITOLARE'
+        ? `
+      SELECT
+        i.id,
+        i.codice,
+        i.oggetto,
+        i.descrizione,
+        i.importo_totale as "importoTotale",
+        i.stato,
+        i.data_inizio as "dataInizio",
+        i.data_fine as "dataFine",
+        i.data_scadenza as "dataScadenza",
+        i.priorita,
+        c.codice as "clienteCodice",
+        c.nome as "clienteNome",
+        c.cognome as "clienteCognome",
+        c.ragione_sociale as "clienteRagioneSociale",
+        b.nome as "bundleNome",
+        (SELECT COUNT(*)::int FROM milestone m WHERE m.incarico_id = i.id) as "milestoneTotal",
+        (SELECT COUNT(*)::int FROM milestone m WHERE m.incarico_id = i.id AND m.stato = 'PAGATO') as "milestonePagate",
+        (SELECT COUNT(*)::int FROM documenti d WHERE d.incarico_id = i.id) as "documentiCount"
+      FROM incarichi i
+      LEFT JOIN clienti c ON i.cliente_id = c.id
+      LEFT JOIN bundle b ON i.bundle_id = b.id
+      ORDER BY i."createdAt" DESC
+    `
+        : `
+      SELECT
+        i.id,
+        i.codice,
+        i.oggetto,
+        i.descrizione,
+        i.importo_totale as "importoTotale",
+        i.stato,
+        i.data_inizio as "dataInizio",
+        i.data_fine as "dataFine",
+        i.data_scadenza as "dataScadenza",
+        i.priorita,
+        c.codice as "clienteCodice",
+        c.nome as "clienteNome",
+        c.cognome as "clienteCognome",
+        c.ragione_sociale as "clienteRagioneSociale",
+        b.nome as "bundleNome",
+        (SELECT COUNT(*)::int FROM milestone m WHERE m.incarico_id = i.id) as "milestoneTotal",
+        (SELECT COUNT(*)::int FROM milestone m WHERE m.incarico_id = i.id AND m.stato = 'PAGATO') as "milestonePagate",
+        (SELECT COUNT(*)::int FROM documenti d WHERE d.incarico_id = i.id) as "documentiCount"
+      FROM incarichi i
+      LEFT JOIN clienti c ON i.cliente_id = c.id
+      LEFT JOIN bundle b ON i.bundle_id = b.id
+      WHERE i.responsabile_id = $1
+      ORDER BY i."createdAt" DESC
+    `
+
+    const params = session.user.ruolo === 'TITOLARE' ? [] : [parseInt(session.user.id)]
+    const result = await query(sql, params)
+
+    return NextResponse.json({
+      success: true,
+      data: result.rows,
+    })
+  } catch (error) {
+    console.error('Error in GET /api/collaboratore/incarichi:', error)
+    return NextResponse.json(
+      { success: false, error: 'Errore del server' },
+      { status: 500 }
+    )
+  }
+}
