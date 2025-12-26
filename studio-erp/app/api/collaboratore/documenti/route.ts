@@ -32,10 +32,8 @@ export async function GET(request: Request) {
           d.visibile_cliente as "visibileCliente",
           d.path_storage as "pathStorage",
           d."createdAt",
-          json_build_object(
-            'nome', u.nome,
-            'cognome', u.cognome
-          ) as "uploadedBy"
+          u.nome as "uploadedByNome",
+          u.cognome as "uploadedByCognome"
         FROM documenti d
         JOIN utenti u ON d.uploaded_by = u.id
         WHERE d.incarico_id = $1
@@ -56,10 +54,8 @@ export async function GET(request: Request) {
           d.visibile_cliente as "visibileCliente",
           d.path_storage as "pathStorage",
           d."createdAt",
-          json_build_object(
-            'nome', u.nome,
-            'cognome', u.cognome
-          ) as "uploadedBy"
+          u.nome as "uploadedByNome",
+          u.cognome as "uploadedByCognome"
         FROM documenti d
         JOIN utenti u ON d.uploaded_by = u.id
         ORDER BY d."createdAt" DESC
@@ -79,10 +75,8 @@ export async function GET(request: Request) {
           d.visibile_cliente as "visibileCliente",
           d.path_storage as "pathStorage",
           d."createdAt",
-          json_build_object(
-            'nome', u.nome,
-            'cognome', u.cognome
-          ) as "uploadedBy"
+          u.nome as "uploadedByNome",
+          u.cognome as "uploadedByCognome"
         FROM documenti d
         JOIN utenti u ON d.uploaded_by = u.id
         JOIN incarichi i ON d.incarico_id = i.id
