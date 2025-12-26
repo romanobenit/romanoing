@@ -18,10 +18,8 @@ interface Messaggio {
   incaricoOggetto: string
   mittenteNome: string
   mittenteCognome: string
-  mittenteRuolo: string
   destinatarioNome?: string
   destinatarioCognome?: string
-  destinatarioRuolo?: string
   clienteNome: string
 }
 
@@ -180,9 +178,6 @@ export function MessaggiMonitor({ limit = 10, showOnlyUnread = false }: Messaggi
                     <span className="font-medium">
                       {msg.mittenteNome} {msg.mittenteCognome}
                     </span>
-                    <Badge variant="outline" className="text-xs">
-                      {msg.mittenteRuolo}
-                    </Badge>
                     {msg.destinatarioNome && (
                       <>
                         <span>→</span>
