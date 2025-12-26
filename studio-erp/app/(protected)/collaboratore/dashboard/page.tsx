@@ -15,6 +15,7 @@ import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { auth } from '@/lib/auth'
 import { query } from '@/lib/db'
+import { DashboardMonitors } from '@/components/dashboard-monitors'
 
 async function getIncarichiCollaboratore(utenteId: string, ruolo: string) {
   // Query diversa per TITOLARE (vede tutto) vs altri ruoli (solo assegnati a loro)
@@ -320,6 +321,9 @@ export default async function CollaboratoreDashboardPage() {
           </Link>
         </Card>
       </div>
+
+      {/* Monitors: Messaggi e Log AI */}
+      <DashboardMonitors isTitolare={session.user.ruolo === 'TITOLARE'} />
     </div>
   )
 }
