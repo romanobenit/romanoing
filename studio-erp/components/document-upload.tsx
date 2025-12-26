@@ -101,8 +101,8 @@ export function DocumentUpload({ incaricoId, incaricoCodice, onUploadComplete }:
     formData.append('file', uploadFile.file)
     formData.append('incaricoId', incaricoId.toString())
     formData.append('categoria', uploadFile.categoria)
-    formData.append('descrizione', uploadFile.descrizione)
     formData.append('visibileCliente', uploadFile.visibileCliente.toString())
+    // Note: descrizione field not in current DB schema
 
     try {
       const response = await fetch('/api/documenti/upload', {

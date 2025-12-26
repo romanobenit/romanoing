@@ -19,7 +19,6 @@ export async function POST(request: Request) {
     const file = formData.get('file') as File
     const incaricoId = formData.get('incaricoId') as string
     const categoria = formData.get('categoria') as string
-    const descrizione = formData.get('descrizione') as string | null
     const visibileCliente = formData.get('visibileCliente') === 'true'
 
     if (!file || !incaricoId || !categoria) {
@@ -28,6 +27,9 @@ export async function POST(request: Request) {
         { status: 400 }
       )
     }
+
+    // Determina MIME type
+    const mimeType = file.type || 'application/octet-stream'
 
     // Verifica che l'incarico esista
     const incaricoCheck = await query(
@@ -69,14 +71,15 @@ export async function POST(request: Request) {
         incarico_id,
         nome_file,
         categoria,
-        descrizione,
         dimensione,
         path_storage,
+        mime_type,
         visibile_cliente,
         stato,
         versione,
-        created_by
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        uploaded_by,
+        antivirus_scanned
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
       RETURNING
         id,
         nome_file as "nomeFile",
@@ -92,13 +95,14 @@ export async function POST(request: Request) {
       parseInt(incaricoId),
       file.name,
       categoria,
-      descrizione || null,
       file.size,
       pathStorage,
+      mimeType,
       visibileCliente,
       'BOZZA',
       1,
       parseInt(session.user.id),
+      false,
     ])
 
     return NextResponse.json({
