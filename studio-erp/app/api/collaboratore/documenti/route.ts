@@ -66,6 +66,12 @@ export async function GET(request: Request) {
       params = []
     } else {
       // Altri collaboratori vedono solo documenti degli incarichi assegnati
+      const userId = parseInt(session.user.id as string)
+      if (isNaN(userId)) {
+        console.error('[API] Invalid user ID:', session.user.id)
+        return NextResponse.json({ success: false, error: 'ID utente non valido' }, { status: 400 })
+      }
+
       sql = `
         SELECT
           d.id,
@@ -86,7 +92,7 @@ export async function GET(request: Request) {
         WHERE i.responsabile_id = $1
         ORDER BY d."createdAt" DESC
       `
-      params = [parseInt(session.user.id)]
+      params = [userId]
     }
 
     console.log('[API] /api/collaboratore/documenti - Executing query with params:', params)
@@ -95,10 +101,21 @@ export async function GET(request: Request) {
 
     return NextResponse.json({
       success: true,
-      data: result.rows,
+      data: result.rows || [],
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('[API] Error in GET /api/collaboratore/documenti:', error)
-    return NextResponse.json({ success: false, error: 'Errore del server' }, { status: 500 })
+    console.error('[API] Error details:', {
+      message: error?.message,
+      code: error?.code,
+      detail: error?.detail,
+      stack: error?.stack?.split('\n').slice(0, 3),
+    })
+
+    return NextResponse.json({
+      success: false,
+      error: 'Errore del server',
+      details: error?.message || 'Unknown error'
+    }, { status: 500 })
   }
 }
