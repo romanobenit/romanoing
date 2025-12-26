@@ -29,11 +29,9 @@ export async function GET(request: Request) {
         mittente.id as "mittenteId",
         mittente.nome as "mittenteNome",
         mittente.cognome as "mittenteCognome",
-        mittente.ruolo as "mittenteRuolo",
         destinatario.id as "destinatarioId",
         destinatario.nome as "destinatarioNome",
         destinatario.cognome as "destinatarioCognome",
-        destinatario.ruolo as "destinatarioRuolo",
         cliente.id as "clienteId",
         COALESCE(cliente.ragione_sociale, CONCAT(cliente.nome, ' ', cliente.cognome)) as "clienteNome"
       FROM messaggi m
