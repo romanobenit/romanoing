@@ -98,8 +98,9 @@ export async function POST(request: Request) {
         stato,
         versione,
         uploaded_by,
-        antivirus_scanned
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
+        antivirus_scanned,
+        "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
       RETURNING
         id,
         nome_file as "nomeFile",
@@ -108,6 +109,7 @@ export async function POST(request: Request) {
         stato,
         dimensione,
         "createdAt",
+        "updatedAt",
         path_storage as "pathStorage"
     `
 
