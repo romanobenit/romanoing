@@ -5,15 +5,18 @@ import { query } from '@/lib/db'
 export async function GET(request: Request) {
   try {
     const session = await auth()
+    console.log('[API] /api/collaboratore/documenti - Session:', session?.user?.id, session?.user?.ruolo)
 
     // Verifica autenticazione
     const ruoliCollaboratori = ['TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO']
     if (!session?.user || !ruoliCollaboratori.includes(session.user.ruolo)) {
+      console.log('[API] /api/collaboratore/documenti - Unauthorized')
       return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 401 })
     }
 
     const { searchParams } = new URL(request.url)
     const incaricoId = searchParams.get('incaricoId')
+    console.log('[API] /api/collaboratore/documenti - incaricoId:', incaricoId)
 
     let sql: string
     let params: any[]
@@ -86,14 +89,16 @@ export async function GET(request: Request) {
       params = [parseInt(session.user.id)]
     }
 
+    console.log('[API] /api/collaboratore/documenti - Executing query with params:', params)
     const result = await query(sql, params)
+    console.log('[API] /api/collaboratore/documenti - Query result count:', result.rows.length)
 
     return NextResponse.json({
       success: true,
       data: result.rows,
     })
   } catch (error) {
-    console.error('Error in GET /api/collaboratore/documenti:', error)
+    console.error('[API] Error in GET /api/collaboratore/documenti:', error)
     return NextResponse.json({ success: false, error: 'Errore del server' }, { status: 500 })
   }
 }
