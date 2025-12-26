@@ -27,7 +27,7 @@ export function NuovoIncaricoForm({ onSuccess, onCancel }: NuovoIncaricoFormProp
 
   const [formData, setFormData] = useState({
     cliente_id: '',
-    bundle_id: '',
+    bundle_id: '0',
     oggetto: '',
     descrizione: '',
     importo_totale: '',
