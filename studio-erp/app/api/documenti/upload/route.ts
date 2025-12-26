@@ -100,7 +100,7 @@ export async function POST(request: Request) {
         uploaded_by,
         antivirus_scanned,
         "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, CURRENT_TIMESTAMP)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
       RETURNING
         id,
         nome_file as "nomeFile",
@@ -113,6 +113,7 @@ export async function POST(request: Request) {
         path_storage as "pathStorage"
     `
 
+    const now = new Date()
     const params = [
       parseInt(incaricoId),
       file.name,
@@ -125,6 +126,7 @@ export async function POST(request: Request) {
       1,
       parseInt(session.user.id),
       false,
+      now, // updatedAt
     ]
 
     console.log('[API Upload] Inserting document with params:', {
@@ -139,6 +141,7 @@ export async function POST(request: Request) {
       versione: params[8],
       uploadedBy: params[9],
       antivirusScanned: params[10],
+      updatedAt: params[11],
     })
 
     const result = await query(sql, params)
