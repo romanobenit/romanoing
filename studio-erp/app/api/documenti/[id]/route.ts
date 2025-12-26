@@ -42,7 +42,7 @@ export async function GET(
         ) as "uploadedBy"
       FROM documenti d
       JOIN incarichi i ON d.incarico_id = i.id
-      JOIN utenti u ON d.created_by = u.id
+      JOIN utenti u ON d.uploaded_by = u.id
       WHERE d.id = $1
       LIMIT 1
     `

@@ -64,7 +64,7 @@ export async function GET(
           'email', u.email
         ) as "uploadedBy"
       FROM documenti d
-      JOIN utenti u ON d.created_by = u.id
+      JOIN utenti u ON d.uploaded_by = u.id
       WHERE d.nome_file = $1 AND d.incarico_id = $2
       ORDER BY d.versione DESC
     `
