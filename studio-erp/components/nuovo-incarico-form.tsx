@@ -75,10 +75,16 @@ export function NuovoIncaricoForm({ onSuccess, onCancel }: NuovoIncaricoFormProp
     setLoading(true)
 
     try {
+      // Prepara i dati convertendo "0" in null per bundle_id
+      const payload = {
+        ...formData,
+        bundle_id: formData.bundle_id === "0" ? null : formData.bundle_id,
+      }
+
       const res = await fetch('/api/collaboratore/incarichi', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(payload),
       })
 
       const data = await res.json()
@@ -133,7 +139,7 @@ export function NuovoIncaricoForm({ onSuccess, onCancel }: NuovoIncaricoFormProp
               <SelectValue placeholder="Seleziona bundle" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Nessuno</SelectItem>
+              <SelectItem value="0">Nessuno</SelectItem>
               {bundle.map((b) => (
                 <SelectItem key={b.id} value={b.id.toString()}>
                   {b.nome}
