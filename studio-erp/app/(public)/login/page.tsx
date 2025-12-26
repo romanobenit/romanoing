@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { signIn } from 'next-auth/react'
+import { signIn, useSession } from 'next-auth/react'
 import Link from 'next/link'
 import { Mail, Lock, AlertCircle, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -31,7 +31,17 @@ export default function LoginPage() {
       if (result?.error) {
         setError('Email o password non validi')
       } else if (result?.ok) {
-        router.push('/cliente/dashboard')
+        // Get the session to determine the user's role
+        const response = await fetch('/api/auth/session')
+        const session = await response.json()
+
+        // Redirect based on role
+        const ruoliCollaboratori = ['TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO']
+        if (session?.user?.ruolo && ruoliCollaboratori.includes(session.user.ruolo)) {
+          router.push('/collaboratore/dashboard')
+        } else {
+          router.push('/cliente/dashboard')
+        }
         router.refresh()
       }
     } catch (err) {

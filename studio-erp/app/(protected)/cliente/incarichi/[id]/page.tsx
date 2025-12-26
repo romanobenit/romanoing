@@ -3,10 +3,27 @@
 import { useState, useEffect } from 'react'
 import { use } from 'react'
 import Link from 'next/link'
-import { ArrowLeft, Calendar, Euro, FileText, Download, CheckCircle, Clock, XCircle, User } from 'lucide-react'
+import {
+  ArrowLeft,
+  Calendar,
+  Euro,
+  FileText,
+  Download,
+  CheckCircle,
+  Clock,
+  XCircle,
+  User,
+  MessageSquare,
+  Upload,
+} from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { DocumentList } from '@/components/document-list'
+import { MessageThread } from '@/components/message-thread'
+import { MilestonePayment } from '@/components/milestone-payment'
+import { IncaricoTimeline } from '@/components/incarico-timeline'
 
 const STATO_LABELS = {
   BOZZA: { label: 'Bozza', variant: 'secondary' as const },
@@ -26,10 +43,13 @@ const STATO_MILESTONE = {
 export default function IncaricoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
   const [incarico, setIncarico] = useState<any>(null)
+  const [messaggi, setMessaggi] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
+  const [activeTab, setActiveTab] = useState('overview')
 
   useEffect(() => {
     fetchIncarico()
+    fetchMessaggi()
   }, [resolvedParams.id])
 
   const fetchIncarico = async () => {
@@ -44,6 +64,26 @@ export default function IncaricoDetailPage({ params }: { params: Promise<{ id: s
     } finally {
       setLoading(false)
     }
+  }
+
+  const fetchMessaggi = async () => {
+    try {
+      const res = await fetch(`/api/cliente/messaggi?incaricoId=${resolvedParams.id}`)
+      const data = await res.json()
+      if (data.success) {
+        setMessaggi(data.data || [])
+      }
+    } catch (error) {
+      console.error('Errore caricamento messaggi:', error)
+    }
+  }
+
+  const handleView = (doc: any) => {
+    window.open(`/api/documenti/${doc.id}/download`, '_blank')
+  }
+
+  const handleDownload = (doc: any) => {
+    window.open(`/api/documenti/${doc.id}/download`, '_blank')
   }
 
   if (loading) {
@@ -112,216 +152,237 @@ export default function IncaricoDetailPage({ params }: { params: Promise<{ id: s
         </div>
       </div>
 
-      {/* Grid principale */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Colonna principale */}
-        <div className="lg:col-span-2 space-y-6">
-          {/* Descrizione */}
-          {incarico.descrizione && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Descrizione</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-gray-700 whitespace-pre-wrap">{incarico.descrizione}</p>
-              </CardContent>
-            </Card>
-          )}
+      {/* Tabs Navigation */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <TabsList className="grid w-full grid-cols-5">
+          <TabsTrigger value="overview">Panoramica</TabsTrigger>
+          <TabsTrigger value="pagamenti">
+            <Euro className="w-4 h-4 mr-2" />
+            Pagamenti
+          </TabsTrigger>
+          <TabsTrigger value="documenti">
+            <FileText className="w-4 h-4 mr-2" />
+            Documenti
+          </TabsTrigger>
+          <TabsTrigger value="messaggi">
+            <MessageSquare className="w-4 h-4 mr-2" />
+            Messaggi
+            {messaggi.filter((m) => !m.letto).length > 0 && (
+              <Badge variant="destructive" className="ml-2 text-xs">
+                {messaggi.filter((m) => !m.letto).length}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="timeline">Timeline</TabsTrigger>
+        </TabsList>
 
-          {/* Servizi inclusi */}
-          {incarico.bundleServizi && incarico.bundleServizi.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Servizi Inclusi</CardTitle>
-                <CardDescription>{incarico.bundleDescrizione}</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <ul className="space-y-2">
-                  {incarico.bundleServizi.map((servizio: string, index: number) => (
-                    <li key={index} className="flex items-start gap-2">
-                      <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
-                      <span className="text-gray-700">{servizio}</span>
-                    </li>
-                  ))}
-                </ul>
-              </CardContent>
-            </Card>
-          )}
+        {/* Overview Tab */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Descrizione */}
+              {incarico.descrizione && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Descrizione</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-gray-700 whitespace-pre-wrap">{incarico.descrizione}</p>
+                  </CardContent>
+                </Card>
+              )}
 
-          {/* Timeline Milestone */}
-          {incarico.milestone && incarico.milestone.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Piano di Pagamento</CardTitle>
-                <CardDescription>
-                  Stato dei pagamenti per questo incarico
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {incarico.milestone.map((milestone: any, index: number) => {
-                    const statoMilestone = STATO_MILESTONE[milestone.stato as keyof typeof STATO_MILESTONE]
-                    const Icon = statoMilestone.icon
+              {/* Servizi inclusi */}
+              {incarico.bundleServizi && incarico.bundleServizi.length > 0 && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Servizi Inclusi</CardTitle>
+                    <CardDescription>{incarico.bundleDescrizione}</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <ul className="space-y-2">
+                      {incarico.bundleServizi.map((servizio: string, index: number) => (
+                        <li key={index} className="flex items-start gap-2">
+                          <CheckCircle className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                          <span className="text-gray-700">{servizio}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
 
-                    return (
-                      <div
-                        key={milestone.id}
-                        className="relative pl-8 pb-6 last:pb-0 border-l-2 border-gray-200 last:border-0"
-                      >
-                        <div className="absolute left-0 top-0 transform -translate-x-1/2">
-                          <div className={`w-4 h-4 rounded-full ${
-                            milestone.stato === 'PAGATO' ? 'bg-green-600' :
-                            milestone.stato === 'RIMBORSATO' ? 'bg-gray-400' :
-                            'bg-yellow-500'
-                          }`} />
-                        </div>
-
-                        <div className="bg-gray-50 rounded-lg p-4">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h4 className="font-semibold text-gray-900">{milestone.nome}</h4>
-                              <p className="text-sm text-gray-600">{milestone.descrizione}</p>
-                            </div>
-                            <div className="text-right ml-4">
-                              <p className="font-bold text-lg">
-                                €{parseFloat(milestone.importo).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
-                              </p>
-                              <p className="text-xs text-gray-500">
-                                {milestone.percentuale}%
-                              </p>
-                            </div>
-                          </div>
-
-                          <div className="flex items-center justify-between mt-3 pt-3 border-t">
-                            <div className={`flex items-center gap-2 ${statoMilestone.color}`}>
-                              <Icon className="w-4 h-4" />
-                              <span className="text-sm font-medium">{statoMilestone.label}</span>
-                            </div>
-                            {milestone.stato === 'PAGATO' && milestone.dataPagamento && (
-                              <span className="text-xs text-gray-500">
-                                Pagato il {new Date(milestone.dataPagamento).toLocaleDateString('it-IT')}
-                              </span>
-                            )}
-                            {milestone.stato === 'NON_PAGATO' && (
-                              <Button size="sm" disabled>
-                                Paga Ora
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Documenti */}
-          {incarico.documenti && incarico.documenti.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Documenti</CardTitle>
-                <CardDescription>
-                  Documenti disponibili per il download
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {incarico.documenti.map((doc: any) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 transition-colors"
-                    >
-                      <div className="flex items-center gap-3 flex-1">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <div className="flex-1">
-                          <p className="font-medium text-gray-900">{doc.nomeFile}</p>
-                          <div className="flex items-center gap-3 text-xs text-gray-500 mt-1">
-                            {doc.categoria && (
-                              <span className="bg-gray-100 px-2 py-0.5 rounded">{doc.categoria}</span>
-                            )}
-                            <span>v{doc.versione}</span>
-                            {doc.dataConsegna && (
-                              <span>{new Date(doc.dataConsegna).toLocaleDateString('it-IT')}</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                      <Button size="sm" variant="outline" disabled>
-                        <Download className="w-4 h-4 mr-2" />
-                        Scarica
-                      </Button>
+            {/* Sidebar */}
+            <div className="space-y-6">
+              {/* Info Responsabile */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Responsabile Progetto</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex items-start gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <User className="w-5 h-5 text-primary" />
                     </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
-        </div>
+                    <div>
+                      <p className="font-medium text-gray-900">
+                        {incarico.responsabileNome} {incarico.responsabileCognome}
+                      </p>
+                      <p className="text-sm text-gray-500">{incarico.responsabileEmail}</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
 
-        {/* Sidebar */}
-        <div className="space-y-6">
-          {/* Info Responsabile */}
+              {/* Date importanti */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg">Date Importanti</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {incarico.dataInizio && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Inizio</span>
+                      <span className="font-medium">
+                        {new Date(incarico.dataInizio).toLocaleDateString('it-IT')}
+                      </span>
+                    </div>
+                  )}
+                  {incarico.dataScadenza && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Scadenza</span>
+                      <span className="font-medium">
+                        {new Date(incarico.dataScadenza).toLocaleDateString('it-IT')}
+                      </span>
+                    </div>
+                  )}
+                  {incarico.dataFine && (
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-gray-600">Fine Lavori</span>
+                      <span className="font-medium text-green-600">
+                        {new Date(incarico.dataFine).toLocaleDateString('it-IT')}
+                      </span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Note */}
+              {incarico.note && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Note</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{incarico.note}</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Pagamenti Tab */}
+        <TabsContent value="pagamenti">
           <Card>
             <CardHeader>
-              <CardTitle className="text-lg">Responsabile Progetto</CardTitle>
+              <CardTitle>Piano di Pagamento</CardTitle>
+              <CardDescription>
+                Gestisci i pagamenti delle milestone per questo incarico
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex items-start gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                  <User className="w-5 h-5 text-primary" />
+              {incarico.milestone && incarico.milestone.length > 0 ? (
+                <div className="space-y-4">
+                  {incarico.milestone.map((milestone: any) => (
+                    <MilestonePayment
+                      key={milestone.id}
+                      milestone={milestone}
+                      incaricoCodice={incarico.codice}
+                    />
+                  ))}
                 </div>
-                <div>
-                  <p className="font-medium text-gray-900">
-                    {incarico.responsabileNome} {incarico.responsabileCognome}
-                  </p>
-                  <p className="text-sm text-gray-500">{incarico.responsabileEmail}</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Date importanti */}
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-lg">Date Importanti</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {incarico.dataInizio && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Inizio</span>
-                  <span className="font-medium">{new Date(incarico.dataInizio).toLocaleDateString('it-IT')}</span>
-                </div>
-              )}
-              {incarico.dataScadenza && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Scadenza</span>
-                  <span className="font-medium">{new Date(incarico.dataScadenza).toLocaleDateString('it-IT')}</span>
-                </div>
-              )}
-              {incarico.dataFine && (
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-gray-600">Fine Lavori</span>
-                  <span className="font-medium text-green-600">{new Date(incarico.dataFine).toLocaleDateString('it-IT')}</span>
-                </div>
+              ) : (
+                <p className="text-center text-gray-600 py-8">
+                  Nessuna milestone configurata per questo incarico
+                </p>
               )}
             </CardContent>
           </Card>
+        </TabsContent>
 
-          {/* Note */}
-          {incarico.note && (
+        {/* Documenti Tab */}
+        <TabsContent value="documenti">
+          {incarico.documenti && incarico.documenti.length > 0 ? (
+            <DocumentList
+              documenti={incarico.documenti}
+              userRole="COMMITTENTE"
+              onView={handleView}
+              onDownload={handleDownload}
+            />
+          ) : (
             <Card>
-              <CardHeader>
-                <CardTitle className="text-lg">Note</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-gray-700 whitespace-pre-wrap">{incarico.note}</p>
+              <CardContent className="py-16 text-center">
+                <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
+                <p className="text-gray-600">Nessun documento disponibile</p>
               </CardContent>
             </Card>
           )}
-        </div>
-      </div>
+        </TabsContent>
+
+        {/* Messaggi Tab */}
+        <TabsContent value="messaggi">
+          <MessageThread incaricoId={parseInt(resolvedParams.id)} messages={messaggi} />
+        </TabsContent>
+
+        {/* Timeline Tab */}
+        <TabsContent value="timeline">
+          <IncaricoTimeline
+            eventi={[
+              {
+                tipo: 'creazione',
+                titolo: 'Incarico Creato',
+                descrizione: `Incarico ${incarico.codice} creato`,
+                data: incarico.createdAt,
+                completato: true,
+              },
+              ...(incarico.dataInizio
+                ? [
+                    {
+                      tipo: 'inizio',
+                      titolo: 'Inizio Lavori',
+                      descrizione: 'Avvio delle attività progettuali',
+                      data: incarico.dataInizio,
+                      completato: new Date(incarico.dataInizio) <= new Date(),
+                    },
+                  ]
+                : []),
+              ...(incarico.milestone || []).map((m: any) => ({
+                tipo: m.stato === 'PAGATO' ? 'pagamento' : 'milestone',
+                titolo: m.nome,
+                descrizione: m.descrizione,
+                data: m.dataPagamento || m.dataScadenza,
+                completato: m.stato === 'PAGATO',
+              })),
+              ...(incarico.dataFine
+                ? [
+                    {
+                      tipo: 'completamento',
+                      titolo: 'Completamento Lavori',
+                      descrizione: 'Fine delle attività progettuali',
+                      data: incarico.dataFine,
+                      completato: new Date(incarico.dataFine) <= new Date(),
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        </TabsContent>
+      </Tabs>
+
+      {/* Keep sidebar for mobile/desktop consistency */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
     </div>
   )
 }
