@@ -13,6 +13,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 
 interface DocumentStats {
   totale: number
@@ -32,10 +39,33 @@ export default function DocumentiCollaboratorePage() {
   const [loading, setLoading] = useState(true)
   const [uploadDialogOpen, setUploadDialogOpen] = useState(false)
   const [selectedIncarico, setSelectedIncarico] = useState<any>(null)
+  const [incarichi, setIncarichi] = useState<any[]>([])
+  const [loadingIncarichi, setLoadingIncarichi] = useState(false)
 
   useEffect(() => {
     fetchDocumenti()
   }, [])
+
+  useEffect(() => {
+    if (uploadDialogOpen && incarichi.length === 0) {
+      fetchIncarichi()
+    }
+  }, [uploadDialogOpen])
+
+  const fetchIncarichi = async () => {
+    try {
+      setLoadingIncarichi(true)
+      const res = await fetch('/api/collaboratore/incarichi')
+      const data = await res.json()
+      if (data.success) {
+        setIncarichi(data.data || [])
+      }
+    } catch (error) {
+      console.error('Errore caricamento incarichi:', error)
+    } finally {
+      setLoadingIncarichi(false)
+    }
+  }
 
   const fetchDocumenti = async () => {
     try {
@@ -124,6 +154,12 @@ export default function DocumentiCollaboratorePage() {
   const handleViewHistory = (doc: any) => {
     // TODO: Implementa visualizzazione storico versioni
     alert('Funzionalità in arrivo: storico versioni')
+  }
+
+  const handleUploadComplete = () => {
+    fetchDocumenti() // Ricarica lista documenti
+    setSelectedIncarico(null) // Reset selezione
+    setUploadDialogOpen(false) // Chiudi dialog
   }
 
   return (
@@ -215,21 +251,65 @@ export default function DocumentiCollaboratorePage() {
           <DialogHeader>
             <DialogTitle>Carica Documenti</DialogTitle>
             <DialogDescription>
-              Seleziona o trascina i file da caricare. Puoi caricare più file contemporaneamente.
+              Seleziona un incarico e poi trascina o seleziona i file da caricare.
             </DialogDescription>
           </DialogHeader>
 
-          {/* TODO: Add incarico selector */}
-          <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-4">
-            <p className="text-sm text-yellow-800">
-              Seleziona un incarico dalla lista documenti per caricare i file.
-              Per ora, visita la pagina di dettaglio di un incarico per caricare documenti.
-            </p>
-          </div>
+          <div className="space-y-4">
+            {/* Selettore Incarico */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Incarico</label>
+              {loadingIncarichi ? (
+                <div className="text-sm text-gray-600">Caricamento incarichi...</div>
+              ) : (
+                <Select
+                  value={selectedIncarico?.id?.toString()}
+                  onValueChange={(value) => {
+                    const incarico = incarichi.find((i) => i.id.toString() === value)
+                    setSelectedIncarico(incarico)
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleziona un incarico" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {incarichi.map((incarico) => (
+                      <SelectItem key={incarico.id} value={incarico.id.toString()}>
+                        {incarico.codice} - {incarico.oggetto}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            </div>
 
-          <Button onClick={() => setUploadDialogOpen(false)} variant="outline">
-            Chiudi
-          </Button>
+            {/* Componente Upload */}
+            {selectedIncarico ? (
+              <DocumentUpload
+                incaricoId={selectedIncarico.id}
+                incaricoCodice={selectedIncarico.codice}
+                onUploadComplete={handleUploadComplete}
+              />
+            ) : (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <p className="text-sm text-blue-800">
+                  Seleziona un incarico dal menu sopra per iniziare a caricare i documenti.
+                </p>
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2">
+              <Button
+                onClick={() => {
+                  setSelectedIncarico(null)
+                  setUploadDialogOpen(false)
+                }}
+                variant="outline"
+              >
+                Chiudi
+              </Button>
+            </div>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
