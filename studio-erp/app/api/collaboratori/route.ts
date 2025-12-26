@@ -13,22 +13,23 @@ export async function GET(request: Request) {
 
     const sql = `
       SELECT
-        id,
-        nome,
-        cognome,
-        email,
-        ruolo
-      FROM utenti
-      WHERE ruolo IN ('TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO')
-        AND attivo = true
+        u.id,
+        u.nome,
+        u.cognome,
+        u.email,
+        r.codice as ruolo
+      FROM utenti u
+      JOIN ruoli r ON u.ruolo_id = r.id
+      WHERE r.codice IN ('TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO')
+        AND u.attivo = true
       ORDER BY
         CASE
-          WHEN ruolo = 'TITOLARE' THEN 1
-          WHEN ruolo = 'SENIOR' THEN 2
-          WHEN ruolo = 'JUNIOR' THEN 3
-          WHEN ruolo = 'ESTERNO' THEN 4
+          WHEN r.codice = 'TITOLARE' THEN 1
+          WHEN r.codice = 'SENIOR' THEN 2
+          WHEN r.codice = 'JUNIOR' THEN 3
+          WHEN r.codice = 'ESTERNO' THEN 4
         END,
-        cognome, nome
+        u.cognome, u.nome
     `
 
     const result = await query(sql, [])
