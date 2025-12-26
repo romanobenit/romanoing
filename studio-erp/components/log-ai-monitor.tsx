@@ -23,7 +23,6 @@ interface LogAI {
   incaricoOggetto: string | null
   utilizzatoNome: string
   utilizzatoCognome: string
-  utilizzatoRuolo: string
   verificatoreNome: string | null
   verificatoreCognome: string | null
 }
@@ -233,9 +232,6 @@ export function LogAIMonitor({
                       <span className="font-medium">
                         {log.utilizzatoNome} {log.utilizzatoCognome}
                       </span>
-                      <Badge variant="outline" className="text-xs">
-                        {log.utilizzatoRuolo}
-                      </Badge>
                     </div>
                     <div className="flex items-center gap-1">
                       <Calendar className="w-3 h-3" />
@@ -278,8 +274,7 @@ export function LogAIMonitor({
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
                   <span className="font-medium">Utilizzato da:</span>{' '}
-                  {selectedLog.utilizzatoNome} {selectedLog.utilizzatoCognome} (
-                  {selectedLog.utilizzatoRuolo})
+                  {selectedLog.utilizzatoNome} {selectedLog.utilizzatoCognome}
                 </div>
                 <div>
                   <span className="font-medium">Data:</span>{' '}
