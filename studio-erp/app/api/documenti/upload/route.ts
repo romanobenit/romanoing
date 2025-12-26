@@ -91,7 +91,7 @@ export async function POST(request: Request) {
         path_storage as "pathStorage"
     `
 
-    const result = await query(sql, [
+    const params = [
       parseInt(incaricoId),
       file.name,
       categoria,
@@ -103,17 +103,44 @@ export async function POST(request: Request) {
       1,
       parseInt(session.user.id),
       false,
-    ])
+    ]
+
+    console.log('[API Upload] Inserting document with params:', {
+      incaricoId: params[0],
+      fileName: params[1],
+      categoria: params[2],
+      size: params[3],
+      path: params[4],
+      mimeType: params[5],
+      visibileCliente: params[6],
+      stato: params[7],
+      versione: params[8],
+      uploadedBy: params[9],
+      antivirusScanned: params[10],
+    })
+
+    const result = await query(sql, params)
 
     return NextResponse.json({
       success: true,
       data: result.rows[0],
       message: 'Documento caricato con successo',
     })
-  } catch (error) {
+  } catch (error: any) {
     console.error('Error in POST /api/documenti/upload:', error)
+    console.error('Error details:', {
+      message: error?.message,
+      stack: error?.stack,
+      code: error?.code,
+      detail: error?.detail,
+    })
     return NextResponse.json(
-      { success: false, error: 'Errore durante il caricamento del file' },
+      {
+        success: false,
+        error: 'Errore durante il caricamento del file',
+        details: error?.message || 'Unknown error',
+        code: error?.code,
+      },
       { status: 500 }
     )
   }
