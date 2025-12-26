@@ -1,12 +1,12 @@
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
 import { auth } from '@/lib/auth'
+import { LogoutButton } from '@/components/logout-button'
 import {
   LayoutDashboard,
   FolderKanban,
   Clock,
   User,
-  LogOut,
   FileText,
   Building2,
 } from 'lucide-react'
@@ -117,13 +117,7 @@ export default async function CollaboratoreLayout({
 
         {/* Logout */}
         <div className="absolute bottom-0 left-0 right-0 p-4 border-t border-gray-200">
-          <Link
-            href="/api/auth/signout"
-            className="flex items-center gap-3 px-3 py-2 text-sm font-medium text-red-600 rounded-lg hover:bg-red-50 transition-colors"
-          >
-            <LogOut className="w-5 h-5" />
-            Esci
-          </Link>
+          <LogoutButton />
         </div>
       </div>
 
