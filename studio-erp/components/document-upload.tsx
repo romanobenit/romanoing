@@ -94,7 +94,7 @@ export function DocumentUpload({ incaricoId, incaricoCodice, onUploadComplete }:
     setFiles((prev) => prev.map((f) => (f.id === id ? { ...f, ...updates } : f)))
   }
 
-  const uploadFile = async (uploadFile: UploadFile) => {
+  const uploadFile = async (uploadFile: UploadFile): Promise<boolean> => {
     updateFile(uploadFile.id, { status: 'uploading', progress: 0 })
 
     const formData = new FormData()
@@ -112,30 +112,46 @@ export function DocumentUpload({ incaricoId, incaricoCodice, onUploadComplete }:
 
       if (response.ok) {
         updateFile(uploadFile.id, { status: 'success', progress: 100 })
+        console.log('[DocumentUpload] File uploaded successfully:', uploadFile.file.name)
+        return true
       } else {
         const error = await response.json()
+        console.error('[DocumentUpload] Upload failed:', error)
         updateFile(uploadFile.id, {
           status: 'error',
           error: error.error || 'Errore durante l\'upload',
         })
+        return false
       }
     } catch (error) {
+      console.error('[DocumentUpload] Upload error:', error)
       updateFile(uploadFile.id, {
         status: 'error',
         error: 'Errore di connessione',
       })
+      return false
     }
   }
 
   const uploadAll = async () => {
     const pendingFiles = files.filter((f) => f.status === 'pending')
+    let successCount = 0
 
     for (const file of pendingFiles) {
-      await uploadFile(file)
+      const success = await uploadFile(file)
+      if (success) {
+        successCount++
+      }
     }
 
-    if (onUploadComplete) {
+    console.log(`[DocumentUpload] Uploaded ${successCount}/${pendingFiles.length} files`)
+
+    // Chiama callback solo se almeno un file è stato caricato con successo
+    if (successCount > 0 && onUploadComplete) {
+      console.log('[DocumentUpload] Calling onUploadComplete callback')
       onUploadComplete()
+    } else if (successCount === 0 && pendingFiles.length > 0) {
+      alert('Errore: nessun file è stato caricato con successo. Controlla la console per dettagli.')
     }
   }
 
