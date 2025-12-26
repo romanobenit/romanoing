@@ -37,7 +37,7 @@ export async function GET(request: Request) {
             'cognome', u.cognome
           ) as "uploadedBy"
         FROM documenti d
-        JOIN utenti u ON d.created_by = u.id
+        JOIN utenti u ON d.uploaded_by = u.id
         WHERE d.incarico_id = $1
         ORDER BY d."createdAt" DESC
       `
@@ -61,7 +61,7 @@ export async function GET(request: Request) {
             'cognome', u.cognome
           ) as "uploadedBy"
         FROM documenti d
-        JOIN utenti u ON d.created_by = u.id
+        JOIN utenti u ON d.uploaded_by = u.id
         ORDER BY d."createdAt" DESC
       `
       params = []
@@ -84,7 +84,7 @@ export async function GET(request: Request) {
             'cognome', u.cognome
           ) as "uploadedBy"
         FROM documenti d
-        JOIN utenti u ON d.created_by = u.id
+        JOIN utenti u ON d.uploaded_by = u.id
         JOIN incarichi i ON d.incarico_id = i.id
         WHERE i.responsabile_id = $1
         ORDER BY d."createdAt" DESC
