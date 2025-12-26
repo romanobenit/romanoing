@@ -113,7 +113,6 @@ export async function POST(request: Request) {
         path_storage as "pathStorage"
     `
 
-    const now = new Date()
     const params = [
       parseInt(incaricoId),
       file.name,
@@ -126,7 +125,7 @@ export async function POST(request: Request) {
       1,
       parseInt(session.user.id),
       false,
-      now, // updatedAt
+      new Date().toISOString(), // updatedAt
     ]
 
     console.log('[API Upload] Inserting document with params:', {
