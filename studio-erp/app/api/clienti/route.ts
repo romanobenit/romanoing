@@ -23,7 +23,6 @@ export async function GET(request: Request) {
         email,
         telefono
       FROM clienti
-      WHERE attivo = true
       ORDER BY
         CASE WHEN tipo = 'AZIENDA' THEN ragione_sociale ELSE cognome END
     `
