@@ -7,6 +7,7 @@ import { existsSync } from 'fs'
 
 export async function POST(request: Request) {
   try {
+    console.log('[API Upload] POST request received')
     const session = await auth()
 
     // Verifica autenticazione - solo collaboratori possono caricare documenti
@@ -15,11 +16,30 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 401 })
     }
 
+    if (!session.user.id) {
+      console.error('[API Upload] session.user.id is missing:', session.user)
+      return NextResponse.json(
+        { success: false, error: 'ID utente mancante nella sessione' },
+        { status: 401 }
+      )
+    }
+
     const formData = await request.formData()
     const file = formData.get('file') as File
     const incaricoId = formData.get('incaricoId') as string
     const categoria = formData.get('categoria') as string
     const visibileCliente = formData.get('visibileCliente') === 'true'
+
+    console.log('[API Upload] Request data:', {
+      fileName: file?.name,
+      fileSize: file?.size,
+      fileType: file?.type,
+      incaricoId,
+      categoria,
+      visibileCliente,
+      userId: session.user.id,
+      userRole: session.user.ruolo,
+    })
 
     if (!file || !incaricoId || !categoria) {
       return NextResponse.json(
