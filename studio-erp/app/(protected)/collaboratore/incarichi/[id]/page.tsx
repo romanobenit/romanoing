@@ -14,6 +14,7 @@ import {
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { DocumentiSection } from '@/components/documenti-section'
 import { auth } from '@/lib/auth'
 import { query } from '@/lib/db'
 
@@ -259,54 +260,11 @@ export default async function IncaricoDetailPage({
           </Card>
 
           {/* Documenti */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Documenti</CardTitle>
-                  <CardDescription>File caricati per questo incarico</CardDescription>
-                </div>
-                <Button size="sm">
-                  <Upload className="w-4 h-4 mr-2" />
-                  Carica
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {documenti.length === 0 ? (
-                <div className="text-center py-8">
-                  <FileText className="w-12 h-12 text-gray-400 mx-auto mb-3" />
-                  <p className="text-sm text-gray-600">Nessun documento caricato</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {documenti.map((doc: any) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50"
-                    >
-                      <div className="flex items-center gap-3">
-                        <FileText className="w-5 h-5 text-gray-400" />
-                        <div>
-                          <p className="text-sm font-medium text-gray-900">{doc.nomeFile}</p>
-                          <p className="text-xs text-gray-500">
-                            Caricato da {doc.uploadedByNome} {doc.uploadedByCognome} •{' '}
-                            {new Date(doc.createdAt).toLocaleDateString('it-IT')}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Badge variant="outline">{doc.categoria}</Badge>
-                        <Button variant="ghost" size="sm">
-                          Download
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <DocumentiSection
+            incaricoId={parseInt(id)}
+            incaricoCodice={incarico.codice}
+            documenti={documenti}
+          />
         </div>
 
         {/* Sidebar */}
