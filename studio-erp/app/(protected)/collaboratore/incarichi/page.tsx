@@ -2,11 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
-import { Search, Filter, Calendar, Euro, FileText, Clock } from 'lucide-react'
+import { Search, Filter, Calendar, Euro, FileText, Clock, Plus } from 'lucide-react'
 import { Card, CardContent } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
+import { NuovoIncaricoForm } from '@/components/nuovo-incarico-form'
+import { useSession } from 'next-auth/react'
 
 const STATO_LABELS = {
   BOZZA: { label: 'Bozza', variant: 'secondary' as const },
@@ -18,10 +21,14 @@ const STATO_LABELS = {
 }
 
 export default function IncarichiCollaboratorePage() {
+  const { data: session } = useSession()
   const [incarichi, setIncarichi] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchQuery, setSearchQuery] = useState('')
   const [statoFilter, setStatoFilter] = useState<string>('TUTTI')
+  const [showNuovoIncaricoDialog, setShowNuovoIncaricoDialog] = useState(false)
+
+  const isTitolare = session?.user?.ruolo === 'TITOLARE'
 
   useEffect(() => {
     fetchIncarichi()
@@ -67,9 +74,17 @@ export default function IncarichiCollaboratorePage() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-3xl font-bold text-gray-900">Incarichi</h1>
-        <p className="mt-2 text-gray-600">Gestisci i tuoi incarichi assegnati</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Incarichi</h1>
+          <p className="mt-2 text-gray-600">Gestisci i tuoi incarichi assegnati</p>
+        </div>
+        {isTitolare && (
+          <Button onClick={() => setShowNuovoIncaricoDialog(true)} size="lg">
+            <Plus className="w-5 h-5 mr-2" />
+            Nuovo Incarico
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -247,6 +262,23 @@ export default function IncarichiCollaboratorePage() {
           ))}
         </div>
       )}
+
+      {/* Dialog Nuovo Incarico */}
+      <Dialog open={showNuovoIncaricoDialog} onOpenChange={setShowNuovoIncaricoDialog}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Crea Nuovo Incarico</DialogTitle>
+          </DialogHeader>
+          <NuovoIncaricoForm
+            onSuccess={(nuovoIncarico) => {
+              setShowNuovoIncaricoDialog(false)
+              fetchIncarichi() // Ricarica la lista
+              alert(`Incarico ${nuovoIncarico.codice} creato con successo!`)
+            }}
+            onCancel={() => setShowNuovoIncaricoDialog(false)}
+          />
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

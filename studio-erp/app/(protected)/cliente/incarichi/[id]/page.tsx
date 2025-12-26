@@ -380,9 +380,6 @@ export default function IncaricoDetailPage({ params }: { params: Promise<{ id: s
           />
         </TabsContent>
       </Tabs>
-
-      {/* Keep sidebar for mobile/desktop consistency */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
     </div>
   )
 }
