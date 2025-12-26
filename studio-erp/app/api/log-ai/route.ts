@@ -33,7 +33,6 @@ export async function GET(request: Request) {
         utilizzato.id as "utilizzatoId",
         utilizzato.nome as "utilizzatoNome",
         utilizzato.cognome as "utilizzatoCognome",
-        utilizzato.ruolo as "utilizzatoRuolo",
         verificatore.id as "verificatoreId",
         verificatore.nome as "verificatoreNome",
         verificatore.cognome as "verificatoreCognome",
