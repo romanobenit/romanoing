@@ -4,6 +4,7 @@ import {query} from '@/lib/db'
 import Stripe from 'stripe'
 import {authenticatedApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 import {logPagamento} from '@/lib/audit-log'
+import {sendWelcomeEmail, sendPaymentConfirmationEmail} from '@/lib/email'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -178,8 +179,19 @@ export async function POST(request: Request) {
               [cliente.id]
             )
 
-            // TODO Sprint 11: Invia email con credenziali
-            // sendWelcomeEmail(utente.email, tempPassword)
+            // 7. Invia email con credenziali
+            try {
+              await sendWelcomeEmail(
+                utente.email,
+                metadata.clienteNome,
+                tempPassword,
+                incarico.codice
+              )
+              console.log(`[Webhook] Welcome email sent to ${utente.email}`)
+            } catch (emailError: any) {
+              // Email non critico, non blocca creazione
+              console.error('[Webhook] Error sending welcome email:', emailError.message)
+            }
 
             console.log(
               `[Webhook] ✅ Initial purchase completed: Cliente ${cliente.codice}, ` +
@@ -226,16 +238,48 @@ export async function POST(request: Request) {
           }
 
           // Aggiorna milestone come pagata
-          await query(
+          const milestoneUpdate = await query(
             `UPDATE milestone
              SET stato = 'PAGATO',
                  data_pagamento = CURRENT_TIMESTAMP,
                  "updatedAt" = CURRENT_TIMESTAMP
-             WHERE id = $1`,
+             WHERE id = $1
+             RETURNING nome`,
             [milestoneId]
           )
 
-          // TODO Sprint 11: Invia email di conferma pagamento
+          // Invia email conferma pagamento
+          if (incaricoResult.rows.length > 0 && milestoneUpdate.rows.length > 0) {
+            const clienteId = incaricoResult.rows[0].cliente_id
+            const milestoneName = milestoneUpdate.rows[0].nome
+
+            // Get cliente info
+            const clienteInfo = await query(
+              `SELECT c.nome, c.cognome, c.email, i.codice as incarico_codice
+               FROM clienti c
+               JOIN incarichi i ON i.cliente_id = c.id
+               WHERE c.id = $1 AND i.id = $2
+               LIMIT 1`,
+              [clienteId, incaricoId]
+            )
+
+            if (clienteInfo.rows.length > 0) {
+              const {nome, email, incarico_codice} = clienteInfo.rows[0]
+
+              try {
+                await sendPaymentConfirmationEmail(
+                  email,
+                  nome,
+                  milestoneName,
+                  session.amount_total || 0,
+                  incarico_codice
+                )
+                console.log(`[Webhook] Payment confirmation email sent to ${email}`)
+              } catch (emailError: any) {
+                console.error('[Webhook] Error sending payment confirmation:', emailError.message)
+              }
+            }
+          }
 
           console.log(`[Webhook] ✅ Milestone ${milestoneId} marked as paid`)
         } else {
