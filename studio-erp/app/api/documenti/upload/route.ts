@@ -1,11 +1,12 @@
 import {NextResponse} from 'next/server'
 import {auth} from '@/lib/auth'
 import {query} from '@/lib/db'
-import {writeFile, mkdir} from 'fs/promises'
+import {writeFile, mkdir, unlink} from 'fs/promises'
 import {join} from 'path'
 import {existsSync} from 'fs'
 import {uploadRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 import {logDocumento} from '@/lib/audit-log'
+import {scanFile} from '@/lib/antivirus'
 
 export async function POST(request: Request) {
   try {
@@ -97,9 +98,82 @@ export async function POST(request: Request) {
     const buffer = Buffer.from(bytes)
     await writeFile(filePath, buffer)
 
-    // TODO: Scansione antivirus (placeholder)
-    // const scanResult = await scanFile(filePath)
-    // if (!scanResult.clean) throw new Error('Virus detected')
+    console.log('[API Upload] File saved, starting antivirus scan...')
+
+    // Scansione antivirus con ClamAV
+    let antivirusScanned = false
+    let antivirusStatus: 'pending' | 'clean' | 'infected' | 'error' = 'pending'
+
+    try {
+      const scanResult = await scanFile(filePath)
+
+      antivirusScanned = true
+
+      if (!scanResult.isClean) {
+        // VIRUS RILEVATO - elimina file e blocca upload
+        antivirusStatus = 'infected'
+
+        console.error(
+          `[API Upload] 🦠 VIRUS DETECTED in ${file.name}: ${scanResult.virus}`
+        )
+
+        // Elimina file infetto (fail-safe: ClamAV dovrebbe già averlo fatto)
+        try {
+          await unlink(filePath)
+        } catch (unlinkErr) {
+          console.warn('[API Upload] File already removed by ClamAV')
+        }
+
+        // Audit log dell'attacco
+        await logDocumento(parseInt(session.user.id), 'UPLOAD', 0, request, {
+          nomeFile: file.name,
+          categoria,
+          dimensione: file.size,
+          incaricoId,
+          status: 'VIRUS_DETECTED',
+          virus: scanResult.virus,
+        })
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Virus rilevato nel file caricato',
+            details: scanResult.virus,
+            virusDetected: true,
+          },
+          { status: 400 }
+        )
+      }
+
+      // File pulito
+      antivirusStatus = 'clean'
+      console.log(`[API Upload] ✓ File clean: ${file.name} (${scanResult.scanTimeMs}ms)`)
+
+    } catch (scanError: any) {
+      // Errore durante scansione
+      antivirusStatus = 'error'
+
+      console.error('[API Upload] Antivirus scan error:', scanError.message)
+
+      // In produzione: se scan fallisce, RIFIUTA file (fail-safe)
+      if (process.env.NODE_ENV === 'production') {
+        try {
+          await unlink(filePath)
+        } catch {}
+
+        return NextResponse.json(
+          {
+            success: false,
+            error: 'Impossibile verificare la sicurezza del file',
+            scanError: true,
+          },
+          { status: 500 }
+        )
+      }
+
+      // In development: permetti upload con warning (solo per testing)
+      console.warn('[API Upload] ⚠️  File uploaded WITHOUT scan (development only)')
+    }
 
     // Inserisci record nel database
     const sql = `
@@ -115,8 +189,9 @@ export async function POST(request: Request) {
         versione,
         uploaded_by,
         antivirus_scanned,
+        antivirus_status,
         "updatedAt"
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13)
       RETURNING
         id,
         nome_file as "nomeFile",
@@ -126,7 +201,9 @@ export async function POST(request: Request) {
         dimensione,
         "createdAt",
         "updatedAt",
-        path_storage as "pathStorage"
+        path_storage as "pathStorage",
+        antivirus_scanned as "antivirusScanned",
+        antivirus_status as "antivirusStatus"
     `
 
     const params = [
@@ -140,7 +217,8 @@ export async function POST(request: Request) {
       'BOZZA',
       1,
       parseInt(session.user.id),
-      false,
+      antivirusScanned,
+      antivirusStatus,
       new Date().toISOString(), // updatedAt
     ]
 
@@ -156,7 +234,8 @@ export async function POST(request: Request) {
       versione: params[8],
       uploadedBy: params[9],
       antivirusScanned: params[10],
-      updatedAt: params[11],
+      antivirusStatus: params[11],
+      updatedAt: params[12],
     })
 
     const result = await query(sql, params)
