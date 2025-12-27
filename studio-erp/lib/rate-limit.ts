@@ -69,32 +69,39 @@ const inMemoryRateLimit = (identifier: string, limit: number, window: number) =>
 
 /**
  * Rate limiter per autenticazione (login/signup)
- * 5 tentativi per minuto per IP
+ * Development: 100 tentativi per minuto per IP
+ * Production: 5 tentativi per minuto per IP
  */
+const isDevelopment = process.env.NODE_ENV === 'development'
+const authLimit = isDevelopment ? 100 : 5
+
 export const authRateLimit = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(5, '1 m'),
+      limiter: Ratelimit.slidingWindow(authLimit, '1 m'),
       analytics: true,
       prefix: 'ratelimit:auth',
     })
   : {
-      limit: async (identifier: string) => inMemoryRateLimit(identifier, 5, 60),
+      limit: async (identifier: string) => inMemoryRateLimit(identifier, authLimit, 60),
     }
 
 /**
  * Rate limiter per API pubbliche
- * 100 richieste per minuto per IP
+ * Development: 500 richieste per minuto per IP
+ * Production: 100 richieste per minuto per IP
  */
+const publicApiLimit = isDevelopment ? 500 : 100
+
 export const publicApiRateLimit = redis
   ? new Ratelimit({
       redis,
-      limiter: Ratelimit.slidingWindow(100, '1 m'),
+      limiter: Ratelimit.slidingWindow(publicApiLimit, '1 m'),
       analytics: true,
       prefix: 'ratelimit:public',
     })
   : {
-      limit: async (identifier: string) => inMemoryRateLimit(identifier, 100, 60),
+      limit: async (identifier: string) => inMemoryRateLimit(identifier, publicApiLimit, 60),
     }
 
 /**
