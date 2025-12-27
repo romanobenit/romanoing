@@ -17,6 +17,7 @@
  */
 
 import sgMail from '@sendgrid/mail'
+import {query} from '@/lib/db'
 
 // Configurazione SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
@@ -39,6 +40,90 @@ export interface EmailResult {
   success: boolean
   messageId?: string
   error?: string
+}
+
+/**
+ * Tipi di notifica disponibili
+ */
+type NotificationType =
+  | 'nuovo_documento'
+  | 'messaggio'
+  | 'richiesta_pagamento'
+  | 'stato_incarico'
+  | 'richiesta_documento'
+
+/**
+ * Controlla se l'utente vuole ricevere un tipo specifico di notifica
+ *
+ * @param userEmail - Email dell'utente
+ * @param notificationType - Tipo di notifica da verificare
+ * @returns true se l'utente vuole ricevere la notifica, false altrimenti
+ */
+async function checkUserNotificationPreference(
+  userEmail: string,
+  notificationType: NotificationType
+): Promise<boolean> {
+  try {
+    // Get user ID
+    const userResult = await query(`SELECT id FROM utenti WHERE email = $1`, [userEmail])
+
+    if (userResult.rows.length === 0) {
+      console.warn(`[Email] User not found: ${userEmail}`)
+      return false
+    }
+
+    const userId = userResult.rows[0].id
+
+    // Get preferences
+    const prefsResult = await query(
+      `SELECT
+        email_attivo,
+        notifica_nuovo_documento,
+        notifica_messaggio,
+        notifica_richiesta_pagamento,
+        notifica_stato_incarico,
+        notifica_richiesta_documento
+      FROM preferenze_notifiche
+      WHERE utente_id = $1`,
+      [userId]
+    )
+
+    // If no preferences found, allow by default (opt-in by default)
+    if (prefsResult.rows.length === 0) {
+      console.log(`[Email] No preferences found for user ${userEmail}, allowing by default`)
+      return true
+    }
+
+    const prefs = prefsResult.rows[0]
+
+    // Check master switch first
+    if (!prefs.email_attivo) {
+      console.log(`[Email] Email disabled for user ${userEmail}`)
+      return false
+    }
+
+    // Check specific notification type
+    const fieldMap: Record<NotificationType, string> = {
+      nuovo_documento: 'notifica_nuovo_documento',
+      messaggio: 'notifica_messaggio',
+      richiesta_pagamento: 'notifica_richiesta_pagamento',
+      stato_incarico: 'notifica_stato_incarico',
+      richiesta_documento: 'notifica_richiesta_documento',
+    }
+
+    const fieldName = fieldMap[notificationType]
+    const allowed = prefs[fieldName] === true
+
+    console.log(
+      `[Email] User ${userEmail} preference for ${notificationType}: ${allowed ? 'ALLOWED' : 'BLOCKED'}`
+    )
+
+    return allowed
+  } catch (error) {
+    console.error('[Email] Error checking notification preference:', error)
+    // On error, allow by default (fail-safe)
+    return true
+  }
 }
 
 /**
@@ -283,6 +368,13 @@ export async function sendPaymentConfirmationEmail(
     return {success: false, error: 'SendGrid not configured'}
   }
 
+  // Check user notification preferences
+  const allowed = await checkUserNotificationPreference(to, 'richiesta_pagamento')
+  if (!allowed) {
+    console.log(`[Email] Skip payment confirmation to ${to} (user preference)`)
+    return {success: false, error: 'User preference: notification disabled'}
+  }
+
   const importoEuro = (importo / 100).toLocaleString('it-IT', {
     style: 'currency',
     currency: 'EUR',
@@ -371,6 +463,13 @@ export async function sendDocumentDeliveredEmail(
     return {success: false, error: 'SendGrid not configured'}
   }
 
+  // Check user notification preferences
+  const allowed = await checkUserNotificationPreference(to, 'nuovo_documento')
+  if (!allowed) {
+    console.log(`[Email] Skip document notification to ${to} (user preference)`)
+    return {success: false, error: 'User preference: notification disabled'}
+  }
+
   const content = `
     <div class="content">
       <h2>Nuovo Documento Disponibile</h2>
@@ -446,6 +545,13 @@ export async function sendNewMessageEmail(
   if (!SENDGRID_API_KEY) {
     console.warn(`[Email] Skip message notification to ${to} (SendGrid not configured)`)
     return {success: false, error: 'SendGrid not configured'}
+  }
+
+  // Check user notification preferences
+  const allowed = await checkUserNotificationPreference(to, 'messaggio')
+  if (!allowed) {
+    console.log(`[Email] Skip message notification to ${to} (user preference)`)
+    return {success: false, error: 'User preference: notification disabled'}
   }
 
   const messaggioPreview = messaggio.length > 200 ? `${messaggio.substring(0, 200)}...` : messaggio
