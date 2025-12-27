@@ -35,6 +35,7 @@
     "@upstash/redis": "^1.36.0",
     "autoprefixer": "^10.4.23",
     "bcryptjs": "^3.0.3",
+    "clamscan": "^2.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "dotenv": "^17.2.3",
