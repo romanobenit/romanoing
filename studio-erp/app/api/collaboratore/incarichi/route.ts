@@ -151,8 +151,9 @@ export async function POST(request: Request) {
       INSERT INTO incarichi (
         codice, cliente_id, bundle_id, responsabile_id,
         oggetto, descrizione, importo_totale,
-        stato, data_inizio, data_scadenza, priorita, note
-      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+        stato, data_inizio, data_scadenza, priorita, note,
+        "createdAt", "updatedAt"
+      ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
       RETURNING id, codice
     `
 
@@ -187,8 +188,9 @@ export async function POST(request: Request) {
           await query(
             `INSERT INTO milestone (
               incarico_id, codice, nome, descrizione,
-              percentuale, importo, stato
-            ) VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+              percentuale, importo, stato,
+              "createdAt", "updatedAt"
+            ) VALUES ($1, $2, $3, $4, $5, $6, $7, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)`,
             [
               incarico.id,
               m.codice,
