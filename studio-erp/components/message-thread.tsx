@@ -1,7 +1,7 @@
 'use client'
 
-import { useState } from 'react'
-import { Send, Paperclip, User } from 'lucide-react'
+import { useState, useEffect, useRef } from 'react'
+import { Send, Paperclip, User, RefreshCw } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -28,11 +28,58 @@ interface MessageThreadProps {
 export function MessageThread({
   incaricoId,
   incaricoCodice,
-  messages,
+  messages: initialMessages,
   currentUserEmail,
 }: MessageThreadProps) {
+  const [messages, setMessages] = useState<Message[]>(initialMessages)
   const [newMessage, setNewMessage] = useState('')
   const [sending, setSending] = useState(false)
+  const [isRefreshing, setIsRefreshing] = useState(false)
+  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch messages from API
+  const fetchMessages = async () => {
+    try {
+      const response = await fetch(`/api/cliente/messaggi?incaricoId=${incaricoId}`)
+      if (response.ok) {
+        const data = await response.json()
+        if (data.success && data.data) {
+          setMessages(data.data)
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching messages:', error)
+    }
+  }
+
+  // Auto-scroll to bottom when new messages arrive
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }
+
+  // Setup polling for new messages (every 5 seconds)
+  useEffect(() => {
+    // Initial fetch
+    fetchMessages()
+
+    // Start polling
+    pollingIntervalRef.current = setInterval(() => {
+      fetchMessages()
+    }, 5000) // Poll every 5 seconds
+
+    // Cleanup on unmount
+    return () => {
+      if (pollingIntervalRef.current) {
+        clearInterval(pollingIntervalRef.current)
+      }
+    }
+  }, [incaricoId])
+
+  // Auto-scroll when messages change
+  useEffect(() => {
+    scrollToBottom()
+  }, [messages])
 
   const handleSend = async () => {
     if (!newMessage.trim()) return
@@ -50,7 +97,8 @@ export function MessageThread({
 
       if (response.ok) {
         setNewMessage('')
-        // TODO: Refresh messages
+        // Refresh messages immediately after sending
+        await fetchMessages()
       }
     } catch (error) {
       console.error('Error sending message:', error)
@@ -59,14 +107,32 @@ export function MessageThread({
     }
   }
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true)
+    await fetchMessages()
+    setTimeout(() => setIsRefreshing(false), 500)
+  }
+
   return (
     <Card>
-      <CardHeader>
+      <CardHeader className="flex flex-row items-center justify-between">
         <CardTitle>Messaggi - {incaricoCodice}</CardTitle>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={handleManualRefresh}
+          disabled={isRefreshing}
+          className="gap-2"
+        >
+          <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+          <span className="text-xs hidden sm:inline">
+            {isRefreshing ? 'Aggiornamento...' : 'Aggiorna'}
+          </span>
+        </Button>
       </CardHeader>
       <CardContent className="space-y-4">
         {/* Messages List */}
-        <div className="space-y-4 max-h-96 overflow-y-auto">
+        <div className="space-y-4 max-h-96 overflow-y-auto scroll-smooth">
           {messages.length === 0 ? (
             <div className="text-center py-8 text-gray-500">
               <p>Nessun messaggio ancora</p>
@@ -121,6 +187,14 @@ export function MessageThread({
               )
             })
           )}
+          {/* Invisible div for auto-scroll */}
+          <div ref={messagesEndRef} />
+        </div>
+
+        {/* Real-time indicator */}
+        <div className="flex items-center gap-2 text-xs text-gray-500">
+          <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+          <span>Messaggi aggiornati automaticamente ogni 5 secondi</span>
         </div>
 
         {/* New Message Input */}

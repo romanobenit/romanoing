@@ -1,7 +1,7 @@
 import { auth } from '@/lib/auth'
 import { redirect } from 'next/navigation'
 import Link from 'next/link'
-import { Home, FileText, User, LogOut } from 'lucide-react'
+import { Home, FileText, User, Bell, LogOut } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 export default async function ClienteLayout({
@@ -50,6 +50,13 @@ export default async function ClienteLayout({
                 >
                   <User className="w-4 h-4" />
                   Profilo
+                </Link>
+                <Link
+                  href="/cliente/preferenze"
+                  className="flex items-center gap-2 text-gray-600 hover:text-primary transition-colors"
+                >
+                  <Bell className="w-4 h-4" />
+                  Notifiche
                 </Link>
               </nav>
             </div>

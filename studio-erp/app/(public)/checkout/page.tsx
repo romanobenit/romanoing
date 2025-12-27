@@ -66,20 +66,36 @@ function CheckoutContent() {
     setSubmitting(true);
 
     try {
-      // TODO: Implementare chiamata API per creare sessione Stripe
-      // Per ora mostra solo un messaggio
-      alert("Integrazione Stripe in arrivo! Per ora questo è un demo.");
+      // Crea Stripe Checkout Session
+      const response = await fetch('/api/checkout/create-session', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          bundleCode: bundle?.codice,
+          cliente: formData,
+        }),
+      });
 
-      // In produzione, qui ci sarà:
-      // 1. POST /api/stripe/create-session con formData + bundle
-      // 2. Redirect a Stripe Checkout
-      // 3. Webhook per creare cliente + incarico dopo pagamento
+      const data = await response.json();
 
-    } catch (error) {
-      alert("Errore durante il checkout. Riprova.");
-    } finally {
+      if (!response.ok || !data.success) {
+        throw new Error(data.error || 'Errore durante il checkout');
+      }
+
+      // Redirect a Stripe Checkout
+      if (data.checkoutUrl) {
+        window.location.href = data.checkoutUrl;
+      } else {
+        throw new Error('URL checkout non ricevuto');
+      }
+    } catch (error: any) {
+      console.error('Checkout error:', error);
+      alert(error.message || "Errore durante il checkout. Riprova.");
       setSubmitting(false);
     }
+    // Note: Non settiamo setSubmitting(false) se redirect avviene con successo
   };
 
   if (loading) {
