@@ -7,10 +7,24 @@ import { Button } from '@/components/ui/button'
 import { DocumentUpload } from '@/components/document-upload'
 import { DocumentList } from '@/components/document-list'
 
+interface Documento {
+  id: number
+  nomeFile: string
+  categoria: string
+  versione: number
+  stato: string
+  dimensione: number
+  visibileCliente: boolean
+  pathStorage: string
+  createdAt: string
+  uploadedByNome?: string
+  uploadedByCognome?: string
+}
+
 interface DocumentiSectionProps {
   incaricoId: number
   incaricoCodice: string
-  documenti: any[]
+  documenti: Documento[]
   onRefresh?: () => void
 }
 
@@ -34,15 +48,15 @@ export function DocumentiSection({
     }
   }
 
-  const handleView = (doc: any) => {
+  const handleView = (doc: Documento) => {
     window.open(`/api/documenti/${doc.id}/download`, '_blank')
   }
 
-  const handleDownload = (doc: any) => {
+  const handleDownload = (doc: Documento) => {
     window.open(`/api/documenti/${doc.id}/download`, '_blank')
   }
 
-  const handleApprove = async (doc: any) => {
+  const handleApprove = async (doc: Documento) => {
     try {
       const res = await fetch(`/api/documenti/${doc.id}/approve`, { method: 'POST' })
       if (res.ok) {
@@ -53,7 +67,7 @@ export function DocumentiSection({
     }
   }
 
-  const handleReject = async (doc: any) => {
+  const handleReject = async (doc: Documento) => {
     const motivo = prompt('Motivo del rifiuto:')
     if (!motivo) return
 
@@ -71,7 +85,7 @@ export function DocumentiSection({
     }
   }
 
-  const handleDelete = async (doc: any) => {
+  const handleDelete = async (doc: Documento) => {
     if (!confirm(`Sei sicuro di voler eliminare "${doc.nomeFile}"?`)) return
 
     try {

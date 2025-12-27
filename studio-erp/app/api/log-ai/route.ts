@@ -16,7 +16,17 @@ export async function GET(request: Request) {
     const verificato = searchParams.get('verificato')
     const incaricoId = searchParams.get('incaricoId')
     const strumento = searchParams.get('strumento')
+    const page = parseInt(searchParams.get('page') || '1')
     const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = (page - 1) * limit
+
+    // Validazione parametri paginazione
+    if (page < 1 || limit < 1 || limit > 100) {
+      return NextResponse.json(
+        { success: false, error: 'Parametri di paginazione non validi' },
+        { status: 400 }
+      )
+    }
 
     let sql = `
       SELECT
@@ -76,28 +86,78 @@ export async function GET(request: Request) {
       paramCount++
     }
 
-    sql += ` ORDER BY l."createdAt" DESC LIMIT $${paramCount}`
-    params.push(limit)
+    sql += ` ORDER BY l."createdAt" DESC LIMIT $${paramCount} OFFSET $${paramCount + 1}`
+    params.push(limit, offset)
 
-    const result = await query(sql, params)
+    // Costruisci query count con stessi filtri
+    let countSql = `
+      SELECT COUNT(*) as total
+      FROM log_ai l
+      WHERE 1=1
+    `
+    const countParams: any[] = []
+    let countParamCount = 1
+
+    if (session.user.ruolo !== 'TITOLARE') {
+      countSql += ` AND l.utilizzato_da = $${countParamCount}`
+      countParams.push(parseInt(session.user.id))
+      countParamCount++
+    }
+
+    if (verificato !== null && verificato !== undefined) {
+      countSql += ` AND l.verificato = $${countParamCount}`
+      countParams.push(verificato === 'true')
+      countParamCount++
+    }
+
+    if (incaricoId) {
+      countSql += ` AND l.incarico_id = $${countParamCount}`
+      countParams.push(parseInt(incaricoId))
+      countParamCount++
+    }
+
+    if (strumento) {
+      countSql += ` AND l.strumento = $${countParamCount}`
+      countParams.push(strumento)
+      countParamCount++
+    }
+
+    const [result, countResult] = await Promise.all([
+      query(sql, params),
+      query(countSql, countParams),
+    ])
+
+    const total = parseInt(countResult.rows[0].total)
+    const totalPages = Math.ceil(total / limit)
 
     // Conta log non verificati (solo per TITOLARE)
     let nonVerificatiCount = 0
     if (session.user.ruolo === 'TITOLARE') {
-      const countSql = `SELECT COUNT(*) as count FROM log_ai WHERE verificato = false`
-      const countResult = await query(countSql, [])
-      nonVerificatiCount = parseInt(countResult.rows[0].count)
+      const nonVerificatiSql = `SELECT COUNT(*) as count FROM log_ai WHERE verificato = false`
+      const nonVerificatiResult = await query(nonVerificatiSql, [])
+      nonVerificatiCount = parseInt(nonVerificatiResult.rows[0].count)
     }
 
     return NextResponse.json({
       success: true,
       data: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
       nonVerificatiCount,
     })
   } catch (error: any) {
     console.error('Error in GET /api/log-ai:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }
@@ -160,8 +220,13 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('Error in POST /api/log-ai:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }
@@ -202,8 +267,13 @@ export async function PATCH(request: Request) {
     })
   } catch (error: any) {
     console.error('Error in PATCH /api/log-ai:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }

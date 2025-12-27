@@ -26,9 +26,18 @@ export async function POST(request: Request) {
 
     const formData = await request.formData()
     const file = formData.get('file') as File
-    const incaricoId = formData.get('incaricoId') as string
+    const incaricoIdRaw = formData.get('incaricoId') as string
     const categoria = formData.get('categoria') as string
     const visibileCliente = formData.get('visibileCliente') === 'true'
+
+    // Validazione incaricoId per prevenire path traversal
+    const incaricoId = parseInt(incaricoIdRaw)
+    if (isNaN(incaricoId) || incaricoId <= 0) {
+      return NextResponse.json(
+        { success: false, error: 'ID incarico non valido' },
+        { status: 400 }
+      )
+    }
 
     console.log('[API Upload] Request data:', {
       fileName: file?.name,
@@ -41,9 +50,9 @@ export async function POST(request: Request) {
       userRole: session.user.ruolo,
     })
 
-    if (!file || !incaricoId || !categoria) {
+    if (!file || !categoria) {
       return NextResponse.json(
-        { success: false, error: 'File, incaricoId e categoria richiesti' },
+        { success: false, error: 'File e categoria richiesti' },
         { status: 400 }
       )
     }
@@ -54,7 +63,7 @@ export async function POST(request: Request) {
     // Verifica che l'incarico esista
     const incaricoCheck = await query(
       `SELECT id FROM incarichi WHERE id = $1`,
-      [parseInt(incaricoId)]
+      [incaricoId]
     )
 
     if (incaricoCheck.rows.length === 0) {
@@ -64,8 +73,8 @@ export async function POST(request: Request) {
       )
     }
 
-    // Crea directory se non esiste
-    const uploadDir = join(process.cwd(), 'uploads', 'documenti', incaricoId)
+    // Crea directory se non esiste (usa toString() del numero validato per prevenire path traversal)
+    const uploadDir = join(process.cwd(), 'uploads', 'documenti', incaricoId.toString())
     if (!existsSync(uploadDir)) {
       await mkdir(uploadDir, { recursive: true })
     }
@@ -74,7 +83,7 @@ export async function POST(request: Request) {
     const timestamp = Date.now()
     const fileName = `${timestamp}-${file.name}`
     const filePath = join(uploadDir, fileName)
-    const pathStorage = `uploads/documenti/${incaricoId}/${fileName}`
+    const pathStorage = `uploads/documenti/${incaricoId.toString()}/${fileName}`
 
     // Salva file
     const bytes = await file.arrayBuffer()
@@ -114,7 +123,7 @@ export async function POST(request: Request) {
     `
 
     const params = [
-      parseInt(incaricoId),
+      incaricoId,
       file.name,
       categoria,
       file.size,
@@ -158,12 +167,13 @@ export async function POST(request: Request) {
       code: error?.code,
       detail: error?.detail,
     })
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
       {
         success: false,
         error: 'Errore durante il caricamento del file',
-        details: error?.message || 'Unknown error',
-        code: error?.code,
+        ...(isDev && { details: error?.message || 'Unknown error' }),
+        ...(isDev && error?.code && { code: error.code }),
       },
       { status: 500 }
     )

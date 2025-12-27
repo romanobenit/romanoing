@@ -27,12 +27,12 @@ export function getPool(): Pool {
 /**
  * Execute a SQL query
  * @param text SQL query text
- * @param params Query parameters
+ * @param params Query parameters (strongly typed)
  * @returns Query result
  */
 export async function query<T extends QueryResultRow = any>(
   text: string,
-  params?: any[]
+  params?: (string | number | boolean | null | Date)[]
 ): Promise<QueryResult<T>> {
   const pool = getPool();
   const start = Date.now();

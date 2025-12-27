@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { query } from '@/lib/db'
 import { readFile } from 'fs/promises'
 import { existsSync } from 'fs'
-import { join } from 'path'
+import { join, resolve } from 'path'
 
 export async function GET(
   request: Request,
@@ -55,8 +55,20 @@ export async function GET(
       }
     }
 
-    // Leggi file
+    // Leggi file con validazione path traversal
     const filePath = join(process.cwd(), documento.pathStorage)
+    const uploadDir = join(process.cwd(), 'uploads')
+
+    // Valida che il file sia all'interno della directory uploads
+    const resolvedPath = resolve(filePath)
+    const resolvedUploadDir = resolve(uploadDir)
+
+    if (!resolvedPath.startsWith(resolvedUploadDir)) {
+      return NextResponse.json(
+        { success: false, error: 'Accesso negato' },
+        { status: 403 }
+      )
+    }
 
     if (!existsSync(filePath)) {
       return NextResponse.json(
