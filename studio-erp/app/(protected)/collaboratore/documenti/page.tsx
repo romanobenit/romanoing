@@ -100,9 +100,35 @@ export default function DocumentiCollaboratorePage() {
     window.open(`/api/documenti/${doc.id}/download?disposition=inline`, '_blank')
   }
 
-  const handleDownload = (doc: any) => {
-    // Forza il download del documento
-    window.open(`/api/documenti/${doc.id}/download?disposition=attachment`, '_blank')
+  const handleDownload = async (doc: any) => {
+    try {
+      // Scarica il file usando fetch per evitare blocco popup
+      const response = await fetch(`/api/documenti/${doc.id}/download?disposition=attachment`)
+
+      if (!response.ok) {
+        throw new Error('Errore durante il download del file')
+      }
+
+      // Converti la response in blob
+      const blob = await response.blob()
+
+      // Crea un URL temporaneo per il blob
+      const url = window.URL.createObjectURL(blob)
+
+      // Crea un link temporaneo e simula il click
+      const a = document.createElement('a')
+      a.href = url
+      a.download = doc.nomeFile
+      document.body.appendChild(a)
+      a.click()
+
+      // Cleanup
+      document.body.removeChild(a)
+      window.URL.revokeObjectURL(url)
+    } catch (error) {
+      console.error('Errore download:', error)
+      alert('Impossibile scaricare il file. Riprova.')
+    }
   }
 
   const handleApprove = async (doc: any) => {
