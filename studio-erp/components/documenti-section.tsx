@@ -49,11 +49,13 @@ export function DocumentiSection({
   }
 
   const handleView = (doc: Documento) => {
-    window.open(`/api/documenti/${doc.id}/download`, '_blank')
+    // Apri il documento nel browser per visualizzazione inline
+    window.open(`/api/documenti/${doc.id}/download?disposition=inline`, '_blank')
   }
 
   const handleDownload = (doc: Documento) => {
-    window.open(`/api/documenti/${doc.id}/download`, '_blank')
+    // Forza il download del documento
+    window.open(`/api/documenti/${doc.id}/download?disposition=attachment`, '_blank')
   }
 
   const handleApprove = async (doc: Documento) => {
