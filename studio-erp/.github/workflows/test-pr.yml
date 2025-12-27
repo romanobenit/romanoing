@@ -1,0 +1,262 @@
+name: Test Pull Request
+
+# Trigger su ogni PR aperta o aggiornata
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'studio-erp/**'
+      - '.github/workflows/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  # ═══════════════════════════════════════════════════════
+  # Code Quality & Lint
+  # ═══════════════════════════════════════════════════════
+
+  lint:
+    name: Lint Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: studio-erp/package-lock.json
+
+      - name: Install dependencies
+        working-directory: studio-erp
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: studio-erp
+        run: npm run lint
+
+      - name: Check TypeScript types
+        working-directory: studio-erp
+        run: npx tsc --noEmit
+
+  # ═══════════════════════════════════════════════════════
+  # Build Test
+  # ═══════════════════════════════════════════════════════
+
+  build:
+    name: Test Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: studio-erp/package-lock.json
+
+      - name: Install dependencies
+        working-directory: studio-erp
+        run: npm ci
+
+      - name: Generate Prisma Client
+        working-directory: studio-erp
+        run: npx prisma generate
+
+      - name: Build Next.js
+        working-directory: studio-erp
+        run: npm run build
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test?schema=public"
+          NEXTAUTH_SECRET: "test-secret-min-32-characters-long"
+          NEXTAUTH_URL: "http://localhost:3000"
+          STRIPE_PUBLISHABLE_KEY: "pk_test_mock"
+          STRIPE_SECRET_KEY: "sk_test_mock"
+          STRIPE_WEBHOOK_SECRET: "whsec_mock"
+
+      - name: Check build output size
+        working-directory: studio-erp
+        run: |
+          BUILD_SIZE=$(du -sh .next | cut -f1)
+          echo "Build size: $BUILD_SIZE"
+
+          # Warning se build > 50MB
+          SIZE_MB=$(du -sm .next | cut -f1)
+          if [ $SIZE_MB -gt 50 ]; then
+            echo "⚠️ Warning: Build size exceeds 50MB ($SIZE_MB MB)"
+          fi
+
+  # ═══════════════════════════════════════════════════════
+  # Security Scan
+  # ═══════════════════════════════════════════════════════
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Run npm audit
+        working-directory: studio-erp
+        run: |
+          npm audit --audit-level=moderate || EXIT_CODE=$?
+          if [ $EXIT_CODE -eq 0 ]; then
+            echo "✅ No vulnerabilities found"
+          else
+            echo "⚠️ Vulnerabilities detected - review before merging"
+            npm audit
+          fi
+        continue-on-error: true
+
+      - name: Check for secrets in code
+        uses: trufflesecurity/trufflehog@main
+        with:
+          path: ./studio-erp
+          base: ${{ github.event.pull_request.base.sha }}
+          head: ${{ github.event.pull_request.head.sha }}
+
+  # ═══════════════════════════════════════════════════════
+  # Prisma Schema Validation
+  # ═══════════════════════════════════════════════════════
+
+  prisma:
+    name: Validate Prisma Schema
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+          cache-dependency-path: studio-erp/package-lock.json
+
+      - name: Install dependencies
+        working-directory: studio-erp
+        run: npm ci
+
+      - name: Validate Prisma schema
+        working-directory: studio-erp
+        run: npx prisma validate
+
+      - name: Check for Prisma migrations
+        working-directory: studio-erp
+        run: |
+          if [ -d "prisma/migrations" ]; then
+            echo "✅ Migration files found"
+            ls -la prisma/migrations/
+          else
+            echo "⚠️ No migration files - ensure schema changes are migrated"
+          fi
+
+  # ═══════════════════════════════════════════════════════
+  # Code Coverage (Placeholder - da implementare)
+  # ═══════════════════════════════════════════════════════
+
+  # test:
+  #   name: Run Tests
+  #   runs-on: ubuntu-latest
+  #   services:
+  #     postgres:
+  #       image: postgres:16
+  #       env:
+  #         POSTGRES_USER: test
+  #         POSTGRES_PASSWORD: test
+  #         POSTGRES_DB: test
+  #       ports:
+  #         - 5432:5432
+  #       options: >-
+  #         --health-cmd pg_isready
+  #         --health-interval 10s
+  #         --health-timeout 5s
+  #         --health-retries 5
+  #
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with:
+  #         node-version: ${{ env.NODE_VERSION }}
+  #     - run: npm ci
+  #       working-directory: studio-erp
+  #     - run: npx prisma migrate deploy
+  #       working-directory: studio-erp
+  #       env:
+  #         DATABASE_URL: postgresql://test:test@localhost:5432/test
+  #     - run: npm test -- --coverage
+  #       working-directory: studio-erp
+
+  # ═══════════════════════════════════════════════════════
+  # Comment PR with Results
+  # ═══════════════════════════════════════════════════════
+
+  comment:
+    name: Comment PR
+    runs-on: ubuntu-latest
+    needs: [lint, build, security, prisma]
+    if: always()
+
+    steps:
+      - name: Comment PR with results
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const results = {
+              lint: '${{ needs.lint.result }}',
+              build: '${{ needs.build.result }}',
+              security: '${{ needs.security.result }}',
+              prisma: '${{ needs.prisma.result }}'
+            };
+
+            const emoji = {
+              success: '✅',
+              failure: '❌',
+              cancelled: '⏸️',
+              skipped: '⏭️'
+            };
+
+            let comment = `## 🤖 CI/CD Results\n\n`;
+            comment += `| Check | Status |\n`;
+            comment += `|-------|--------|\n`;
+
+            for (const [check, result] of Object.entries(results)) {
+              const icon = emoji[result] || '❓';
+              comment += `| ${check} | ${icon} ${result} |\n`;
+            }
+
+            comment += `\n---\n`;
+            comment += `**Workflow Run:** [#${{ github.run_number }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})\n`;
+            comment += `**Commit:** ${{ github.event.pull_request.head.sha }}\n`;
+
+            // Check se tutti i job sono success
+            const allSuccess = Object.values(results).every(r => r === 'success');
+
+            if (allSuccess) {
+              comment += `\n### ✅ All checks passed! Ready to merge.\n`;
+            } else {
+              comment += `\n### ⚠️ Some checks failed. Please review before merging.\n`;
+            }
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            });
