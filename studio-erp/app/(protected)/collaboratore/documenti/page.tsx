@@ -1,25 +1,14 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { FileText, Upload, FolderOpen, Plus, X } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { DocumentList } from '@/components/document-list'
-import { DocumentUpload } from '@/components/document-upload'
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
+import {useState, useEffect} from 'react'
+import {FileText, Upload, FolderOpen, Plus, X} from 'lucide-react'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Button} from '@/components/ui/button'
+import {DocumentList} from '@/components/document-list'
+import {DocumentUpload} from '@/components/document-upload'
+import {Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle} from '@/components/ui/dialog'
+import {Select, SelectContent, SelectItem, SelectTrigger, SelectValue} from '@/components/ui/select'
+import {Documento} from '@/types/documento'
 
 interface DocumentStats {
   totale: number
@@ -29,7 +18,7 @@ interface DocumentStats {
 }
 
 export default function DocumentiCollaboratorePage() {
-  const [documenti, setDocumenti] = useState<any[]>([])
+  const [documenti, setDocumenti] = useState<Documento[]>([])
   const [stats, setStats] = useState<DocumentStats>({
     totale: 0,
     caricatiDaMe: 0,
@@ -83,7 +72,7 @@ export default function DocumentiCollaboratorePage() {
     }
   }
 
-  const calculateStats = (docs: any[]) => {
+  const calculateStats = (docs: Documento[]) => {
     const categorie = new Set(docs.map((d) => d.categoria)).size
     const daApprovare = docs.filter((d) => d.stato === 'IN_REVISIONE').length
 
@@ -95,12 +84,12 @@ export default function DocumentiCollaboratorePage() {
     })
   }
 
-  const handleView = (doc: any) => {
+  const handleView = (doc: Documento) => {
     // Apri il documento nel browser per visualizzazione inline
     window.open(`/api/documenti/${doc.id}/download?disposition=inline`, '_blank')
   }
 
-  const handleDownload = async (doc: any) => {
+  const handleDownload = async (doc: Documento) => {
     try {
       // Scarica il file usando fetch per evitare blocco popup
       const response = await fetch(`/api/documenti/${doc.id}/download?disposition=attachment`)
@@ -131,7 +120,7 @@ export default function DocumentiCollaboratorePage() {
     }
   }
 
-  const handleApprove = async (doc: any) => {
+  const handleApprove = async (doc: Documento) => {
     try {
       const res = await fetch(`/api/documenti/${doc.id}/approve`, { method: 'POST' })
       if (res.ok) {
@@ -142,7 +131,7 @@ export default function DocumentiCollaboratorePage() {
     }
   }
 
-  const handleReject = async (doc: any) => {
+  const handleReject = async (doc: Documento) => {
     const motivo = prompt('Motivo del rifiuto:')
     if (!motivo) return
 
@@ -160,7 +149,7 @@ export default function DocumentiCollaboratorePage() {
     }
   }
 
-  const handleDelete = async (doc: any) => {
+  const handleDelete = async (doc: Documento) => {
     if (!confirm(`Sei sicuro di voler eliminare "${doc.nomeFile}"?`)) return
 
     try {
@@ -173,12 +162,12 @@ export default function DocumentiCollaboratorePage() {
     }
   }
 
-  const handleNewVersion = (doc: any) => {
+  const handleNewVersion = (doc: Documento) => {
     // TODO: Implementa caricamento nuova versione
     alert('Funzionalità in arrivo: caricamento nuova versione')
   }
 
-  const handleViewHistory = (doc: any) => {
+  const handleViewHistory = (doc: Documento) => {
     // TODO: Implementa visualizzazione storico versioni
     alert('Funzionalità in arrivo: storico versioni')
   }
