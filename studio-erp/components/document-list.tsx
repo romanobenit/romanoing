@@ -32,8 +32,8 @@ interface Documento {
   stato: string
   dimensione: number
   createdAt: string
-  uploadedByNome: string
-  uploadedByCognome: string
+  uploadedByNome?: string
+  uploadedByCognome?: string
   visibileCliente: boolean
   pathStorage: string
 }
@@ -156,7 +156,9 @@ export function DocumentList({
                         <div className="flex-1 min-w-0">
                           <h4 className="font-medium text-gray-900 truncate">{doc.nomeFile}</h4>
                           <p className="text-sm text-gray-600">
-                            Caricato da {doc.uploadedByNome} {doc.uploadedByCognome} •{' '}
+                            {doc.uploadedByNome && doc.uploadedByCognome && (
+                              <>Caricato da {doc.uploadedByNome} {doc.uploadedByCognome} •{' '}</>
+                            )}
                             {new Date(doc.createdAt).toLocaleDateString('it-IT')}
                           </p>
                         </div>
