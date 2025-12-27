@@ -1,0 +1,117 @@
+---
+# Common System Configuration
+# - Timezone, locale, packages base, user creation
+
+- name: Common System Setup
+  hosts: production
+  gather_facts: true
+  become: true
+
+  tasks:
+    - name: Set timezone
+      community.general.timezone:
+        name: "{{ timezone }}"
+      tags: timezone
+
+    - name: Set locale
+      ansible.builtin.locale_gen:
+        name: "{{ locale }}"
+        state: present
+      tags: locale
+
+    - name: Install essential packages
+      ansible.builtin.apt:
+        name:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg
+          - lsb-release
+          - software-properties-common
+          - git
+          - vim
+          - htop
+          - net-tools
+          - unzip
+          - wget
+          - rsync
+          - python3
+          - python3-pip
+          - python3-venv
+          - build-essential
+          - ufw
+          - fail2ban
+        state: present
+        update_cache: true
+      tags: packages
+
+    - name: Enable automatic security updates
+      ansible.builtin.apt:
+        name: unattended-upgrades
+        state: present
+      tags: security-updates
+
+    - name: Configure unattended-upgrades
+      ansible.builtin.copy:
+        dest: /etc/apt/apt.conf.d/50unattended-upgrades
+        content: |
+          Unattended-Upgrade::Allowed-Origins {
+              "${distro_id}:${distro_codename}-security";
+          };
+          Unattended-Upgrade::AutoFixInterruptedDpkg "true";
+          Unattended-Upgrade::MinimalSteps "true";
+          Unattended-Upgrade::Remove-Unused-Kernel-Packages "true";
+          Unattended-Upgrade::Remove-Unused-Dependencies "true";
+          Unattended-Upgrade::Automatic-Reboot "false";
+        mode: '0644'
+      tags: security-updates
+
+    - name: Create application user
+      ansible.builtin.user:
+        name: "{{ app_user }}"
+        shell: /bin/bash
+        create_home: true
+        home: "/home/{{ app_user }}"
+        system: false
+      tags: user
+
+    - name: Create application directory
+      ansible.builtin.file:
+        path: "{{ app_directory }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0755'
+      tags: user
+
+    - name: Configure swappiness (optimize for database)
+      ansible.posix.sysctl:
+        name: vm.swappiness
+        value: '10'
+        state: present
+        reload: true
+      tags: sysctl
+
+    - name: Increase max open files
+      ansible.builtin.lineinfile:
+        path: /etc/security/limits.conf
+        line: "{{ item }}"
+        create: true
+        mode: '0644'
+      loop:
+        - "* soft nofile 65536"
+        - "* hard nofile 65536"
+      tags: limits
+
+    - name: Install and configure chrony (NTP)
+      ansible.builtin.apt:
+        name: chrony
+        state: present
+      tags: ntp
+
+    - name: Start and enable chrony
+      ansible.builtin.systemd:
+        name: chrony
+        state: started
+        enabled: true
+      tags: ntp

@@ -1,0 +1,52 @@
+---
+# Production Inventory - Studio ERP
+# Aggiorna l'IP dopo provisioning Hetzner
+
+all:
+  children:
+    production:
+      hosts:
+        studio-erp-prod:
+          ansible_host: XXX.XXX.XXX.XXX  # ← SOSTITUIRE con IP Hetzner
+          ansible_port: 22
+          ansible_user: root
+          ansible_python_interpreter: /usr/bin/python3
+
+      vars:
+        env: production
+        app_domain: erp.studioromano.it
+
+        # Hetzner
+        hetzner_server_type: cx22
+        hetzner_location: nbg1  # Norimberga (Germania, EU)
+        hetzner_image: ubuntu-24.04
+
+        # PostgreSQL
+        postgresql_version: "16"
+        postgresql_max_connections: 100
+        postgresql_shared_buffers: "1GB"  # 25% di 4GB RAM
+        postgresql_effective_cache_size: "3GB"  # 75% di 4GB RAM
+
+        # Node.js
+        nodejs_version: "20"
+
+        # Applicazione
+        app_port: 3000
+        app_workers: 2  # pm2 instances (1 per vCPU)
+
+        # Nginx
+        nginx_worker_processes: 2  # = vCPU count
+        nginx_client_max_body_size: "10M"
+
+        # SSL
+        ssl_protocols: "TLSv1.2 TLSv1.3"
+        ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
+
+        # Monitoring
+        prometheus_retention: "15d"
+        grafana_port: 3001
+
+        # Backup
+        backup_retention_days: 30
+        backup_time: "03:00"
+        backup_storage_box: "u123456.your-storagebox.de"  # ← Hetzner Storage Box hostname

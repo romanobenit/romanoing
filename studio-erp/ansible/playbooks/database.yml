@@ -1,0 +1,170 @@
+---
+# PostgreSQL Database Setup
+# - Install PostgreSQL 16, create database, user, tuning
+
+- name: PostgreSQL Database Setup
+  hosts: production
+  gather_facts: true
+  become: true
+
+  tasks:
+    # ═══════════════════════════════════════════════════════
+    # Install PostgreSQL 16
+    # ═══════════════════════════════════════════════════════
+
+    - name: Add PostgreSQL APT repository key
+      ansible.builtin.apt_key:
+        url: https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        state: present
+      tags: postgres
+
+    - name: Add PostgreSQL APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+        state: present
+        filename: pgdg
+      tags: postgres
+
+    - name: Install PostgreSQL {{ postgresql_version }}
+      ansible.builtin.apt:
+        name:
+          - "postgresql-{{ postgresql_version }}"
+          - "postgresql-contrib-{{ postgresql_version }}"
+          - postgresql-client
+          - python3-psycopg2  # Required for Ansible postgresql modules
+        state: present
+        update_cache: true
+      tags: postgres
+
+    - name: Ensure PostgreSQL is started and enabled
+      ansible.builtin.systemd:
+        name: postgresql
+        state: started
+        enabled: true
+      tags: postgres
+
+    # ═══════════════════════════════════════════════════════
+    # Database and User Creation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create application database
+      community.postgresql.postgresql_db:
+        name: "{{ postgresql_database }}"
+        encoding: UTF8
+        lc_collate: "{{ locale }}"
+        lc_ctype: "{{ locale }}"
+        template: template0
+        state: present
+      become_user: postgres
+      tags: postgres-db
+
+    - name: Create application database user
+      community.postgresql.postgresql_user:
+        name: "{{ postgresql_user }}"
+        password: "{{ vault_postgresql_password }}"
+        encrypted: true
+        state: present
+      become_user: postgres
+      tags: postgres-user
+
+    - name: Grant privileges to user
+      community.postgresql.postgresql_privs:
+        database: "{{ postgresql_database }}"
+        privs: ALL
+        type: database
+        role: "{{ postgresql_user }}"
+      become_user: postgres
+      tags: postgres-user
+
+    # ═══════════════════════════════════════════════════════
+    # PostgreSQL Configuration (Performance Tuning)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Configure PostgreSQL for performance (CX22 - 4GB RAM)
+      ansible.builtin.lineinfile:
+        path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        # Memory
+        - { regexp: '^#?shared_buffers', line: "shared_buffers = {{ postgresql_shared_buffers }}" }
+        - { regexp: '^#?effective_cache_size', line: "effective_cache_size = {{ postgresql_effective_cache_size }}" }
+        - { regexp: '^#?maintenance_work_mem', line: 'maintenance_work_mem = 256MB' }
+        - { regexp: '^#?work_mem', line: 'work_mem = 8MB' }
+
+        # Connections
+        - { regexp: '^#?max_connections', line: "max_connections = {{ postgresql_max_connections }}" }
+
+        # Logging (for audit)
+        - { regexp: '^#?log_destination', line: "log_destination = 'stderr'" }
+        - { regexp: '^#?logging_collector', line: 'logging_collector = on' }
+        - { regexp: '^#?log_directory', line: "log_directory = 'log'" }
+        - { regexp: '^#?log_filename', line: "log_filename = 'postgresql-%Y-%m-%d_%H%M%S.log'" }
+        - { regexp: '^#?log_rotation_age', line: 'log_rotation_age = 1d' }
+        - { regexp: '^#?log_rotation_size', line: 'log_rotation_size = 100MB' }
+        - { regexp: '^#?log_min_duration_statement', line: 'log_min_duration_statement = 1000' }  # Log queries > 1s
+        - { regexp: '^#?log_connections', line: 'log_connections = on' }
+        - { regexp: '^#?log_disconnections', line: 'log_disconnections = on' }
+
+        # Security
+        - { regexp: '^#?listen_addresses', line: "listen_addresses = '{{ postgresql_listen_addresses }}'" }
+        - { regexp: '^#?ssl', line: 'ssl = on' }
+
+        # Checkpoints (reduce I/O spikes)
+        - { regexp: '^#?checkpoint_completion_target', line: 'checkpoint_completion_target = 0.9' }
+        - { regexp: '^#?wal_buffers', line: 'wal_buffers = 16MB' }
+
+        # Query planner
+        - { regexp: '^#?random_page_cost', line: 'random_page_cost = 1.1' }  # SSD optimized
+        - { regexp: '^#?effective_io_concurrency', line: 'effective_io_concurrency = 200' }  # SSD
+      notify: restart postgresql
+      tags: postgres-config
+
+    - name: Configure pg_hba.conf (host-based authentication)
+      ansible.builtin.lineinfile:
+        path: "/etc/postgresql/{{ postgresql_version }}/main/pg_hba.conf"
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        # Local connections
+        - { regexp: '^local\s+all\s+postgres', line: 'local   all             postgres                                peer' }
+        - { regexp: '^local\s+all\s+all', line: 'local   all             all                                     peer' }
+        # Localhost connections (applicazione Next.js)
+        - { regexp: '^host\s+all\s+all\s+127\.0\.0\.1', line: 'host    all             all             127.0.0.1/32            scram-sha-256' }
+        - { regexp: '^host\s+all\s+all\s+::1', line: 'host    all             all             ::1/128                 scram-sha-256' }
+      notify: restart postgresql
+      tags: postgres-config
+
+    # ═══════════════════════════════════════════════════════
+    # Backup Configuration
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create backup directory
+      ansible.builtin.file:
+        path: /backup/postgresql
+        state: directory
+        owner: postgres
+        group: postgres
+        mode: '0700'
+      tags: postgres-backup
+
+    - name: Create .pgpass for automated backups
+      ansible.builtin.copy:
+        dest: /var/lib/postgresql/.pgpass
+        content: "localhost:{{ postgresql_port }}:{{ postgresql_database }}:{{ postgresql_user }}:{{ vault_postgresql_password }}"
+        owner: postgres
+        group: postgres
+        mode: '0600'
+      tags: postgres-backup
+
+  # ═══════════════════════════════════════════════════════
+  # Handlers
+  # ═══════════════════════════════════════════════════════
+
+  handlers:
+    - name: restart postgresql
+      ansible.builtin.systemd:
+        name: postgresql
+        state: restarted

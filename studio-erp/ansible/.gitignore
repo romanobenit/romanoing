@@ -1,0 +1,30 @@
+# Ansible Vault password file
+.vault_pass
+
+# Secrets (non-encrypted vault files)
+group_vars/*/vault.yml
+!group_vars/*/vault.yml.template
+
+# Ansible logs
+ansible.log
+*.retry
+
+# Temporary files
+/tmp/
+/retry/
+*.tmp
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Fact cache
+/tmp/ansible_facts/
