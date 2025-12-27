@@ -11,7 +11,9 @@
     "db:push": "prisma db push",
     "db:migrate": "prisma migrate dev",
     "db:studio": "prisma studio",
-    "db:seed": "tsx prisma/seed.ts"
+    "db:seed": "tsx prisma/seed.ts",
+    "db:seed-nuovi-bundle": "node -e \"const {execSync} = require('child_process'); const url = process.env.DATABASE_URL; if(!url){console.error('DATABASE_URL non configurato in .env'); process.exit(1);} execSync('psql ' + url + ' -f prisma/seed-nuovi-bundle.sql', {stdio: 'inherit'});\"",
+    "db:update-bundle": "node -e \"const {execSync} = require('child_process'); const url = process.env.DATABASE_URL; if(!url){console.error('DATABASE_URL non configurato in .env'); process.exit(1);} execSync('psql ' + url + ' -f prisma/update-bundle-completo.sql', {stdio: 'inherit'});\""
   },
   "keywords": [],
   "author": "",
