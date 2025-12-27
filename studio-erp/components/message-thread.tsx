@@ -80,7 +80,6 @@ export function MessageThread({
                 <div
                   key={message.id}
                   className={`flex gap-3 ${isOwnMessage ? 'flex-row-reverse' : 'flex-row'}`}
-                }
                 >
                   {/* Avatar */}
                   <div

@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { use } from 'react'
+import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import {
   ArrowLeft,
@@ -42,6 +43,7 @@ const STATO_MILESTONE = {
 
 export default function IncaricoDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const resolvedParams = use(params)
+  const { data: session } = useSession()
   const [incarico, setIncarico] = useState<any>(null)
   const [messaggi, setMessaggi] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
@@ -361,7 +363,12 @@ export default function IncaricoDetailPage({ params }: { params: Promise<{ id: s
 
         {/* Messaggi Tab */}
         <TabsContent value="messaggi">
-          <MessageThread incaricoId={parseInt(resolvedParams.id)} messages={messaggi} />
+          <MessageThread
+            incaricoId={parseInt(resolvedParams.id)}
+            incaricoCodice={incarico?.codice || ''}
+            messages={messaggi}
+            currentUserEmail={session?.user?.email || ''}
+          />
         </TabsContent>
 
         {/* Timeline Tab */}

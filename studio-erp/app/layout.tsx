@@ -1,9 +1,6 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
 import "./globals.css";
 import { AuthSessionProvider } from "@/components/session-provider";
-
-const inter = Inter({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
   title: "Studio Ing. Romano - Gestione Incarichi",
@@ -17,7 +14,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="it">
-      <body className={inter.className}>
+      <body className="font-sans antialiased">
         <AuthSessionProvider>{children}</AuthSessionProvider>
       </body>
     </html>
