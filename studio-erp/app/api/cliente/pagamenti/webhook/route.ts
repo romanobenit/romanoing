@@ -1,7 +1,9 @@
-import { NextResponse } from 'next/server'
-import { headers } from 'next/headers'
-import { query } from '@/lib/db'
+import {NextResponse} from 'next/server'
+import {headers} from 'next/headers'
+import {query} from '@/lib/db'
 import Stripe from 'stripe'
+import {authenticatedApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
+import {logPagamento} from '@/lib/audit-log'
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: '2025-12-15.clover',
@@ -10,6 +12,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
 export async function POST(request: Request) {
+  // Rate limiting per webhook (usa limite API autenticate: 1000/min)
+  const identifier = getIdentifier(request)
+  const rateLimitResponse = await applyRateLimit(authenticatedApiRateLimit, identifier)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
     const body = await request.text()
     const headersList = await headers()
@@ -33,6 +40,34 @@ export async function POST(request: Request) {
         const incaricoId = session.metadata?.incaricoId
 
         if (milestoneId && incaricoId) {
+          // Ottieni cliente dell'incarico per audit log
+          const incaricoResult = await query(
+            `SELECT cliente_id FROM incarichi WHERE id = $1`,
+            [parseInt(incaricoId)]
+          )
+
+          if (incaricoResult.rows.length > 0) {
+            const clienteId = incaricoResult.rows[0].cliente_id
+
+            // Ottieni utente del cliente
+            const utenteResult = await query(
+              `SELECT id FROM utenti WHERE cliente_id = $1 LIMIT 1`,
+              [clienteId]
+            )
+
+            if (utenteResult.rows.length > 0) {
+              const utenteId = utenteResult.rows[0].id
+
+              // Audit log
+              await logPagamento(utenteId, 'PAYMENT', parseInt(milestoneId), request, {
+                stripeSessionId: session.id,
+                importo: session.amount_total,
+                valuta: session.currency,
+                incaricoId: parseInt(incaricoId),
+              })
+            }
+          }
+
           // Aggiorna milestone come pagata
           await query(
             `UPDATE milestone

@@ -1,13 +1,19 @@
-import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import {NextResponse} from 'next/server'
+import {query} from '@/lib/db'
+import {publicApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 
 /**
  * GET /api/bundle
  * Restituisce tutti i bundle attivi della Fase 1 MVP
  */
 export async function GET(request: Request) {
+  // Rate limiting per API pubbliche
+  const identifier = getIdentifier(request)
+  const rateLimitResponse = await applyRateLimit(publicApiRateLimit, identifier)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
-    const { searchParams } = new URL(request.url)
+    const {searchParams} = new URL(request.url)
     const faseMvp = searchParams.get('fase') || '1'
     const target = searchParams.get('target')
 

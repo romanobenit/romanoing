@@ -1,5 +1,6 @@
-import { NextResponse } from 'next/server'
-import { query } from '@/lib/db'
+import {NextResponse} from 'next/server'
+import {query} from '@/lib/db'
+import {publicApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 
 /**
  * GET /api/bundle/[codice]
@@ -7,10 +8,15 @@ import { query } from '@/lib/db'
  */
 export async function GET(
   request: Request,
-  { params }: { params: Promise<{ codice: string }> }
+  {params}: {params: Promise<{codice: string}>}
 ) {
+  // Rate limiting per API pubbliche
+  const identifier = getIdentifier(request)
+  const rateLimitResponse = await applyRateLimit(publicApiRateLimit, identifier)
+  if (rateLimitResponse) return rateLimitResponse
+
   try {
-    const { codice } = await params
+    const {codice} = await params
 
     const sql = `
       SELECT
