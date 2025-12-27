@@ -1,9 +1,10 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { query } from '@/lib/db'
-import { readFile } from 'fs/promises'
-import { existsSync } from 'fs'
-import { join, resolve } from 'path'
+import {NextResponse} from 'next/server'
+import {auth} from '@/lib/auth'
+import {query} from '@/lib/db'
+import {readFile} from 'fs/promises'
+import {existsSync} from 'fs'
+import {join, resolve} from 'path'
+import {logDocumento} from '@/lib/audit-log'
 
 export async function GET(
   request: Request,
@@ -101,6 +102,13 @@ export async function GET(
     }
 
     const mimeType = mimeTypes[ext || ''] || 'application/octet-stream'
+
+    // Audit log
+    await logDocumento(parseInt(session.user.id), 'DOWNLOAD', parseInt(id), request, {
+      nomeFile: documento.nomeFile,
+      disposition,
+      incaricoId: documento.incaricoId,
+    })
 
     // Ritorna file con disposition appropriata (inline per visualizzazione, attachment per download)
     return new NextResponse(fileBuffer, {

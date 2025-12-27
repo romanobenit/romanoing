@@ -1,11 +1,12 @@
 import Link from 'next/link'
-import { redirect } from 'next/navigation'
-import { FileText, Clock, CheckCircle, AlertCircle, Euro, Calendar } from 'lucide-react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { auth } from '@/lib/auth'
-import { query } from '@/lib/db'
+import {redirect} from 'next/navigation'
+import {FileText, Clock, CheckCircle, AlertCircle, Euro, Calendar} from 'lucide-react'
+import {Card, CardContent, CardDescription, CardHeader, CardTitle} from '@/components/ui/card'
+import {Button} from '@/components/ui/button'
+import {Badge} from '@/components/ui/badge'
+import {auth} from '@/lib/auth'
+import {query} from '@/lib/db'
+import {Incarico, Milestone} from '@/types/documento'
 
 async function getIncarichiDashboard(clienteId: string) {
   const sql = `
@@ -76,15 +77,15 @@ export default async function DashboardPage() {
   // Statistiche
   const stats = {
     totale: incarichi.length,
-    attivi: incarichi.filter((i: any) => ['ATTIVO', 'IN_CORSO'].includes(i.stato)).length,
-    completati: incarichi.filter((i: any) => i.stato === 'COMPLETATO').length,
-    importoTotale: incarichi.reduce((sum: number, i: any) => sum + parseFloat(i.importoTotale || 0), 0),
+    attivi: incarichi.filter((i: Incarico) => ['ATTIVO', 'IN_CORSO'].includes(i.stato)).length,
+    completati: incarichi.filter((i: Incarico) => i.stato === 'COMPLETATO').length,
+    importoTotale: incarichi.reduce((sum: number, i: Incarico) => sum + parseFloat(String(i.importoTotale || 0)), 0),
   }
 
   // Milestone da pagare
   const milestoneDaPagare = incarichi
-    .flatMap((i: any) => i.milestone || [])
-    .filter((m: any) => m.stato === 'NON_PAGATO')
+    .flatMap((i: Incarico) => i.milestone || [])
+    .filter((m: Milestone) => m.stato === 'NON_PAGATO')
 
   return (
     <div className="space-y-8">
@@ -167,7 +168,7 @@ export default async function DashboardPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {milestoneDaPagare.slice(0, 3).map((milestone: any) => (
+              {milestoneDaPagare.slice(0, 3).map((milestone: Milestone) => (
                 <div
                   key={milestone.id}
                   className="flex items-center justify-between bg-white p-3 rounded-lg border"
@@ -178,7 +179,7 @@ export default async function DashboardPage() {
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-sm">
-                      €{parseFloat(milestone.importo).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                      €{Number(milestone.importo).toLocaleString('it-IT', {minimumFractionDigits: 2})}
                     </p>
                     {milestone.dataScadenza && (
                       <p className="text-xs text-gray-500">
@@ -226,7 +227,7 @@ export default async function DashboardPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {incarichi.slice(0, 5).map((incarico: any) => {
+              {incarichi.slice(0, 5).map((incarico: Incarico) => {
                 const statoConfig = STATO_LABELS[incarico.stato as keyof typeof STATO_LABELS]
                 const Icon = statoConfig?.icon || FileText
 
@@ -252,7 +253,7 @@ export default async function DashboardPage() {
                             {new Date(incarico.createdAt).toLocaleDateString('it-IT')}
                           </span>
                           <span>{incarico.codice}</span>
-                          {incarico.documentiCount > 0 && (
+                          {incarico.documentiCount && incarico.documentiCount > 0 && (
                             <span className="flex items-center gap-1">
                               <FileText className="w-3 h-3" />
                               {incarico.documentiCount} documenti
@@ -262,11 +263,11 @@ export default async function DashboardPage() {
                       </div>
                       <div className="text-right ml-4">
                         <p className="font-bold text-lg text-gray-900">
-                          €{parseFloat(incarico.importoTotale).toLocaleString('it-IT', { minimumFractionDigits: 2 })}
+                          €{Number(incarico.importoTotale || 0).toLocaleString('it-IT', {minimumFractionDigits: 2})}
                         </p>
                         {incarico.milestone && (
                           <p className="text-xs text-gray-500 mt-1">
-                            {incarico.milestone.filter((m: any) => m.stato === 'PAGATO').length}/{incarico.milestone.length} milestone pagate
+                            {incarico.milestone && incarico.milestone.filter((m: Milestone) => m.stato === 'PAGATO').length}/{incarico.milestone ? incarico.milestone.length : 0} milestone pagate
                           </p>
                         )}
                       </div>

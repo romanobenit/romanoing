@@ -1,9 +1,11 @@
-import { NextResponse } from 'next/server'
-import { auth } from '@/lib/auth'
-import { query } from '@/lib/db'
-import { writeFile, mkdir } from 'fs/promises'
-import { join } from 'path'
-import { existsSync } from 'fs'
+import {NextResponse} from 'next/server'
+import {auth} from '@/lib/auth'
+import {query} from '@/lib/db'
+import {writeFile, mkdir} from 'fs/promises'
+import {join} from 'path'
+import {existsSync} from 'fs'
+import {uploadRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
+import {logDocumento} from '@/lib/audit-log'
 
 export async function POST(request: Request) {
   try {
@@ -13,16 +15,21 @@ export async function POST(request: Request) {
     // Verifica autenticazione - solo collaboratori possono caricare documenti
     const ruoliCollaboratori = ['TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO']
     if (!session?.user || !ruoliCollaboratori.includes(session.user.ruolo)) {
-      return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 401 })
+      return NextResponse.json({success: false, error: 'Non autorizzato'}, {status: 401})
     }
 
     if (!session.user.id) {
       console.error('[API Upload] session.user.id is missing:', session.user)
       return NextResponse.json(
-        { success: false, error: 'ID utente mancante nella sessione' },
-        { status: 401 }
+        {success: false, error: 'ID utente mancante nella sessione'},
+        {status: 401}
       )
     }
+
+    // Rate limiting per upload (20 upload/ora per utente)
+    const identifier = getIdentifier(request, session.user.id)
+    const rateLimitResponse = await applyRateLimit(uploadRateLimit, identifier)
+    if (rateLimitResponse) return rateLimitResponse
 
     const formData = await request.formData()
     const file = formData.get('file') as File
@@ -153,10 +160,20 @@ export async function POST(request: Request) {
     })
 
     const result = await query(sql, params)
+    const documento = result.rows[0]
+
+    // Audit log
+    await logDocumento(parseInt(session.user.id), 'UPLOAD', documento.id, request, {
+      nomeFile: file.name,
+      categoria,
+      dimensione: file.size,
+      incaricoId,
+      visibileCliente,
+    })
 
     return NextResponse.json({
       success: true,
-      data: result.rows[0],
+      data: documento,
       message: 'Documento caricato con successo',
     })
   } catch (error: any) {
