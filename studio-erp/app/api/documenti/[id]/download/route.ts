@@ -17,6 +17,11 @@ export async function GET(
       return NextResponse.json({ success: false, error: 'Non autenticato' }, { status: 401 })
     }
 
+    // Ottieni parametro disposition (inline per visualizzazione, attachment per download)
+    const { searchParams } = new URL(request.url)
+    const dispositionParam = searchParams.get('disposition')
+    const disposition = dispositionParam === 'inline' ? 'inline' : 'attachment'
+
     // Ottieni documento
     const sql = `
       SELECT
@@ -97,11 +102,11 @@ export async function GET(
 
     const mimeType = mimeTypes[ext || ''] || 'application/octet-stream'
 
-    // Ritorna file
+    // Ritorna file con disposition appropriata (inline per visualizzazione, attachment per download)
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': mimeType,
-        'Content-Disposition': `attachment; filename="${encodeURIComponent(documento.nomeFile)}"`,
+        'Content-Disposition': `${disposition}; filename="${encodeURIComponent(documento.nomeFile)}"`,
         'Content-Length': fileBuffer.length.toString(),
       },
     })

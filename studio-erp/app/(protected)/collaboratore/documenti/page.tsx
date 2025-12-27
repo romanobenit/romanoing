@@ -96,12 +96,13 @@ export default function DocumentiCollaboratorePage() {
   }
 
   const handleView = (doc: any) => {
-    // Apri in una nuova finestra o modale
-    window.open(`/api/documenti/${doc.id}/download`, '_blank')
+    // Apri il documento nel browser per visualizzazione inline
+    window.open(`/api/documenti/${doc.id}/download?disposition=inline`, '_blank')
   }
 
   const handleDownload = (doc: any) => {
-    window.open(`/api/documenti/${doc.id}/download`, '_blank')
+    // Forza il download del documento
+    window.open(`/api/documenti/${doc.id}/download?disposition=attachment`, '_blank')
   }
 
   const handleApprove = async (doc: any) => {
