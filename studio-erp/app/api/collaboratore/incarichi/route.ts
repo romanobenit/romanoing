@@ -209,8 +209,13 @@ export async function POST(request: Request) {
     })
   } catch (error: any) {
     console.error('Error in POST /api/collaboratore/incarichi:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }

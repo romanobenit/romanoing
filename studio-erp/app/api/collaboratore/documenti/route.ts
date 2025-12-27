@@ -109,10 +109,14 @@ export async function GET(request: Request) {
       stack: error?.stack?.split('\n').slice(0, 3),
     })
 
-    return NextResponse.json({
-      success: false,
-      error: 'Errore del server',
-      details: error?.message || 'Unknown error'
-    }, { status: 500 })
+    const isDev = process.env.NODE_ENV === 'development'
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message || 'Unknown error' }),
+      },
+      { status: 500 }
+    )
   }
 }

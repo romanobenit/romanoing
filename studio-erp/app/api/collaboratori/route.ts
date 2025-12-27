@@ -11,6 +11,20 @@ export async function GET(request: Request) {
       return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 403 })
     }
 
+    // Paginazione
+    const { searchParams } = new URL(request.url)
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '50')
+    const offset = (page - 1) * limit
+
+    // Validazione parametri
+    if (page < 1 || limit < 1 || limit > 100) {
+      return NextResponse.json(
+        { success: false, error: 'Parametri di paginazione non validi' },
+        { status: 400 }
+      )
+    }
+
     const sql = `
       SELECT
         u.id,
@@ -30,13 +44,35 @@ export async function GET(request: Request) {
           WHEN r.codice = 'ESTERNO' THEN 4
         END,
         u.cognome, u.nome
+      LIMIT $1 OFFSET $2
     `
 
-    const result = await query(sql, [])
+    // Conta totale per paginazione
+    const countSql = `
+      SELECT COUNT(*) as total
+      FROM utenti u
+      JOIN ruoli r ON u.ruolo_id = r.id
+      WHERE r.codice IN ('TITOLARE', 'SENIOR', 'JUNIOR', 'ESTERNO')
+        AND u.attivo = true
+    `
+
+    const [result, countResult] = await Promise.all([
+      query(sql, [limit, offset]),
+      query(countSql, []),
+    ])
+
+    const total = parseInt(countResult.rows[0].total)
+    const totalPages = Math.ceil(total / limit)
 
     return NextResponse.json({
       success: true,
       data: result.rows,
+      pagination: {
+        page,
+        limit,
+        total,
+        totalPages,
+      },
     })
   } catch (error: any) {
     console.error('Error in GET /api/collaboratori:', error)

@@ -80,8 +80,13 @@ export async function GET(request: Request) {
     })
   } catch (error: any) {
     console.error('Error in GET /api/admin/messaggi:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }
@@ -122,8 +127,13 @@ export async function PATCH(request: Request) {
     })
   } catch (error: any) {
     console.error('Error in PATCH /api/admin/messaggi:', error)
+    const isDev = process.env.NODE_ENV === 'development'
     return NextResponse.json(
-      { success: false, error: 'Errore del server', details: error?.message },
+      {
+        success: false,
+        error: 'Errore del server',
+        ...(isDev && { details: error?.message }),
+      },
       { status: 500 }
     )
   }
