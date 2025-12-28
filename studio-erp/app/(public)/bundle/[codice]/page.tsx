@@ -1,12 +1,11 @@
-'use client';
-
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import React, { useState } from 'react';
+import React from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, Check, X, Clock, ChevronDown } from 'lucide-react';
+import { ChevronRight, Check, X, Clock } from 'lucide-react';
+import { FAQAccordion } from './components/FAQAccordion';
 
 // Types
 type BundleCode =
@@ -742,8 +741,6 @@ export default function BundlePage({ params }: PageProps) {
     notFound();
   }
 
-  const [expandedFaq, setExpandedFaq] = useState<number | null>(null);
-
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-gray-50">
       {/* Header */}
@@ -998,33 +995,7 @@ export default function BundlePage({ params }: PageProps) {
           <h2 className="text-3xl font-bold text-gray-900 mb-8 text-center">
             Domande Frequenti
           </h2>
-          <div className="space-y-4">
-            {bundle.faq.map((faq, idx) => (
-              <Card
-                key={idx}
-                className="cursor-pointer hover:shadow-md transition-shadow"
-                onClick={() => setExpandedFaq(expandedFaq === idx ? null : idx)}
-              >
-                <CardHeader>
-                  <div className="flex items-center justify-between">
-                    <CardTitle className="text-lg font-semibold text-gray-900 pr-4">
-                      {faq.domanda}
-                    </CardTitle>
-                    <ChevronDown
-                      className={`w-5 h-5 text-blue-600 flex-shrink-0 transition-transform ${
-                        expandedFaq === idx ? 'rotate-180' : ''
-                      }`}
-                    />
-                  </div>
-                </CardHeader>
-                {expandedFaq === idx && (
-                  <CardContent className="pt-0 border-t">
-                    <p className="text-gray-600 mt-4">{faq.risposta}</p>
-                  </CardContent>
-                )}
-              </Card>
-            ))}
-          </div>
+          <FAQAccordion faqs={bundle.faq} />
         </div>
       </section>
 
