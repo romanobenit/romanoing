@@ -156,18 +156,7 @@ export default function ConfiguratoreDueDiligence() {
     // Il prezzo al mq viene applicato alla superficie unitaria
     // Gli sconti progressivi vengono poi applicati su ogni unità
 
-    // Prezzi base minimi per tipologia
-    const prezziBaseTipologia: Record<string, number> = {
-      residenziale: 2000,
-      uffici: 2500,
-      commerciale: 2500,
-      industriale: 3000,
-      alberghiero: 3000,
-      sanitario: 3000,
-      mixeduse: 2800,
-    };
-
-    // Incrementi per superficie con scaglioni decrescenti (da €10-15/mq iniziale a €1-2/mq finale)
+    // Incrementi per superficie con scaglioni decrescenti (solo €/mq, no prezzo base fisso)
     const scaglioniSuperficie: Record<string, { min: number; max: number; euroMq: number }[]> = {
       residenziale: [
         { min: 0, max: 200, euroMq: 10 },      // Prime 200mq: €10/mq
@@ -232,13 +221,13 @@ export default function ConfiguratoreDueDiligence() {
       ? data.superficieCommerciale / data.numeroUnita
       : data.superficieCommerciale;
 
-    let prezzoSingolaUnita = prezziBaseTipologia[data.tipologiaImmobile] || 2000;
+    // Prezzo calcolato SOLO sulla superficie (no prezzo base fisso)
+    let prezzoSingolaUnita = 0;
 
     // Calcolo incremento per superficie unitaria con scaglioni decrescenti
     if (data.tipologiaImmobile && superficiePerUnita > 0) {
       const scaglioni = scaglioniSuperficie[data.tipologiaImmobile] || scaglioniSuperficie.residenziale;
       let superficieRimanente = superficiePerUnita;
-      let incrementoSuperficie = 0;
 
       for (const scaglione of scaglioni) {
         if (superficieRimanente <= 0) break;
@@ -248,11 +237,9 @@ export default function ConfiguratoreDueDiligence() {
           scaglione.max - scaglione.min
         );
 
-        incrementoSuperficie += superficieScaglione * scaglione.euroMq;
+        prezzoSingolaUnita += superficieScaglione * scaglione.euroMq;
         superficieRimanente -= superficieScaglione;
       }
-
-      prezzoSingolaUnita += incrementoSuperficie;
     }
 
     let prezzoBase = prezzoSingolaUnita;
