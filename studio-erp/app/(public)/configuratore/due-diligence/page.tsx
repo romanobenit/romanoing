@@ -216,10 +216,12 @@ export default function ConfiguratoreDueDiligence() {
       ],
     };
 
-    // Calcolo superficie per singola unità immobiliare
-    const superficiePerUnita = data.numeroUnita > 0
+    // Calcolo superficie per singola unità immobiliare (minimo 150 mq)
+    const superficieCalcolata = data.numeroUnita > 0
       ? data.superficieCommerciale / data.numeroUnita
       : data.superficieCommerciale;
+
+    const superficiePerUnita = Math.max(superficieCalcolata, 150);
 
     // Prezzo calcolato SOLO sulla superficie (no prezzo base fisso)
     let prezzoSingolaUnita = 0;
