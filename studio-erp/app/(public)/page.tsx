@@ -226,34 +226,34 @@ export default function HomePage() {
             </CardContent>
           </Card>
 
-          {/* Bundle 3: Due Diligence */}
+          {/* Bundle 3: Due Diligence Tecnica */}
           <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
             <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                📋
+              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-3xl mb-4">
+                🏢
               </div>
-              <CardTitle className="text-lg">Due Diligence</CardTitle>
+              <CardTitle className="text-lg">Due Diligence Tecnica</CardTitle>
               <CardDescription className="text-sm">
-                Verifica tecnica pre-acquisto
+                Verifica immobiliare pre-acquisizione
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
+                  <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €1.500 - €4.000
+                  €8.000 - €60.000
                 </div>
                 <div className="text-xs text-gray-600">
-                  ✓ Ispezione immobile<br />
-                  ✓ Verifica conformità<br />
-                  ✓ Stima interventi<br />
-                  ✓ Report fotografico
+                  ✓ Desktop/Standard/Enhanced DD<br />
+                  ✓ Verifica amministrativa/strutturale<br />
+                  ✓ Red Flag Report<br />
+                  ✓ Stima costi interventi
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-DUE-DILIGENCE">
-                    Preventivo →
+                  <Link href="/configuratore/due-diligence">
+                    🔍 Configuratore →
                   </Link>
                 </Button>
               </div>
@@ -587,7 +587,7 @@ export default function HomePage() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/bundle/BDL-CONSULENZA" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
                 <li><Link href="/bundle/BDL-RISTR-BONUS" className="hover:text-blue-600">Ristrutturazione</Link></li>
-                <li><Link href="/bundle/BDL-DUE-DILIGENCE" className="hover:text-blue-600">Due Diligence</Link></li>
+                <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
                 <li><Link href="/bundle/BDL-EFF-ENERGETICO" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
                 <li><Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">Ampliamento Produttivo</Link></li>
                 <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
