@@ -245,15 +245,15 @@ export default function ConfiguratoreDueDiligence() {
     let prezzoBase = prezzoSingolaUnita;
 
     // Sconto progressivo per numero unità (economia di scala)
-    // 1ª unità: 0% sconto, 2ª unità: 20% sconto, 3ª unità: 40% sconto, 4ª unità: 60% sconto, ecc.
+    // 1ª unità: 0%, 2ª: 20%, 3ª: 40%, 4ª: 60%, 5ª: 80%, 6ª+: 90% (fisso)
     const dettaglioUnita: { unitaNumero: number; sconto: number; prezzoScontato: number }[] = [];
 
     if (data.numeroUnita > 1) {
       let totaleConSconto = 0;
 
       for (let i = 1; i <= data.numeroUnita; i++) {
-        // Sconto progressivo: (i-1) * 20%
-        const scontoPercentuale = (i - 1) * 20;
+        // Sconto progressivo: (i-1) * 20%, max 90% dalla 6ª unità
+        const scontoPercentuale = Math.min((i - 1) * 20, 90);
         const moltiplicatoreSconto = 1 - (scontoPercentuale / 100);
         const prezzoUnitaScontato = Math.round(prezzoSingolaUnita * moltiplicatoreSconto);
 
@@ -586,7 +586,7 @@ export default function ConfiguratoreDueDiligence() {
                       placeholder="1"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      Sconto progressivo: 1ª unità 0%, 2ª 20%, 3ª 40%, 4ª 60%, 5ª 80%, 6ª+ 100%
+                      Sconto progressivo: 1ª unità 0%, 2ª 20%, 3ª 40%, 4ª 60%, 5ª 80%, 6ª+ 90%
                     </p>
                   </div>
                 </div>
