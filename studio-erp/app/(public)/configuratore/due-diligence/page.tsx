@@ -27,7 +27,6 @@ interface ConfiguratoreDueDiligenceData {
   tipologiaImmobile: string;
   superficieCommerciale: number;
   numeroUnita: number;
-  numeroEdifici: number;
   indirizzo: string;
   comune: string;
   provincia: string;
@@ -65,7 +64,6 @@ const initialData: ConfiguratoreDueDiligenceData = {
   tipologiaImmobile: '',
   superficieCommerciale: 0,
   numeroUnita: 1,
-  numeroEdifici: 1,
   indirizzo: '',
   comune: '',
   provincia: '',
@@ -150,62 +148,108 @@ export default function ConfiguratoreDueDiligence() {
   }, [data]);
 
   const calcolaPreventivo = (data: ConfiguratoreDueDiligenceData): Preventivo => {
-    // Prezzi base ridotti per superficie e tipologia (partendo da €2.000)
-    const prezziBase: Record<string, { min: number; max: number; importo: number }[]> = {
+    // Calcolo prezzo base considerando superficie totale e numero unità con incrementi decrescenti
+
+    // Prezzi base minimi per tipologia
+    const prezziBaseTipologia: Record<string, number> = {
+      residenziale: 2000,
+      uffici: 2500,
+      commerciale: 2500,
+      industriale: 3000,
+      alberghiero: 3000,
+      sanitario: 3000,
+      mixeduse: 2800,
+    };
+
+    // Incrementi per superficie con scaglioni decrescenti (da €200/mq iniziale a €20/mq finale)
+    const scaglioniSuperficie: Record<string, { min: number; max: number; euroMq: number }[]> = {
       residenziale: [
-        { min: 0, max: 500, importo: 2000 },
-        { min: 500, max: 1500, importo: 3000 },
-        { min: 1500, max: 5000, importo: 4500 },
-        { min: 5000, max: 999999, importo: 6000 },
+        { min: 0, max: 200, euroMq: 10 },      // Prime 200mq: €10/mq
+        { min: 200, max: 500, euroMq: 7.5 },   // 200-500mq: €7.5/mq
+        { min: 500, max: 1000, euroMq: 5 },    // 500-1000mq: €5/mq
+        { min: 1000, max: 2000, euroMq: 3 },   // 1000-2000mq: €3/mq
+        { min: 2000, max: 5000, euroMq: 2 },   // 2000-5000mq: €2/mq
+        { min: 5000, max: 999999, euroMq: 1 }, // >5000mq: €1/mq
       ],
       uffici: [
-        { min: 0, max: 500, importo: 2500 },
-        { min: 500, max: 1500, importo: 4000 },
-        { min: 1500, max: 5000, importo: 6000 },
-        { min: 5000, max: 999999, importo: 9000 },
+        { min: 0, max: 200, euroMq: 12 },
+        { min: 200, max: 500, euroMq: 9 },
+        { min: 500, max: 1000, euroMq: 6 },
+        { min: 1000, max: 2000, euroMq: 4 },
+        { min: 2000, max: 5000, euroMq: 2.5 },
+        { min: 5000, max: 999999, euroMq: 1.5 },
       ],
       commerciale: [
-        { min: 0, max: 500, importo: 2500 },
-        { min: 500, max: 1500, importo: 4000 },
-        { min: 1500, max: 5000, importo: 6000 },
-        { min: 5000, max: 999999, importo: 9000 },
+        { min: 0, max: 200, euroMq: 12 },
+        { min: 200, max: 500, euroMq: 9 },
+        { min: 500, max: 1000, euroMq: 6 },
+        { min: 1000, max: 2000, euroMq: 4 },
+        { min: 2000, max: 5000, euroMq: 2.5 },
+        { min: 5000, max: 999999, euroMq: 1.5 },
       ],
       industriale: [
-        { min: 0, max: 500, importo: 3000 },
-        { min: 500, max: 1500, importo: 4500 },
-        { min: 1500, max: 5000, importo: 7500 },
-        { min: 5000, max: 999999, importo: 12000 },
+        { min: 0, max: 200, euroMq: 15 },
+        { min: 200, max: 500, euroMq: 11 },
+        { min: 500, max: 1000, euroMq: 8 },
+        { min: 1000, max: 2000, euroMq: 5 },
+        { min: 2000, max: 5000, euroMq: 3 },
+        { min: 5000, max: 999999, euroMq: 2 },
       ],
       alberghiero: [
-        { min: 0, max: 500, importo: 3000 },
-        { min: 500, max: 1500, importo: 4500 },
-        { min: 1500, max: 5000, importo: 7500 },
-        { min: 5000, max: 999999, importo: 12000 },
+        { min: 0, max: 200, euroMq: 15 },
+        { min: 200, max: 500, euroMq: 11 },
+        { min: 500, max: 1000, euroMq: 8 },
+        { min: 1000, max: 2000, euroMq: 5 },
+        { min: 2000, max: 5000, euroMq: 3 },
+        { min: 5000, max: 999999, euroMq: 2 },
       ],
       sanitario: [
-        { min: 0, max: 500, importo: 3000 },
-        { min: 500, max: 1500, importo: 4500 },
-        { min: 1500, max: 5000, importo: 7500 },
-        { min: 5000, max: 999999, importo: 12000 },
+        { min: 0, max: 200, euroMq: 15 },
+        { min: 200, max: 500, euroMq: 11 },
+        { min: 500, max: 1000, euroMq: 8 },
+        { min: 1000, max: 2000, euroMq: 5 },
+        { min: 2000, max: 5000, euroMq: 3 },
+        { min: 5000, max: 999999, euroMq: 2 },
       ],
       mixeduse: [
-        { min: 0, max: 500, importo: 2800 },
-        { min: 500, max: 1500, importo: 4200 },
-        { min: 1500, max: 5000, importo: 7000 },
-        { min: 5000, max: 999999, importo: 10000 },
+        { min: 0, max: 200, euroMq: 14 },
+        { min: 200, max: 500, euroMq: 10 },
+        { min: 500, max: 1000, euroMq: 7 },
+        { min: 1000, max: 2000, euroMq: 4.5 },
+        { min: 2000, max: 5000, euroMq: 2.8 },
+        { min: 5000, max: 999999, euroMq: 1.8 },
       ],
     };
 
-    let prezzoBase = 2000;
+    let prezzoBase = prezziBaseTipologia[data.tipologiaImmobile] || 2000;
 
+    // Calcolo incremento per superficie con scaglioni decrescenti
     if (data.tipologiaImmobile && data.superficieCommerciale > 0) {
-      const scaglioni = prezziBase[data.tipologiaImmobile] || prezziBase.residenziale;
-      const scaglione = scaglioni.find(
-        (s) => data.superficieCommerciale > s.min && data.superficieCommerciale <= s.max
-      );
-      if (scaglione) {
-        prezzoBase = scaglione.importo;
+      const scaglioni = scaglioniSuperficie[data.tipologiaImmobile] || scaglioniSuperficie.residenziale;
+      let superficieRimanente = data.superficieCommerciale;
+      let incrementoSuperficie = 0;
+
+      for (const scaglione of scaglioni) {
+        if (superficieRimanente <= 0) break;
+
+        const superficieScaglione = Math.min(
+          superficieRimanente,
+          scaglione.max - scaglione.min
+        );
+
+        incrementoSuperficie += superficieScaglione * scaglione.euroMq;
+        superficieRimanente -= superficieScaglione;
       }
+
+      prezzoBase += incrementoSuperficie;
+    }
+
+    // Moltiplicatore per numero unità (economia di scala: +10% per unità aggiuntiva, decrescente)
+    if (data.numeroUnita > 1) {
+      // Formula: 1 + (numeroUnita - 1) * 0.10
+      // Es: 1 unità = 1.0x, 2 unità = 1.10x, 5 unità = 1.40x, 10 unità = 1.90x
+      const moltiplicatoreUnita = 1 + (data.numeroUnita - 1) * 0.10;
+      prezzoBase = Math.round(prezzoBase * moltiplicatoreUnita);
     }
 
     // Moltiplicatori
@@ -518,18 +562,6 @@ export default function ConfiguratoreDueDiligence() {
                       type="number"
                       value={data.numeroUnita || ''}
                       onChange={(e) => updateData('numeroUnita', Number(e.target.value))}
-                      className="w-full px-3 py-2 border rounded-lg"
-                      placeholder="1"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      N° Edifici
-                    </label>
-                    <input
-                      type="number"
-                      value={data.numeroEdifici || ''}
-                      onChange={(e) => updateData('numeroEdifici', Number(e.target.value))}
                       className="w-full px-3 py-2 border rounded-lg"
                       placeholder="1"
                     />
