@@ -835,7 +835,6 @@ export default function ConfiguratoreSismica() {
                     {[
                       { value: 'tamponature', label: 'Tamponature non solidali' },
                       { value: 'solai_spingenti', label: 'Solai spingenti (volte, non rigidi)' },
-                      { value: 'pilastri_tozzi', label: 'Pilastri tozzi (h/b < 3)' },
                       { value: 'travi_emergenti', label: 'Travi emergenti' },
                       { value: 'nodi_non_confinati', label: 'Nodi trave-pilastro non confinati' },
                       { value: 'plinti_isolati', label: 'Plinti isolati in zona sismica' },
@@ -1446,15 +1445,10 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
   }
 
   // Maggiorazioni per documentazione mancante
-  if (data.documentazioneDisponibile.includes('nessuna')) {
-    maggiorazioni.push({ descrizione: 'Assenza documentazione completa', importo: 1500 });
-  } else {
-    if (!data.documentazioneDisponibile.includes('progetto')) {
-      maggiorazioni.push({ descrizione: 'Assenza progetto originale', importo: 800 });
-    }
-    if (!data.documentazioneDisponibile.includes('relazione')) {
-      maggiorazioni.push({ descrizione: 'Assenza relazione calcolo', importo: 600 });
-    }
+  if (data.documentazioneDisponibile.includes('nessuna') ||
+      !data.documentazioneDisponibile.includes('progetto') ||
+      !data.documentazioneDisponibile.includes('relazione')) {
+    maggiorazioni.push({ descrizione: 'Assenza documentazione', importo: 1500 });
   }
 
   // Maggiorazione edificio vincolato
