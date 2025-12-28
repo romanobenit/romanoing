@@ -1008,16 +1008,27 @@ export default async function BundlePage({ params }: PageProps) {
             Pronto a Richiedere il Preventivo?
           </h2>
           <p className="text-xl mb-8 text-blue-100">
-            Compila il quiz per ottenere un preventivo personalizzato entro 24 ore.
+            {bundle.codice === 'BDL-ANTINCENDIO'
+              ? 'Usa il nostro configuratore intelligente per ottenere un preventivo personalizzato in tempo reale.'
+              : 'Compila il quiz per ottenere un preventivo personalizzato entro 24 ore.'
+            }
             <br />
             <span className="font-semibold">Certificato ISO 9001 | Sicurezza dati ISO 27001</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
-              <Link href={`/quiz?bundle=${bundle.codice}`}>
-                🎯 Richiedi Preventivo per {bundle.nome}
-              </Link>
-            </Button>
+            {bundle.codice === 'BDL-ANTINCENDIO' ? (
+              <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
+                <Link href="/configuratore/antincendio">
+                  🔥 Configuratore Preventivo Antincendio
+                </Link>
+              </Button>
+            ) : (
+              <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
+                <Link href={`/quiz?bundle=${bundle.codice}`}>
+                  🎯 Richiedi Preventivo per {bundle.nome}
+                </Link>
+              </Button>
+            )}
             <Button
               asChild
               size="lg"
