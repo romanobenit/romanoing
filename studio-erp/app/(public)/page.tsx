@@ -354,8 +354,8 @@ export default function HomePage() {
                   ✓ Certificato collaudo
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-COLLAUDO">
-                    Preventivo →
+                  <Link href="/configuratore/collaudo">
+                    Configuratore →
                   </Link>
                 </Button>
               </div>
