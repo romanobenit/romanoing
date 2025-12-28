@@ -571,7 +571,7 @@ export default function HomePage() {
       {/* Footer */}
       <footer className="border-t bg-gray-50 py-12">
         <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8">
+          <div className="grid md:grid-cols-3 gap-8">
             <div>
               <h3 className="font-bold text-lg mb-4">Studio Ing. Romano</h3>
               <p className="text-gray-600 text-sm mb-4">
@@ -583,17 +583,12 @@ export default function HomePage() {
               </div>
             </div>
             <div>
-              <h3 className="font-bold text-lg mb-4">Servizi Privati</h3>
+              <h3 className="font-bold text-lg mb-4">Servizi</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/bundle/BDL-CONSULENZA" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
                 <li><Link href="/bundle/BDL-RISTR-BONUS" className="hover:text-blue-600">Ristrutturazione</Link></li>
                 <li><Link href="/bundle/BDL-DUE-DILIGENCE" className="hover:text-blue-600">Due Diligence</Link></li>
                 <li><Link href="/bundle/BDL-EFF-ENERGETICO" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-4">Servizi Aziende/PA</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">Ampliamento Produttivo</Link></li>
                 <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
                 <li><Link href="/bundle/BDL-ANTINCENDIO" className="hover:text-blue-600">Antincendio</Link></li>
