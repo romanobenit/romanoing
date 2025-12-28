@@ -151,7 +151,10 @@ export default function ConfiguratoreDueDiligence() {
   }, [data]);
 
   const calcolaPreventivo = (data: ConfiguratoreDueDiligenceData): Preventivo => {
-    // Calcolo prezzo base considerando superficie totale e numero unità con incrementi decrescenti
+    // Calcolo prezzo base sulla superficie per singola unità immobiliare
+    // La superficie totale viene divisa per il numero di UIU per ottenere la superficie unitaria
+    // Il prezzo al mq viene applicato alla superficie unitaria
+    // Gli sconti progressivi vengono poi applicati su ogni unità
 
     // Prezzi base minimi per tipologia
     const prezziBaseTipologia: Record<string, number> = {
@@ -164,7 +167,7 @@ export default function ConfiguratoreDueDiligence() {
       mixeduse: 2800,
     };
 
-    // Incrementi per superficie con scaglioni decrescenti (da €200/mq iniziale a €20/mq finale)
+    // Incrementi per superficie con scaglioni decrescenti (da €10-15/mq iniziale a €1-2/mq finale)
     const scaglioniSuperficie: Record<string, { min: number; max: number; euroMq: number }[]> = {
       residenziale: [
         { min: 0, max: 200, euroMq: 10 },      // Prime 200mq: €10/mq
@@ -224,12 +227,17 @@ export default function ConfiguratoreDueDiligence() {
       ],
     };
 
-    let prezzoBase = prezziBaseTipologia[data.tipologiaImmobile] || 2000;
+    // Calcolo superficie per singola unità immobiliare
+    const superficiePerUnita = data.numeroUnita > 0
+      ? data.superficieCommerciale / data.numeroUnita
+      : data.superficieCommerciale;
 
-    // Calcolo incremento per superficie con scaglioni decrescenti
-    if (data.tipologiaImmobile && data.superficieCommerciale > 0) {
+    let prezzoSingolaUnita = prezziBaseTipologia[data.tipologiaImmobile] || 2000;
+
+    // Calcolo incremento per superficie unitaria con scaglioni decrescenti
+    if (data.tipologiaImmobile && superficiePerUnita > 0) {
       const scaglioni = scaglioniSuperficie[data.tipologiaImmobile] || scaglioniSuperficie.residenziale;
-      let superficieRimanente = data.superficieCommerciale;
+      let superficieRimanente = superficiePerUnita;
       let incrementoSuperficie = 0;
 
       for (const scaglione of scaglioni) {
@@ -244,11 +252,10 @@ export default function ConfiguratoreDueDiligence() {
         superficieRimanente -= superficieScaglione;
       }
 
-      prezzoBase += incrementoSuperficie;
+      prezzoSingolaUnita += incrementoSuperficie;
     }
 
-    // Salva prezzo unitario prima di applicare sconto
-    const prezzoSingolaUnita = prezzoBase;
+    let prezzoBase = prezzoSingolaUnita;
 
     // Sconto progressivo per numero unità (economia di scala)
     // 1ª unità: 0% sconto, 2ª unità: 20% sconto, 3ª unità: 40% sconto, 4ª unità: 60% sconto, ecc.
@@ -983,7 +990,10 @@ export default function ConfiguratoreDueDiligence() {
                       <div className="pb-4 border-b">
                         <div className="text-sm text-gray-600 mb-1">Prezzo base</div>
                         <div className="text-sm text-gray-500">
-                          {data.tipologiaImmobile || 'N/A'} • {data.superficieCommerciale || 0} mq
+                          {data.tipologiaImmobile || 'N/A'} • {data.superficieCommerciale || 0} mq totali
+                          {data.numeroUnita > 1 && (
+                            <> • {Math.round(data.superficieCommerciale / data.numeroUnita)} mq/unità</>
+                          )}
                         </div>
                         <div className="text-lg font-semibold text-gray-900">
                           €{preventivo.prezzoBase.toLocaleString('it-IT')}
