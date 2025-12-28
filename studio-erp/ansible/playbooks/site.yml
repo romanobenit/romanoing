@@ -1,0 +1,154 @@
+---
+# Master Playbook - Deploy Completo Studio ERP
+# Esegue tutti i playbook in sequenza per setup da zero
+
+- name: "Studio ERP - Full Deployment"
+  hosts: production
+  gather_facts: true
+  become: true
+
+  pre_tasks:
+    - name: Verifica connettività server
+      ansible.builtin.ping:
+      tags: always
+
+    - name: Display deployment info
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════════════════════
+          🚀  STUDIO ERP - DEPLOYMENT COMPLETO
+          ═══════════════════════════════════════════════════════
+          Target Host: {{ inventory_hostname }}
+          IP Address: {{ ansible_host }}
+          Environment: {{ env }}
+          Domain: {{ app_domain }}
+          ═══════════════════════════════════════════════════════
+      tags: always
+
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: true
+        cache_valid_time: 3600
+      tags: always
+
+# ═════════════════════════════════════════════════════════════
+# FASE 1: Configurazione Base Sistema
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 1: Common System Configuration"
+  ansible.builtin.import_playbook: common.yml
+  tags: [common, phase1]
+
+# ═════════════════════════════════════════════════════════════
+# FASE 2: Security Hardening
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 2: Security Hardening"
+  ansible.builtin.import_playbook: security.yml
+  tags: [security, phase2]
+
+# ═════════════════════════════════════════════════════════════
+# FASE 3: Database Setup
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 3: PostgreSQL Database"
+  ansible.builtin.import_playbook: database.yml
+  tags: [database, phase3]
+
+# ═════════════════════════════════════════════════════════════
+# FASE 4: Application Deployment
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 4: Next.js Application"
+  ansible.builtin.import_playbook: application.yml
+  tags: [application, phase4]
+
+# ═════════════════════════════════════════════════════════════
+# FASE 5: Monitoring Stack
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 5: Monitoring (Prometheus + Grafana)"
+  ansible.builtin.import_playbook: monitoring.yml
+  tags: [monitoring, phase5]
+  when: monitoring_enabled | default(true)
+
+# ═════════════════════════════════════════════════════════════
+# FASE 6: Backup Configuration
+# ═════════════════════════════════════════════════════════════
+
+- name: "FASE 6: Backup Automation"
+  ansible.builtin.import_playbook: backup.yml
+  tags: [backup, phase6]
+
+# ═════════════════════════════════════════════════════════════
+# POST-DEPLOYMENT: Verification
+# ═════════════════════════════════════════════════════════════
+
+- name: "Post-Deployment Verification"
+  hosts: production
+  gather_facts: false
+  become: true
+  tags: [verify, always]
+
+  tasks:
+    - name: Verifica servizi running
+      ansible.builtin.systemd:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      check_mode: true
+      register: service_status
+      loop:
+        - postgresql
+        - nginx
+        - fail2ban
+      ignore_errors: true
+
+    - name: Verifica applicazione Next.js (pm2)
+      ansible.builtin.command: pm2 list
+      become_user: "{{ app_user }}"
+      register: pm2_status
+      changed_when: false
+
+    - name: Test health check endpoint
+      ansible.builtin.uri:
+        url: "https://{{ app_domain }}/api/health"
+        method: GET
+        validate_certs: true
+        timeout: 10
+      register: health_check
+      ignore_errors: true
+      delegate_to: localhost
+
+    - name: Display deployment summary
+      ansible.builtin.debug:
+        msg: |
+          ═══════════════════════════════════════════════════════
+          ✅  DEPLOYMENT COMPLETATO CON SUCCESSO!
+          ═══════════════════════════════════════════════════════
+
+          📊 Stato Servizi:
+          {% for item in service_status.results %}
+            {{ '✓' if item.state == 'started' else '✗' }} {{ item.item }}
+          {% endfor %}
+
+          📱 Applicazione:
+          {{ pm2_status.stdout | default('N/A') }}
+
+          🌐 Endpoint:
+            - Web: https://{{ app_domain }}
+            - Health: https://{{ app_domain }}/api/health
+            {% if monitoring_enabled | default(true) %}
+            - Prometheus: http://{{ ansible_host }}:9090
+            - Grafana: http://{{ ansible_host }}:3001
+            {% endif %}
+
+          📋 Prossimi Step:
+            1. Verifica DNS: dig +short {{ app_domain }}
+            2. Test login: https://{{ app_domain }}/auth/signin
+            3. Import bundle: npm run db:update-bundle
+            4. Configure Stripe webhook: {{ app_domain }}/api/webhooks/stripe
+            5. Monitor logs: pm2 logs {{ app_name }}
+
+          ═══════════════════════════════════════════════════════

@@ -238,16 +238,21 @@ ORDER BY
 SELECT 'Totale bundle attivi: ' || COUNT(*) as status FROM bundle WHERE attivo = true;
 
 -- Verifica somma percentuali = 100
+WITH bundle_percentuali AS (
+  SELECT
+    codice,
+    nome,
+    (
+      SELECT SUM((m->>'percentuale')::numeric)
+      FROM jsonb_array_elements(milestone) AS m
+    ) as somma_percentuali
+  FROM bundle
+)
 SELECT
   codice,
   nome,
-  (
-    SELECT SUM((m->>'percentuale')::numeric)
-    FROM jsonb_array_elements(milestone) AS m
-  ) as somma_percentuali
-FROM bundle
-HAVING (
-  SELECT SUM((m->>'percentuale')::numeric)
-  FROM jsonb_array_elements(milestone) AS m
-) != 100;
+  somma_percentuali,
+  'ERRORE: milestone non sommano a 100%' as errore
+FROM bundle_percentuali
+WHERE somma_percentuali != 100;
 -- Se questa query ritorna righe, ci sono bundle con milestone che non sommano a 100%

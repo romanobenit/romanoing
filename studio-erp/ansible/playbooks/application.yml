@@ -1,0 +1,240 @@
+---
+# Next.js Application Deployment
+# - Node.js, Git clone, build, pm2, Nginx, SSL
+
+- name: Deploy Next.js Application
+  hosts: production
+  gather_facts: true
+  become: true
+
+  tasks:
+    # ═══════════════════════════════════════════════════════
+    # Node.js Installation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Add NodeSource GPG key
+      ansible.builtin.apt_key:
+        url: https://deb.nodesource.com/gpgkey/nodesource.gpg.key
+        state: present
+      tags: nodejs
+
+    - name: Add NodeSource repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://deb.nodesource.com/node_{{ nodejs_version }}.x {{ ansible_distribution_release }} main"
+        state: present
+        filename: nodesource
+      tags: nodejs
+
+    - name: Install Node.js {{ nodejs_version }}
+      ansible.builtin.apt:
+        name: nodejs
+        state: present
+        update_cache: true
+      tags: nodejs
+
+    - name: Install pm2 globally
+      community.general.npm:
+        name: pm2
+        global: true
+        state: present
+      tags: nodejs
+
+    - name: Configure pm2 startup script
+      ansible.builtin.shell: |
+        env PATH=$PATH:/usr/bin pm2 startup systemd -u {{ app_user }} --hp /home/{{ app_user }}
+      args:
+        creates: /etc/systemd/system/pm2-{{ app_user }}.service
+      tags: nodejs
+
+    # ═══════════════════════════════════════════════════════
+    # Application Deployment
+    # ═══════════════════════════════════════════════════════
+
+    - name: Clone application repository
+      ansible.builtin.git:
+        repo: "{{ app_repository }}"
+        dest: "{{ app_directory }}"
+        version: "{{ app_repository_branch }}"
+        force: true
+      become_user: "{{ app_user }}"
+      tags: [deploy, git]
+
+    - name: Navigate to studio-erp subdirectory
+      ansible.builtin.set_fact:
+        app_working_dir: "{{ app_directory }}/studio-erp"
+      tags: deploy
+
+    - name: Create .env file from template
+      ansible.builtin.template:
+        src: ../templates/env.j2
+        dest: "{{ app_working_dir }}/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0600'
+      tags: [deploy, env]
+
+    - name: Install Node.js dependencies
+      community.general.npm:
+        path: "{{ app_working_dir }}"
+        state: present
+        ci: true  # Use npm ci for reproducible builds
+      become_user: "{{ app_user }}"
+      tags: [deploy, npm]
+
+    - name: Generate Prisma Client
+      ansible.builtin.command:
+        cmd: npx prisma generate
+        chdir: "{{ app_working_dir }}"
+      become_user: "{{ app_user }}"
+      changed_when: true
+      tags: [deploy, prisma]
+
+    - name: Run Prisma migrations
+      ansible.builtin.command:
+        cmd: npx prisma migrate deploy
+        chdir: "{{ app_working_dir }}"
+      become_user: "{{ app_user }}"
+      changed_when: true
+      tags: [deploy, prisma]
+
+    - name: Build Next.js application
+      ansible.builtin.command:
+        cmd: npm run build
+        chdir: "{{ app_working_dir }}"
+      become_user: "{{ app_user }}"
+      environment:
+        NODE_ENV: production
+      changed_when: true
+      tags: [deploy, build]
+
+    # ═══════════════════════════════════════════════════════
+    # PM2 Configuration
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create pm2 ecosystem file
+      ansible.builtin.copy:
+        dest: "{{ app_working_dir }}/ecosystem.config.js"
+        content: |
+          module.exports = {
+            apps: [{
+              name: '{{ app_name }}',
+              script: 'npm',
+              args: 'start',
+              cwd: '{{ app_working_dir }}',
+              instances: {{ app_workers }},
+              exec_mode: 'cluster',
+              env: {
+                NODE_ENV: 'production',
+                PORT: {{ app_port }}
+              },
+              error_file: '/home/{{ app_user }}/.pm2/logs/{{ app_name }}-error.log',
+              out_file: '/home/{{ app_user }}/.pm2/logs/{{ app_name }}-out.log',
+              merge_logs: true,
+              time: true,
+              autorestart: true,
+              max_restarts: 10,
+              min_uptime: '10s',
+              max_memory_restart: '500M'
+            }]
+          };
+        owner: "{{ app_user }}"
+        group: "{{ app_group }}"
+        mode: '0644'
+      tags: [deploy, pm2]
+
+    - name: Start application with pm2
+      ansible.builtin.shell: |
+        pm2 delete {{ app_name }} || true
+        pm2 start ecosystem.config.js
+        pm2 save
+      args:
+        chdir: "{{ app_working_dir }}"
+      become_user: "{{ app_user }}"
+      changed_when: true
+      tags: [deploy, pm2]
+
+    # ═══════════════════════════════════════════════════════
+    # Nginx Reverse Proxy
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install Nginx
+      ansible.builtin.apt:
+        name: nginx
+        state: present
+      tags: nginx
+
+    - name: Remove default Nginx site
+      ansible.builtin.file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+      notify: reload nginx
+      tags: nginx
+
+    - name: Create Nginx configuration for Studio ERP
+      ansible.builtin.template:
+        src: ../templates/nginx-site.conf.j2
+        dest: "/etc/nginx/sites-available/{{ app_name }}"
+        mode: '0644'
+      notify: reload nginx
+      tags: nginx
+
+    - name: Enable Nginx site
+      ansible.builtin.file:
+        src: "/etc/nginx/sites-available/{{ app_name }}"
+        dest: "/etc/nginx/sites-enabled/{{ app_name }}"
+        state: link
+      notify: reload nginx
+      tags: nginx
+
+    - name: Test Nginx configuration
+      ansible.builtin.command: nginx -t
+      changed_when: false
+      tags: nginx
+
+    - name: Ensure Nginx is started and enabled
+      ansible.builtin.systemd:
+        name: nginx
+        state: started
+        enabled: true
+      tags: nginx
+
+    # ═══════════════════════════════════════════════════════
+    # SSL/TLS (Let's Encrypt)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install Certbot
+      ansible.builtin.apt:
+        name:
+          - certbot
+          - python3-certbot-nginx
+        state: present
+      tags: ssl
+
+    - name: Obtain Let's Encrypt certificate
+      ansible.builtin.command:
+        cmd: >
+          certbot --nginx -d {{ app_domain }}
+          --non-interactive --agree-tos
+          --email {{ letsencrypt_email }}
+          --redirect
+      args:
+        creates: "/etc/letsencrypt/live/{{ app_domain }}/fullchain.pem"
+      tags: ssl
+
+    - name: Setup Certbot auto-renewal cron
+      ansible.builtin.cron:
+        name: "Certbot renewal"
+        minute: "0"
+        hour: "3"
+        job: "/usr/bin/certbot renew --quiet --post-hook 'systemctl reload nginx'"
+      tags: ssl
+
+  # ═══════════════════════════════════════════════════════
+  # Handlers
+  # ═══════════════════════════════════════════════════════
+
+  handlers:
+    - name: reload nginx
+      ansible.builtin.systemd:
+        name: nginx
+        state: reloaded
