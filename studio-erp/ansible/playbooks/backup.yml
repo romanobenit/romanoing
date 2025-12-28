@@ -1,0 +1,400 @@
+---
+# Backup Automation Setup
+# - PostgreSQL backup, File backup, Encryption, Storage Box sync
+
+- name: Backup Automation Setup
+  hosts: production
+  gather_facts: true
+  become: true
+
+  tasks:
+    # ═══════════════════════════════════════════════════════
+    # Create Backup Directories
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create backup directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: root
+        group: root
+        mode: '0700'
+      loop:
+        - /backup
+        - /backup/daily
+        - /backup/weekly
+        - /backup/monthly
+        - /backup/postgresql
+        - /backup/files
+        - /opt/backup
+      tags: backup
+
+    # ═══════════════════════════════════════════════════════
+    # Backup Scripts
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create PostgreSQL backup script
+      ansible.builtin.copy:
+        dest: /opt/backup/backup-db.sh
+        content: |
+          #!/bin/bash
+          # PostgreSQL Backup Script - Studio ERP
+          # ISO 27001 Compliant
+
+          set -euo pipefail
+
+          # Configuration
+          DB_NAME="{{ postgresql_database }}"
+          DB_USER="{{ postgresql_user }}"
+          BACKUP_DIR="/backup/postgresql"
+          RETENTION_DAYS={{ backup_retention_days }}
+          ENCRYPTION_PASS="{{ vault_backup_encryption_passphrase }}"
+          LOG_FILE="/var/log/backup.log"
+
+          # Timestamp
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          DATE=$(date +%Y-%m-%d)
+          BACKUP_FILE="${BACKUP_DIR}/studio_erp_${TIMESTAMP}.sql"
+          ENCRYPTED_FILE="${BACKUP_FILE}.gpg"
+
+          # Logging function
+          log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+          }
+
+          log "=== PostgreSQL Backup Started ==="
+
+          # Create backup
+          log "Creating database dump..."
+          PGPASSWORD="{{ vault_postgresql_password }}" pg_dump \
+              -h localhost \
+              -U "$DB_USER" \
+              -d "$DB_NAME" \
+              -F custom \
+              -f "$BACKUP_FILE" \
+              --verbose 2>&1 | tee -a "$LOG_FILE"
+
+          if [ $? -eq 0 ]; then
+              log "Database dump completed: $BACKUP_FILE"
+          else
+              log "ERROR: Database dump failed"
+              exit 1
+          fi
+
+          # Get backup size
+          BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+          log "Backup size: $BACKUP_SIZE"
+
+          # Encrypt backup
+          log "Encrypting backup..."
+          echo "$ENCRYPTION_PASS" | gpg \
+              --batch \
+              --yes \
+              --passphrase-fd 0 \
+              --symmetric \
+              --cipher-algo AES256 \
+              --output "$ENCRYPTED_FILE" \
+              "$BACKUP_FILE"
+
+          if [ $? -eq 0 ]; then
+              log "Backup encrypted: $ENCRYPTED_FILE"
+              rm -f "$BACKUP_FILE"  # Remove unencrypted file
+          else
+              log "ERROR: Encryption failed"
+              exit 1
+          fi
+
+          # Calculate checksum
+          CHECKSUM=$(sha256sum "$ENCRYPTED_FILE" | cut -d' ' -f1)
+          log "SHA256: $CHECKSUM"
+          echo "$CHECKSUM" > "${ENCRYPTED_FILE}.sha256"
+
+          # Copy to daily backup directory
+          cp "$ENCRYPTED_FILE" "/backup/daily/studio_erp_${DATE}.sql.gpg"
+          cp "${ENCRYPTED_FILE}.sha256" "/backup/daily/studio_erp_${DATE}.sql.gpg.sha256"
+
+          # Weekly backup (every Sunday)
+          if [ $(date +%u) -eq 7 ]; then
+              log "Creating weekly backup..."
+              cp "$ENCRYPTED_FILE" "/backup/weekly/studio_erp_week_$(date +%V).sql.gpg"
+          fi
+
+          # Monthly backup (first day of month)
+          if [ $(date +%d) -eq 01 ]; then
+              log "Creating monthly backup..."
+              cp "$ENCRYPTED_FILE" "/backup/monthly/studio_erp_$(date +%Y-%m).sql.gpg"
+          fi
+
+          # Cleanup old daily backups (keep only RETENTION_DAYS)
+          log "Cleaning up old backups (retention: ${RETENTION_DAYS} days)..."
+          find /backup/daily -name "*.sql.gpg" -type f -mtime +${RETENTION_DAYS} -delete
+          find /backup/daily -name "*.sha256" -type f -mtime +${RETENTION_DAYS} -delete
+
+          # Cleanup old weekly backups (keep 12 weeks = ~3 months)
+          find /backup/weekly -name "*.sql.gpg" -type f -mtime +84 -delete
+
+          # Cleanup old monthly backups (keep 12 months)
+          find /backup/monthly -name "*.sql.gpg" -type f -mtime +365 -delete
+
+          log "=== PostgreSQL Backup Completed Successfully ==="
+        owner: root
+        group: root
+        mode: '0700'
+      tags: backup
+
+    - name: Create files backup script
+      ansible.builtin.copy:
+        dest: /opt/backup/backup-files.sh
+        content: |
+          #!/bin/bash
+          # Files Backup Script - Studio ERP
+          # Backup application files and uploads
+
+          set -euo pipefail
+
+          # Configuration
+          APP_DIR="{{ app_directory }}"
+          BACKUP_DIR="/backup/files"
+          RETENTION_DAYS={{ backup_retention_days }}
+          LOG_FILE="/var/log/backup.log"
+
+          # Timestamp
+          TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+          BACKUP_FILE="${BACKUP_DIR}/files_${TIMESTAMP}.tar.gz"
+
+          # Logging
+          log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+          }
+
+          log "=== Files Backup Started ==="
+
+          # Create tarball (exclude node_modules, .next build cache)
+          log "Creating files archive..."
+          tar -czf "$BACKUP_FILE" \
+              --exclude='node_modules' \
+              --exclude='.next' \
+              --exclude='.git' \
+              -C "$(dirname $APP_DIR)" \
+              "$(basename $APP_DIR)" \
+              2>&1 | tee -a "$LOG_FILE"
+
+          if [ $? -eq 0 ]; then
+              BACKUP_SIZE=$(du -h "$BACKUP_FILE" | cut -f1)
+              log "Files backup completed: $BACKUP_FILE (Size: $BACKUP_SIZE)"
+          else
+              log "ERROR: Files backup failed"
+              exit 1
+          fi
+
+          # Checksum
+          sha256sum "$BACKUP_FILE" > "${BACKUP_FILE}.sha256"
+
+          # Cleanup old backups
+          log "Cleaning up old file backups..."
+          find "$BACKUP_DIR" -name "files_*.tar.gz" -type f -mtime +${RETENTION_DAYS} -delete
+          find "$BACKUP_DIR" -name "*.sha256" -type f -mtime +${RETENTION_DAYS} -delete
+
+          log "=== Files Backup Completed Successfully ==="
+        owner: root
+        group: root
+        mode: '0700'
+      tags: backup
+
+    - name: Create backup verification script
+      ansible.builtin.copy:
+        dest: /opt/backup/verify-backup.sh
+        content: |
+          #!/bin/bash
+          # Backup Verification Script
+          # Test restore to ensure backups are valid
+
+          set -euo pipefail
+
+          LATEST_BACKUP=$(ls -t /backup/daily/*.sql.gpg | head -1)
+          ENCRYPTION_PASS="{{ vault_backup_encryption_passphrase }}"
+          LOG_FILE="/var/log/backup.log"
+
+          log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+          }
+
+          log "=== Backup Verification Started ==="
+          log "Testing backup: $LATEST_BACKUP"
+
+          # Verify checksum
+          if sha256sum -c "${LATEST_BACKUP}.sha256"; then
+              log "✓ Checksum valid"
+          else
+              log "✗ Checksum verification failed"
+              exit 1
+          fi
+
+          # Test decryption (without full restore)
+          echo "$ENCRYPTION_PASS" | gpg \
+              --batch \
+              --passphrase-fd 0 \
+              --decrypt "$LATEST_BACKUP" > /dev/null 2>&1
+
+          if [ $? -eq 0 ]; then
+              log "✓ Decryption test successful"
+          else
+              log "✗ Decryption failed"
+              exit 1
+          fi
+
+          log "=== Backup Verification Completed Successfully ==="
+        owner: root
+        group: root
+        mode: '0700'
+      tags: backup
+
+    # ═══════════════════════════════════════════════════════
+    # Hetzner Storage Box Setup (Optional)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install rsync
+      ansible.builtin.apt:
+        name: rsync
+        state: present
+      when: vault_backup_storage_box_host is defined
+      tags: [backup, storage-box]
+
+    - name: Create Storage Box sync script
+      ansible.builtin.copy:
+        dest: /opt/backup/sync-to-storage-box.sh
+        content: |
+          #!/bin/bash
+          # Sync backups to Hetzner Storage Box
+
+          set -euo pipefail
+
+          STORAGE_BOX_USER="{{ vault_backup_storage_box_user }}"
+          STORAGE_BOX_HOST="{{ vault_backup_storage_box_host }}"
+          STORAGE_BOX_PATH="studio-erp-backups"
+          LOG_FILE="/var/log/backup.log"
+
+          log() {
+              echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" | tee -a "$LOG_FILE"
+          }
+
+          log "=== Storage Box Sync Started ==="
+
+          # Sync daily backups
+          sshpass -p "{{ vault_backup_storage_box_password }}" rsync -avz \
+              --delete \
+              /backup/daily/ \
+              "${STORAGE_BOX_USER}@${STORAGE_BOX_HOST}:${STORAGE_BOX_PATH}/daily/" \
+              2>&1 | tee -a "$LOG_FILE"
+
+          # Sync weekly backups
+          sshpass -p "{{ vault_backup_storage_box_password }}" rsync -avz \
+              --delete \
+              /backup/weekly/ \
+              "${STORAGE_BOX_USER}@${STORAGE_BOX_HOST}:${STORAGE_BOX_PATH}/weekly/" \
+              2>&1 | tee -a "$LOG_FILE"
+
+          # Sync monthly backups
+          sshpass -p "{{ vault_backup_storage_box_password }}" rsync -avz \
+              --delete \
+              /backup/monthly/ \
+              "${STORAGE_BOX_USER}@${STORAGE_BOX_HOST}:${STORAGE_BOX_PATH}/monthly/" \
+              2>&1 | tee -a "$LOG_FILE"
+
+          log "=== Storage Box Sync Completed ==="
+        owner: root
+        group: root
+        mode: '0700'
+      when: vault_backup_storage_box_host is defined
+      tags: [backup, storage-box]
+
+    - name: Install sshpass (for Storage Box authentication)
+      ansible.builtin.apt:
+        name: sshpass
+        state: present
+      when: vault_backup_storage_box_host is defined
+      tags: [backup, storage-box]
+
+    # ═══════════════════════════════════════════════════════
+    # Cron Jobs
+    # ═══════════════════════════════════════════════════════
+
+    - name: Schedule PostgreSQL backup (daily at 3:00 AM)
+      ansible.builtin.cron:
+        name: "PostgreSQL daily backup"
+        minute: "0"
+        hour: "3"
+        job: "/opt/backup/backup-db.sh >> /var/log/backup.log 2>&1"
+        user: root
+      tags: backup
+
+    - name: Schedule files backup (daily at 3:30 AM)
+      ansible.builtin.cron:
+        name: "Files daily backup"
+        minute: "30"
+        hour: "3"
+        job: "/opt/backup/backup-files.sh >> /var/log/backup.log 2>&1"
+        user: root
+      tags: backup
+
+    - name: Schedule backup verification (weekly on Sunday at 4:00 AM)
+      ansible.builtin.cron:
+        name: "Weekly backup verification"
+        minute: "0"
+        hour: "4"
+        weekday: "0"
+        job: "/opt/backup/verify-backup.sh >> /var/log/backup.log 2>&1"
+        user: root
+      tags: backup
+
+    - name: Schedule Storage Box sync (daily at 5:00 AM)
+      ansible.builtin.cron:
+        name: "Sync to Storage Box"
+        minute: "0"
+        hour: "5"
+        job: "/opt/backup/sync-to-storage-box.sh >> /var/log/backup.log 2>&1"
+        user: root
+      when: vault_backup_storage_box_host is defined
+      tags: [backup, storage-box]
+
+    # ═══════════════════════════════════════════════════════
+    # Backup Log Rotation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Configure logrotate for backup logs
+      ansible.builtin.copy:
+        dest: /etc/logrotate.d/backup
+        content: |
+          /var/log/backup.log {
+              daily
+              rotate 90
+              compress
+              delaycompress
+              missingok
+              notifempty
+              create 0640 root root
+          }
+        mode: '0644'
+      tags: backup
+
+    # ═══════════════════════════════════════════════════════
+    # Initial Backup Test
+    # ═══════════════════════════════════════════════════════
+
+    - name: Run initial PostgreSQL backup test
+      ansible.builtin.command: /opt/backup/backup-db.sh
+      register: backup_test
+      changed_when: true
+      tags: [backup, test]
+
+    - name: Display backup test results
+      ansible.builtin.debug:
+        msg: "{{ backup_test.stdout_lines }}"
+      tags: [backup, test]
+
+    - name: Verify backup was created
+      ansible.builtin.stat:
+        path: /backup/postgresql
+      register: backup_dir
+      failed_when: not backup_dir.stat.exists
+      tags: [backup, test]

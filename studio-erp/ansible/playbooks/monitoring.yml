@@ -1,0 +1,541 @@
+---
+# Monitoring Stack Setup
+# - Prometheus, Grafana, Node Exporter, PostgreSQL Exporter
+
+- name: Monitoring Stack Setup
+  hosts: production
+  gather_facts: true
+  become: true
+
+  vars:
+    prometheus_version: "2.48.0"
+    node_exporter_version: "1.7.0"
+    postgres_exporter_version: "0.15.0"
+    grafana_version: "10.2.2"
+
+  tasks:
+    # ═══════════════════════════════════════════════════════
+    # Create Monitoring User
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create prometheus system user
+      ansible.builtin.user:
+        name: prometheus
+        shell: /bin/false
+        system: true
+        create_home: false
+      tags: prometheus
+
+    # ═══════════════════════════════════════════════════════
+    # Prometheus Installation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Download Prometheus
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
+        dest: /tmp/prometheus.tar.gz
+        mode: '0644'
+      tags: prometheus
+
+    - name: Extract Prometheus
+      ansible.builtin.unarchive:
+        src: /tmp/prometheus.tar.gz
+        dest: /tmp/
+        remote_src: true
+      tags: prometheus
+
+    - name: Copy Prometheus binaries
+      ansible.builtin.copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/usr/local/bin/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: true
+      loop:
+        - prometheus
+        - promtool
+      tags: prometheus
+
+    - name: Create Prometheus directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+      loop:
+        - /etc/prometheus
+        - /var/lib/prometheus
+      tags: prometheus
+
+    - name: Copy Prometheus console files
+      ansible.builtin.copy:
+        src: "/tmp/prometheus-{{ prometheus_version }}.linux-amd64/{{ item }}"
+        dest: "/etc/prometheus/{{ item }}"
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+        remote_src: true
+      loop:
+        - consoles
+        - console_libraries
+      tags: prometheus
+
+    - name: Create Prometheus configuration
+      ansible.builtin.copy:
+        dest: /etc/prometheus/prometheus.yml
+        content: |
+          global:
+            scrape_interval: 15s
+            evaluation_interval: 15s
+            external_labels:
+              environment: '{{ env }}'
+              instance: 'studio-erp-{{ env }}'
+
+          scrape_configs:
+            # Prometheus self-monitoring
+            - job_name: 'prometheus'
+              static_configs:
+                - targets: ['localhost:9090']
+
+            # Node Exporter (system metrics)
+            - job_name: 'node'
+              static_configs:
+                - targets: ['localhost:9100']
+
+            # PostgreSQL Exporter
+            - job_name: 'postgresql'
+              static_configs:
+                - targets: ['localhost:9187']
+
+            # Next.js Application (custom metrics endpoint - se implementato)
+            - job_name: 'nextjs'
+              static_configs:
+                - targets: ['localhost:{{ app_port }}']
+              metrics_path: '/api/metrics'
+              scrape_interval: 30s
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: restart prometheus
+      tags: prometheus
+
+    - name: Create Prometheus systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/prometheus.service
+        content: |
+          [Unit]
+          Description=Prometheus
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          ExecStart=/usr/local/bin/prometheus \
+            --config.file=/etc/prometheus/prometheus.yml \
+            --storage.tsdb.path=/var/lib/prometheus/ \
+            --storage.tsdb.retention.time={{ prometheus_retention }} \
+            --web.console.templates=/etc/prometheus/consoles \
+            --web.console.libraries=/etc/prometheus/console_libraries
+
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: restart prometheus
+      tags: prometheus
+
+    - name: Start and enable Prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: started
+        enabled: true
+        daemon_reload: true
+      tags: prometheus
+
+    # ═══════════════════════════════════════════════════════
+    # Node Exporter Installation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Download Node Exporter
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/node_exporter.tar.gz
+        mode: '0644'
+      tags: node-exporter
+
+    - name: Extract Node Exporter
+      ansible.builtin.unarchive:
+        src: /tmp/node_exporter.tar.gz
+        dest: /tmp/
+        remote_src: true
+      tags: node-exporter
+
+    - name: Copy Node Exporter binary
+      ansible.builtin.copy:
+        src: "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter"
+        dest: /usr/local/bin/node_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: true
+      tags: node-exporter
+
+    - name: Create Node Exporter systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/node_exporter.service
+        content: |
+          [Unit]
+          Description=Node Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          ExecStart=/usr/local/bin/node_exporter \
+            --collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/) \
+            --collector.netclass.ignored-devices=^(veth.*|docker.*|br-.*)$$
+
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: restart node-exporter
+      tags: node-exporter
+
+    - name: Start and enable Node Exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: started
+        enabled: true
+        daemon_reload: true
+      tags: node-exporter
+
+    # ═══════════════════════════════════════════════════════
+    # PostgreSQL Exporter Installation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Download PostgreSQL Exporter
+      ansible.builtin.get_url:
+        url: "https://github.com/prometheus-community/postgres_exporter/releases/download/v{{ postgres_exporter_version }}/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64.tar.gz"
+        dest: /tmp/postgres_exporter.tar.gz
+        mode: '0644'
+      tags: postgres-exporter
+
+    - name: Extract PostgreSQL Exporter
+      ansible.builtin.unarchive:
+        src: /tmp/postgres_exporter.tar.gz
+        dest: /tmp/
+        remote_src: true
+      tags: postgres-exporter
+
+    - name: Copy PostgreSQL Exporter binary
+      ansible.builtin.copy:
+        src: "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64/postgres_exporter"
+        dest: /usr/local/bin/postgres_exporter
+        owner: prometheus
+        group: prometheus
+        mode: '0755'
+        remote_src: true
+      tags: postgres-exporter
+
+    - name: Create PostgreSQL Exporter environment file
+      ansible.builtin.copy:
+        dest: /etc/default/postgres_exporter
+        content: |
+          DATA_SOURCE_NAME="postgresql://{{ postgresql_user }}:{{ vault_postgresql_password }}@localhost:{{ postgresql_port }}/{{ postgresql_database }}?sslmode=require"
+        owner: prometheus
+        group: prometheus
+        mode: '0600'
+      tags: postgres-exporter
+
+    - name: Create PostgreSQL Exporter systemd service
+      ansible.builtin.copy:
+        dest: /etc/systemd/system/postgres_exporter.service
+        content: |
+          [Unit]
+          Description=PostgreSQL Exporter
+          Wants=network-online.target
+          After=network-online.target
+
+          [Service]
+          User=prometheus
+          Group=prometheus
+          Type=simple
+          EnvironmentFile=/etc/default/postgres_exporter
+          ExecStart=/usr/local/bin/postgres_exporter
+
+          Restart=always
+          RestartSec=5
+
+          [Install]
+          WantedBy=multi-user.target
+        mode: '0644'
+      notify: restart postgres-exporter
+      tags: postgres-exporter
+
+    - name: Start and enable PostgreSQL Exporter
+      ansible.builtin.systemd:
+        name: postgres_exporter
+        state: started
+        enabled: true
+        daemon_reload: true
+      tags: postgres-exporter
+
+    # ═══════════════════════════════════════════════════════
+    # Grafana Installation
+    # ═══════════════════════════════════════════════════════
+
+    - name: Add Grafana GPG key
+      ansible.builtin.apt_key:
+        url: https://apt.grafana.com/gpg.key
+        state: present
+      tags: grafana
+
+    - name: Add Grafana APT repository
+      ansible.builtin.apt_repository:
+        repo: "deb https://apt.grafana.com stable main"
+        state: present
+        filename: grafana
+      tags: grafana
+
+    - name: Install Grafana
+      ansible.builtin.apt:
+        name: grafana
+        state: present
+        update_cache: true
+      tags: grafana
+
+    - name: Configure Grafana
+      ansible.builtin.lineinfile:
+        path: /etc/grafana/grafana.ini
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        - { regexp: '^;http_port', line: 'http_port = {{ grafana_port }}' }
+        - { regexp: '^;domain', line: 'domain = {{ app_domain }}' }
+        - { regexp: '^;root_url', line: 'root_url = http://{{ ansible_host }}:{{ grafana_port }}' }
+        - { regexp: '^;admin_password', line: 'admin_password = {{ vault_grafana_admin_password }}' }
+      notify: restart grafana
+      tags: grafana
+
+    - name: Start and enable Grafana
+      ansible.builtin.systemd:
+        name: grafana-server
+        state: started
+        enabled: true
+      tags: grafana
+
+    - name: Wait for Grafana to start
+      ansible.builtin.wait_for:
+        port: "{{ grafana_port }}"
+        delay: 5
+        timeout: 60
+      tags: grafana
+
+    - name: Add Prometheus datasource to Grafana
+      ansible.builtin.uri:
+        url: "http://localhost:{{ grafana_port }}/api/datasources"
+        method: POST
+        user: admin
+        password: "{{ vault_grafana_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          name: Prometheus
+          type: prometheus
+          url: http://localhost:9090
+          access: proxy
+          isDefault: true
+        status_code: [200, 409]  # 409 = already exists
+      tags: grafana
+
+    # ═══════════════════════════════════════════════════════
+    # Grafana Dashboards
+    # ═══════════════════════════════════════════════════════
+
+    - name: Import Node Exporter dashboard
+      ansible.builtin.uri:
+        url: "http://localhost:{{ grafana_port }}/api/dashboards/import"
+        method: POST
+        user: admin
+        password: "{{ vault_grafana_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          dashboard:
+            id: 1860  # Node Exporter Full dashboard
+          overwrite: true
+          inputs:
+            - name: DS_PROMETHEUS
+              type: datasource
+              pluginId: prometheus
+              value: Prometheus
+        status_code: [200, 412]  # 412 = already exists
+      tags: grafana
+
+    - name: Import PostgreSQL dashboard
+      ansible.builtin.uri:
+        url: "http://localhost:{{ grafana_port }}/api/dashboards/import"
+        method: POST
+        user: admin
+        password: "{{ vault_grafana_admin_password }}"
+        force_basic_auth: true
+        body_format: json
+        body:
+          dashboard:
+            id: 9628  # PostgreSQL Database dashboard
+          overwrite: true
+          inputs:
+            - name: DS_PROMETHEUS
+              type: datasource
+              pluginId: prometheus
+              value: Prometheus
+        status_code: [200, 412]
+      tags: grafana
+
+    # ═══════════════════════════════════════════════════════
+    # Alerting Rules (Prometheus)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Create Prometheus alerting rules
+      ansible.builtin.copy:
+        dest: /etc/prometheus/alerts.yml
+        content: |
+          groups:
+            - name: studio_erp_alerts
+              interval: 30s
+              rules:
+                # High CPU usage
+                - alert: HighCPUUsage
+                  expr: 100 - (avg by(instance) (irate(node_cpu_seconds_total{mode="idle"}[5m])) * 100) > 80
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "High CPU usage on {{ $labels.instance }}"
+                    description: "CPU usage is above 80% (current: {{ $value }}%)"
+
+                # High memory usage
+                - alert: HighMemoryUsage
+                  expr: (node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) * 100 < 20
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "High memory usage on {{ $labels.instance }}"
+                    description: "Available memory is below 20% (current: {{ $value }}%)"
+
+                # Disk space low
+                - alert: DiskSpaceLow
+                  expr: (node_filesystem_avail_bytes / node_filesystem_size_bytes) * 100 < 20
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "Low disk space on {{ $labels.instance }}"
+                    description: "Disk {{ $labels.mountpoint }} has less than 20% free space"
+
+                # Service down
+                - alert: ServiceDown
+                  expr: up == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "Service {{ $labels.job }} down"
+                    description: "{{ $labels.job }} on {{ $labels.instance }} is down"
+
+                # PostgreSQL down
+                - alert: PostgreSQLDown
+                  expr: pg_up == 0
+                  for: 1m
+                  labels:
+                    severity: critical
+                  annotations:
+                    summary: "PostgreSQL is down"
+                    description: "PostgreSQL database is not responding"
+
+                # Too many database connections
+                - alert: TooManyDatabaseConnections
+                  expr: sum(pg_stat_activity_count) > 80
+                  for: 5m
+                  labels:
+                    severity: warning
+                  annotations:
+                    summary: "Too many PostgreSQL connections"
+                    description: "Number of connections: {{ $value }} (max: 100)"
+        owner: prometheus
+        group: prometheus
+        mode: '0644'
+      notify: reload prometheus
+      tags: prometheus
+
+    - name: Update Prometheus config to include alerts
+      ansible.builtin.lineinfile:
+        path: /etc/prometheus/prometheus.yml
+        insertafter: '^global:'
+        line: |2
+
+          rule_files:
+            - "alerts.yml"
+        state: present
+      notify: reload prometheus
+      tags: prometheus
+
+    # ═══════════════════════════════════════════════════════
+    # Cleanup
+    # ═══════════════════════════════════════════════════════
+
+    - name: Cleanup downloaded archives
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /tmp/prometheus.tar.gz
+        - /tmp/node_exporter.tar.gz
+        - /tmp/postgres_exporter.tar.gz
+        - "/tmp/prometheus-{{ prometheus_version }}.linux-amd64"
+        - "/tmp/node_exporter-{{ node_exporter_version }}.linux-amd64"
+        - "/tmp/postgres_exporter-{{ postgres_exporter_version }}.linux-amd64"
+      tags: cleanup
+
+  # ═══════════════════════════════════════════════════════
+  # Handlers
+  # ═══════════════════════════════════════════════════════
+
+  handlers:
+    - name: restart prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: restarted
+
+    - name: reload prometheus
+      ansible.builtin.systemd:
+        name: prometheus
+        state: reloaded
+
+    - name: restart node-exporter
+      ansible.builtin.systemd:
+        name: node_exporter
+        state: restarted
+
+    - name: restart postgres-exporter
+      ansible.builtin.systemd:
+        name: postgres_exporter
+        state: restarted
+
+    - name: restart grafana
+      ansible.builtin.systemd:
+        name: grafana-server
+        state: restarted

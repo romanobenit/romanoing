@@ -1,0 +1,252 @@
+---
+# Security Hardening Playbook
+# - Firewall (UFW), Fail2Ban, SSH hardening, Audit logging
+
+- name: Security Hardening
+  hosts: production
+  gather_facts: true
+  become: true
+
+  tasks:
+    # ═══════════════════════════════════════════════════════
+    # SSH Hardening
+    # ═══════════════════════════════════════════════════════
+
+    - name: Configure SSH daemon for security
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: "{{ item.regexp }}"
+        line: "{{ item.line }}"
+        state: present
+      loop:
+        - { regexp: '^#?PermitRootLogin', line: 'PermitRootLogin prohibit-password' }
+        - { regexp: '^#?PasswordAuthentication', line: 'PasswordAuthentication no' }
+        - { regexp: '^#?PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+        - { regexp: '^#?ChallengeResponseAuthentication', line: 'ChallengeResponseAuthentication no' }
+        - { regexp: '^#?UsePAM', line: 'UsePAM yes' }
+        - { regexp: '^#?X11Forwarding', line: 'X11Forwarding no' }
+        - { regexp: '^#?MaxAuthTries', line: 'MaxAuthTries 3' }
+        - { regexp: '^#?ClientAliveInterval', line: 'ClientAliveInterval 300' }
+        - { regexp: '^#?ClientAliveCountMax', line: 'ClientAliveCountMax 2' }
+      notify: restart sshd
+      tags: ssh
+
+    - name: Disable SSH Protocol 1
+      ansible.builtin.lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^#?Protocol'
+        line: 'Protocol 2'
+        state: present
+      notify: restart sshd
+      tags: ssh
+
+    # ═══════════════════════════════════════════════════════
+    # Firewall (UFW)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install UFW
+      ansible.builtin.apt:
+        name: ufw
+        state: present
+      tags: firewall
+
+    - name: Reset UFW to default
+      community.general.ufw:
+        state: reset
+      tags: firewall
+
+    - name: Set UFW default policies
+      community.general.ufw:
+        direction: "{{ item.direction }}"
+        policy: "{{ item.policy }}"
+      loop:
+        - { direction: 'incoming', policy: 'deny' }
+        - { direction: 'outgoing', policy: 'allow' }
+      tags: firewall
+
+    - name: Allow SSH (rate limited)
+      community.general.ufw:
+        rule: limit
+        port: "{{ ssh_port }}"
+        proto: tcp
+        comment: 'SSH with rate limiting'
+      tags: firewall
+
+    - name: Allow HTTP/HTTPS
+      community.general.ufw:
+        rule: allow
+        port: "{{ item }}"
+        proto: tcp
+      loop:
+        - "80"   # HTTP
+        - "443"  # HTTPS
+      tags: firewall
+
+    - name: Enable UFW
+      community.general.ufw:
+        state: enabled
+      tags: firewall
+
+    # ═══════════════════════════════════════════════════════
+    # Fail2Ban
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install Fail2Ban
+      ansible.builtin.apt:
+        name: fail2ban
+        state: present
+      tags: fail2ban
+
+    - name: Configure Fail2Ban (jail.local)
+      ansible.builtin.copy:
+        dest: /etc/fail2ban/jail.local
+        content: |
+          [DEFAULT]
+          bantime  = 3600
+          findtime = 600
+          maxretry = 3
+          destemail = {{ letsencrypt_email }}
+          sendername = Fail2Ban
+          action = %(action_)s
+
+          [sshd]
+          enabled = true
+          port = {{ ssh_port }}
+          filter = sshd
+          logpath = /var/log/auth.log
+          maxretry = 3
+
+          [nginx-http-auth]
+          enabled = true
+          filter = nginx-http-auth
+          logpath = /var/log/nginx/error.log
+
+          [nginx-limit-req]
+          enabled = true
+          filter = nginx-limit-req
+          logpath = /var/log/nginx/error.log
+        mode: '0644'
+      notify: restart fail2ban
+      tags: fail2ban
+
+    - name: Start and enable Fail2Ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: started
+        enabled: true
+      tags: fail2ban
+
+    # ═══════════════════════════════════════════════════════
+    # Kernel Hardening (sysctl)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Apply kernel hardening via sysctl
+      ansible.posix.sysctl:
+        name: "{{ item.name }}"
+        value: "{{ item.value }}"
+        state: present
+        reload: true
+      loop:
+        # IP Forwarding (disable)
+        - { name: 'net.ipv4.ip_forward', value: '0' }
+
+        # SYN Cookies (protection against SYN flood)
+        - { name: 'net.ipv4.tcp_syncookies', value: '1' }
+
+        # Ignore ICMP redirects
+        - { name: 'net.ipv4.conf.all.accept_redirects', value: '0' }
+        - { name: 'net.ipv6.conf.all.accept_redirects', value: '0' }
+
+        # Ignore source-routed packets
+        - { name: 'net.ipv4.conf.all.accept_source_route', value: '0' }
+
+        # Log martians (packets with impossible addresses)
+        - { name: 'net.ipv4.conf.all.log_martians', value: '1' }
+
+        # Ignore ICMP ping requests
+        - { name: 'net.ipv4.icmp_echo_ignore_all', value: '0' }  # Allow ping for monitoring
+
+        # Reverse path filtering
+        - { name: 'net.ipv4.conf.all.rp_filter', value: '1' }
+
+        # TCP hardening
+        - { name: 'net.ipv4.tcp_max_syn_backlog', value: '2048' }
+        - { name: 'net.ipv4.tcp_synack_retries', value: '2' }
+        - { name: 'net.ipv4.tcp_syn_retries', value: '5' }
+      tags: sysctl
+
+    # ═══════════════════════════════════════════════════════
+    # Audit Logging (auditd)
+    # ═══════════════════════════════════════════════════════
+
+    - name: Install auditd
+      ansible.builtin.apt:
+        name: auditd
+        state: present
+      tags: audit
+
+    - name: Configure audit rules (ISO 27001 compliance)
+      ansible.builtin.copy:
+        dest: /etc/audit/rules.d/studio-erp.rules
+        content: |
+          # Audit rules per Studio ERP (ISO 27001)
+
+          # Modifiche a file di sistema critici
+          -w /etc/passwd -p wa -k identity
+          -w /etc/group -p wa -k identity
+          -w /etc/shadow -p wa -k identity
+          -w /etc/sudoers -p wa -k sudoers
+
+          # SSH
+          -w /etc/ssh/sshd_config -p wa -k sshd
+
+          # Nginx
+          -w /etc/nginx/ -p wa -k nginx
+
+          # PostgreSQL
+          -w /etc/postgresql/ -p wa -k postgresql
+
+          # Login/Logout
+          -w /var/log/lastlog -p wa -k logins
+          -w /var/run/utmp -p wa -k logins
+
+          # Modifiche a file applicazione
+          -w {{ app_directory }} -p wa -k app_changes
+
+          # Kernel module loading
+          -w /sbin/insmod -p x -k modules
+          -w /sbin/rmmod -p x -k modules
+          -w /sbin/modprobe -p x -k modules
+
+          # Privilege escalation
+          -a always,exit -F arch=b64 -S setuid -S setgid -S setreuid -S setregid -k privilege_escalation
+        mode: '0640'
+      notify: restart auditd
+      tags: audit
+
+    - name: Start and enable auditd
+      ansible.builtin.systemd:
+        name: auditd
+        state: started
+        enabled: true
+      tags: audit
+
+  # ═══════════════════════════════════════════════════════
+  # Handlers
+  # ═══════════════════════════════════════════════════════
+
+  handlers:
+    - name: restart sshd
+      ansible.builtin.systemd:
+        name: sshd
+        state: restarted
+
+    - name: restart fail2ban
+      ansible.builtin.systemd:
+        name: fail2ban
+        state: restarted
+
+    - name: restart auditd
+      ansible.builtin.systemd:
+        name: auditd
+        state: restarted
