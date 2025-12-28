@@ -154,6 +154,19 @@ export default function ConfiguratoreCollaudo() {
   }, [data]);
 
   const calcolaPreventivo = (data: ConfiguratoreCollaudoData): Preventivo => {
+    // Prezzi base fissi per destinazione d'uso
+    const prezziBaseTipologia: Record<string, number> = {
+      residenziale: 1500,
+      commerciale: 2500,
+      industriale: 2000,
+      pubblico: 2000,
+      agricolo: 1500,
+      misto: 2000,
+    };
+
+    // Prezzo base fisso per tipologia
+    let prezzoBase = prezziBaseTipologia[data.destinazioneUso] || 0;
+
     // Prezzi base per superficie con scaglioni decrescenti
     const scaglioniSuperficie = [
       { min: 0, max: 200, euroMq: 8 },
@@ -164,7 +177,7 @@ export default function ConfiguratoreCollaudo() {
       { min: 5000, max: 999999, euroMq: 1.5 },
     ];
 
-    let prezzoBase = 0;
+    // Aggiungi costo superficie al prezzo base
     if (data.superficieTotale > 0) {
       let superficieRimanente = data.superficieTotale;
       for (const scaglione of scaglioniSuperficie) {
@@ -405,12 +418,12 @@ export default function ConfiguratoreCollaudo() {
                     className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-green-500 focus:border-transparent"
                   >
                     <option value="">Seleziona destinazione</option>
-                    <option value="residenziale">Residenziale</option>
-                    <option value="commerciale">Commerciale</option>
-                    <option value="industriale">Industriale</option>
-                    <option value="pubblico">Uso pubblico</option>
-                    <option value="agricolo">Agricolo</option>
-                    <option value="misto">Misto</option>
+                    <option value="residenziale">Residenziale (base €1.500)</option>
+                    <option value="commerciale">Commerciale (base €2.500)</option>
+                    <option value="industriale">Industriale (base €2.000)</option>
+                    <option value="pubblico">Uso pubblico (base €2.000)</option>
+                    <option value="agricolo">Agricolo (base €1.500)</option>
+                    <option value="misto">Misto (base €2.000)</option>
                   </select>
                 </div>
               </CardContent>
