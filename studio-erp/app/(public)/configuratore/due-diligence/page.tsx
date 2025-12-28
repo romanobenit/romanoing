@@ -88,6 +88,9 @@ const initialData: ConfiguratoreDueDiligenceData = {
 
 interface Preventivo {
   prezzoBase: number;
+  prezzoUnitario?: number; // Prezzo per singola unità (se numeroUnita > 1)
+  numeroUnita?: number; // Numero di unità
+  percentualeScontoUnita?: number; // Sconto applicato per economia di scala
   moltiplicatoreLivello: number;
   moltiplicatoreOperazione: number;
   moltiplicatoreUrgenza: number;
@@ -244,12 +247,22 @@ export default function ConfiguratoreDueDiligence() {
       prezzoBase += incrementoSuperficie;
     }
 
-    // Moltiplicatore per numero unità (economia di scala: +10% per unità aggiuntiva, decrescente)
+    // Salva prezzo unitario prima di applicare sconto
+    const prezzoSingolaUnita = prezzoBase;
+    let percentualeScontoUnita = 0;
+
+    // Sconto per numero unità (economia di scala: sconto crescente all'aumentare delle unità)
     if (data.numeroUnita > 1) {
-      // Formula: 1 + (numeroUnita - 1) * 0.10
-      // Es: 1 unità = 1.0x, 2 unità = 1.10x, 5 unità = 1.40x, 10 unità = 1.90x
-      const moltiplicatoreUnita = 1 + (data.numeroUnita - 1) * 0.10;
-      prezzoBase = Math.round(prezzoBase * moltiplicatoreUnita);
+      // Formula sconto progressivo:
+      // 2 unità = 10%, 3 unità = 15%, 5 unità = 25%, 10 unità = 40%, 20+ unità = 50% (max)
+      // Usa formula logaritmica per sconto progressivo
+      percentualeScontoUnita = Math.min(
+        5 + (data.numeroUnita - 1) * 5, // Base: 5% + 5% per ogni unità aggiuntiva
+        50 // Max 50% di sconto
+      );
+
+      const moltiplicatoreSconto = 1 - (percentualeScontoUnita / 100);
+      prezzoBase = Math.round(prezzoBase * data.numeroUnita * moltiplicatoreSconto);
     }
 
     // Moltiplicatori
@@ -366,6 +379,9 @@ export default function ConfiguratoreDueDiligence() {
 
     return {
       prezzoBase,
+      prezzoUnitario: data.numeroUnita > 1 ? prezzoSingolaUnita : undefined,
+      numeroUnita: data.numeroUnita > 1 ? data.numeroUnita : undefined,
+      percentualeScontoUnita: data.numeroUnita > 1 ? percentualeScontoUnita : undefined,
       moltiplicatoreLivello,
       moltiplicatoreOperazione,
       moltiplicatoreUrgenza,
@@ -960,6 +976,42 @@ export default function ConfiguratoreDueDiligence() {
                           €{preventivo.prezzoBase.toLocaleString('it-IT')}
                         </div>
                       </div>
+
+                      {/* Dettaglio unità immobiliari (se > 1) */}
+                      {preventivo.numeroUnita && preventivo.numeroUnita > 1 && (
+                        <div className="pb-4 border-b bg-green-50 -mx-6 px-6 py-3">
+                          <div className="text-sm font-medium text-green-800 mb-2">
+                            Economia di scala - {preventivo.numeroUnita} unità immobiliari
+                          </div>
+                          <div className="space-y-1 text-xs">
+                            <div className="flex justify-between text-gray-600">
+                              <span>Prezzo per singola unità</span>
+                              <span className="font-medium">
+                                €{preventivo.prezzoUnitario?.toLocaleString('it-IT')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                              <span>Numero unità</span>
+                              <span className="font-medium">×{preventivo.numeroUnita}</span>
+                            </div>
+                            <div className="flex justify-between text-gray-600">
+                              <span>Subtotale senza sconto</span>
+                              <span className="font-medium">
+                                €{((preventivo.prezzoUnitario || 0) * preventivo.numeroUnita).toLocaleString('it-IT')}
+                              </span>
+                            </div>
+                            <div className="flex justify-between text-green-700 font-semibold pt-1 border-t">
+                              <span>Sconto applicato ({preventivo.percentualeScontoUnita}%)</span>
+                              <span>
+                                -€{(((preventivo.prezzoUnitario || 0) * preventivo.numeroUnita) - preventivo.prezzoBase).toLocaleString('it-IT')}
+                              </span>
+                            </div>
+                          </div>
+                          <div className="text-xs text-green-700 mt-2 italic">
+                            Prezzo unitario effettivo: €{Math.round(preventivo.prezzoBase / preventivo.numeroUnita).toLocaleString('it-IT')} per unità
+                          </div>
+                        </div>
+                      )}
 
                       <div className="pb-4 border-b">
                         <div className="text-sm text-gray-600 mb-2">Moltiplicatori</div>
