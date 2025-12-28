@@ -304,12 +304,12 @@ export default function ConfiguratoreDueDiligence() {
 
     const totaleServiziAggiuntivi = serviziAggiuntivi.reduce((sum, s) => sum + s.importo, 0);
 
-    // Costo trasferta (fisso)
-    const costoTrasferta = data.costoTrasferta || 0;
+    // Costo trasferta (solo se ci sono sopralluoghi)
+    const costoTrasferta = data.numerosopralluoghi > 0 ? (data.costoTrasferta || 0) : 0;
 
-    // Costo sopralluoghi aggiuntivi
+    // Costo sopralluoghi aggiuntivi (solo se ci sono sopralluoghi)
     const sopralluogiAggiuntivi = Math.max(0, data.numerosopralluoghi - 1);
-    const costoSopralluoghi = sopralluogiAggiuntivi * (400 + costoTrasferta);
+    const costoSopralluoghi = data.numerosopralluoghi > 0 ? sopralluogiAggiuntivi * (400 + (data.costoTrasferta || 0)) : 0;
 
     // Totale finale
     const totale =
