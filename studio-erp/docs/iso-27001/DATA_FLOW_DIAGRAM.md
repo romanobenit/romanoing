@@ -4,7 +4,7 @@
 **Versione**: 1.0
 **Data**: 2025-12-27
 **Riferimento**: ISO/IEC 27001:2022 - Controllo A.8.11, GDPR Art. 30
-**Responsabile**: Ing. Romano Benedetto (Titolare)
+**Responsabile**: Ing. Romano Domenico (Titolare)
 **Stato**: PRODUCTION
 
 ---
@@ -814,12 +814,12 @@ stateDiagram-v2
 
 | Versione | Data | Autore | Modifiche |
 |----------|------|--------|-----------|
-| 1.0 | 2025-12-27 | Ing. Romano Benedetto | Creazione iniziale DFD completo |
+| 1.0 | 2025-12-27 | Ing. Romano Domenico | Creazione iniziale DFD completo |
 
 ---
 
 **Approvazione**:
-- **Titolare/CISO**: Ing. Romano Benedetto
+- **Titolare/CISO**: Ing. Romano Domenico
 - **Data**: 2025-12-27
 - **Firma**: _______________
 
