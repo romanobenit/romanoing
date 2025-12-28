@@ -9,10 +9,8 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   ChevronRight,
-  Flame,
   MapPin,
   Building2,
-  Users,
   Zap,
   FileText,
   Clock,
