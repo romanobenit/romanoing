@@ -4,7 +4,7 @@
 **Versione**: 1.0
 **Data**: 2025-12-27
 **Riferimento**: ISO/IEC 27001:2022 - Controllo A.5.24, A.5.25, A.5.26
-**Responsabile**: Ing. Romano Benedetto (Titolare + CISO)
+**Responsabile**: Ing. Romano Domenico (Titolare + CISO)
 **Stato**: PRODUCTION
 
 ---
@@ -134,8 +134,8 @@ Sottocategoria di incidente che comporta:
 
 | Ruolo | Persona | Responsabilità | Contatto |
 |-------|---------|----------------|----------|
-| **CISO / Incident Manager** | Ing. Romano Benedetto | Decisioni strategiche, comunicazione esterna, escalation | +39 XXX XXX XXXX |
-| **Technical Lead** | Ing. Romano Benedetto | Analisi tecnica, contenimento, remediation | benedetto.romano@studioromano.it |
+| **CISO / Incident Manager** | Ing. Romano Domenico | Decisioni strategiche, comunicazione esterna, escalation | +39 XXX XXX XXXX |
+| **Technical Lead** | Ing. Romano Domenico | Analisi tecnica, contenimento, remediation | domenico.romano@studioromano.it |
 | **Legal Advisor** | Avvocato Esterno | GDPR compliance, notifiche Garante, PR crisis | studio.legale@example.it |
 | **Hosting Provider Contact** | Hetzner Support | Isolamento VM, snapshot, supporto infrastruttura | +49 XXX XXX XXXX |
 
@@ -540,7 +540,7 @@ const incarichi = await prisma.incarico.findMany({
 
 ## Approval
 
-- **Incident Manager**: Ing. Romano Benedetto
+- **Incident Manager**: Ing. Romano Domenico
 - **Data**: 2026-01-02
 - **Firma**: _______________
 ```
@@ -664,7 +664,7 @@ OGGETTO: Notifica Violazione Dati Personali ai sensi Art. 33 GDPR
    - Prevenzione: WAF implementato, penetration test mensile
 
 5. REFERENTE
-   - Titolare: Ing. Romano Benedetto
+   - Titolare: Ing. Romano Domenico
    - Email: dpo@studioromano.it
    - Tel: +39 XXX XXX XXXX
 ```
@@ -724,7 +724,7 @@ Ci scusiamo per l'accaduto e ti assicuriamo il massimo impegno nella
 protezione dei tuoi dati.
 
 Cordiali saluti,
-Ing. Romano Benedetto
+Ing. Romano Domenico
 Studio Ing. Romano
 ```
 

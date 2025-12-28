@@ -4,7 +4,7 @@
 **Versione**: 1.0
 **Data**: 2025-12-27
 **Target Deployment**: Hetzner Cloud CX22
-**Responsabile**: Ing. Romano Benedetto
+**Responsabile**: Ing. Romano Domenico
 
 ---
 
@@ -55,7 +55,7 @@ Questa checklist garantisce che tutti i prerequisiti siano soddisfatti prima del
 
 ### 1.4 Email (Let's Encrypt)
 
-- [ ] Email valida configurata: `benedetto.romano@studioromano.it`
+- [ ] Email valida configurata: `domenico.romano@studioromano.it`
 - [ ] Inbox accessibile per notifiche certificati
 - [ ] Whitelist email da `letsencrypt.org` e `expiry@letsencrypt.org`
 
@@ -516,9 +516,9 @@ psql -h localhost -U studio_user -d studio_erp -c "SELECT codice, nome FROM bund
 **Opzione A: Via UI** (consigliato):
 - [ ] Aprire: https://erp.studioromano.it/auth/signup
 - [ ] Registrare primo utente:
-  - Email: `benedetto.romano@studioromano.it`
+  - Email: `domenico.romano@studioromano.it`
   - Password: (sicura, salvare in password manager)
-  - Nome: Benedetto Romano
+  - Nome: Domenico Romano
   - P.IVA: (P.IVA studio)
 - [ ] Confermare email (se email verification abilitata)
 
@@ -529,7 +529,7 @@ sudo -u postgres psql studio_erp
 
 UPDATE utente
 SET ruolo = 'TITOLARE'
-WHERE email = 'benedetto.romano@studioromano.it';
+WHERE email = 'domenico.romano@studioromano.it';
 
 \q
 ```
@@ -755,7 +755,7 @@ http://<IP_SERVER>:3001
 **Grafana Alerting** (se si vuole notifica email):
 - [ ] Grafana → Alerting → Notification channels → Add channel
 - [ ] Type: Email
-- [ ] Email: `benedetto.romano@studioromano.it`
+- [ ] Email: `domenico.romano@studioromano.it`
 - [ ] Test: Send Test
 - [ ] Save
 
@@ -990,7 +990,7 @@ tail -100 /var/log/postgresql/postgresql-16-main.log
   - Type: HTTPS
   - URL: `https://erp.studioromano.it/api/health`
   - Interval: 5 minutes
-  - Alert Contacts: Email `benedetto.romano@studioromano.it`
+  - Alert Contacts: Email `domenico.romano@studioromano.it`
 
 **Hetrixtools** (alternativa):
 - [ ] https://hetrixtools.com
@@ -1058,7 +1058,7 @@ tail -100 /var/log/postgresql/postgresql-16-main.log
 
 **Emergency**:
 - Titolare: +39 XXX XXX XXXX
-- Email: benedetto.romano@studioromano.it
+- Email: domenico.romano@studioromano.it
 
 ---
 
@@ -1091,5 +1091,5 @@ tail -100 /var/log/postgresql/postgresql-16-main.log
 **Fine Checklist**
 
 **Deployment Date**: __________________
-**Deployed By**: Ing. Romano Benedetto
+**Deployed By**: Ing. Romano Domenico
 **Signature**: __________________

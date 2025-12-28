@@ -3,6 +3,7 @@
 
 **Versione**: 1.0
 **Data**: 2025-12-27
+**Responsabile**: Ing. Romano Domenico
 **Tempo totale**: ~3 ore (setup) + 30 min (deploy)
 
 ---
@@ -283,9 +284,9 @@ npx prisma studio
 **Crea primo utente TITOLARE**:
 1. Browser: https://erp.studioromano.it/auth/signup
 2. Registra:
-   - Email: `benedetto.romano@studioromano.it`
+   - Email: `domenico.romano@studioromano.it`
    - Password: (sicura, salva in password manager)
-   - Nome: Benedetto Romano
+   - Nome: Domenico Romano
    - P.IVA: (reale)
 3. Login: https://erp.studioromano.it/auth/signin
 4. Verifica dashboard accessibile
@@ -296,7 +297,7 @@ npx prisma studio
 ssh root@<IP_SERVER>
 sudo -u postgres psql studio_erp
 
-UPDATE utente SET ruolo = 'TITOLARE' WHERE email = 'benedetto.romano@studioromano.it';
+UPDATE utente SET ruolo = 'TITOLARE' WHERE email = 'domenico.romano@studioromano.it';
 \q
 ```
 
@@ -632,9 +633,9 @@ tail -f /var/log/postgresql/postgresql-16-main.log
 
 ## 📞 Emergency Contacts
 
-**Titolare**: Ing. Romano Benedetto
+**Titolare**: Ing. Romano Domenico
 - Tel: +39 XXX XXX XXXX
-- Email: benedetto.romano@studioromano.it
+- Email: domenico.romano@studioromano.it
 
 **Infrastructure**:
 - Hetzner Support: https://console.hetzner.cloud/support
