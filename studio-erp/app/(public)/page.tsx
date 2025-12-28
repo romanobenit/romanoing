@@ -388,8 +388,8 @@ export default function HomePage() {
                   ✓ Assistenza sopralluogo
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-ANTINCENDIO">
-                    Preventivo →
+                  <Link href="/configuratore/antincendio">
+                    🔥 Configuratore →
                   </Link>
                 </Button>
               </div>
