@@ -24,7 +24,7 @@ import {
   Settings,
 } from 'lucide-react';
 
-import zonizzazioneSismica from '@/data/zonizzazione-sismica.json';
+import zonizzazioneSismica from '@/data/zonizzazione-sismica-completa.json';
 
 // Interfaccia dati configuratore
 interface ConfiguratoreSismicaData {
