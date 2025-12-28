@@ -707,13 +707,14 @@ const BUNDLES_DATA: Record<BundleCode, Bundle> = {
 };
 
 interface PageProps {
-  params: {
+  params: Promise<{
     codice: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps) {
-  const bundle = BUNDLES_DATA[params.codice as BundleCode];
+  const { codice } = await params;
+  const bundle = BUNDLES_DATA[codice as BundleCode];
 
   if (!bundle) {
     return {
@@ -734,8 +735,9 @@ export async function generateMetadata({ params }: PageProps) {
   };
 }
 
-export default function BundlePage({ params }: PageProps) {
-  const bundle = BUNDLES_DATA[params.codice as BundleCode];
+export default async function BundlePage({ params }: PageProps) {
+  const { codice } = await params;
+  const bundle = BUNDLES_DATA[codice as BundleCode];
 
   if (!bundle) {
     notFound();
