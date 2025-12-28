@@ -3,7 +3,7 @@
 
 **Versione**: 1.0
 **Data**: 2025-12-27
-**Responsabile**: Ing. Romano Benedetto
+**Responsabile**: Ing. Romano Domenico
 **Target**: Hetzner Cloud (Ubuntu 24.04 LTS)
 
 ---
@@ -429,7 +429,7 @@ nginx_worker_processes: "auto"
 nginx_client_max_body_size: "10M"
 
 # SSL/TLS
-letsencrypt_email: "benedetto.romano@studioromano.it"
+letsencrypt_email: "domenico.romano@studioromano.it"
 ssl_protocols: "TLSv1.2 TLSv1.3"
 
 # Backup
@@ -709,7 +709,7 @@ pm2 logs studio-erp --lines 20
 
 **Problemi Ansible**:
 - GitHub Issues: https://github.com/romanobenit/romanoing/issues
-- Email: benedetto.romano@studioromano.it
+- Email: domenico.romano@studioromano.it
 
 **Problemi Hetzner**:
 - Support Portal: https://console.hetzner.cloud/support

@@ -274,7 +274,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Condomini</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €5.000 - €25.000
@@ -376,7 +376,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Aziende / Condomini</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €2.000 - €8.000
@@ -410,7 +410,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati / Condomini</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €2.500 - €8.000

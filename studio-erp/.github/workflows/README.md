@@ -3,7 +3,7 @@
 
 **Versione**: 1.0
 **Data**: 2025-12-27
-**Responsabile**: Ing. Romano Benedetto
+**Responsabile**: Ing. Romano Domenico
 
 ---
 
@@ -508,7 +508,7 @@ gh api /repos/romanobenit/romanoing/actions/runs \
 
 **Problemi CI/CD**:
 - GitHub Issues: https://github.com/romanobenit/romanoing/issues
-- Email: benedetto.romano@studioromano.it
+- Email: domenico.romano@studioromano.it
 
 **GitHub Actions Docs**:
 - https://docs.github.com/en/actions
