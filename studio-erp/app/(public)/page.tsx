@@ -16,9 +16,9 @@ export default function HomePage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Studio Ing. Romano
+                  Studio Ing. Domenico Romano
                 </h1>
-                <p className="text-xs text-gray-600">Ingegneria Strutturale</p>
+                <p className="text-xs text-gray-600">Ingegneria e architettura</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -172,7 +172,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €180 - €600
@@ -206,7 +206,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €8.000 - €18.000
@@ -240,7 +240,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati / Aziende</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €1.500 - €4.000
@@ -308,7 +308,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Aziende</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €12.000 - €35.000
@@ -342,7 +342,7 @@ export default function HomePage() {
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati / Aziende</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
                   €2.500 - €12.000
@@ -460,7 +460,7 @@ export default function HomePage() {
               </div>
 
               <div className="bg-white rounded-lg p-6 border-2 border-green-500">
-                <div className="text-green-600 font-bold mb-2">✅ Studio Romano (Demand-Driven)</div>
+                <div className="text-green-600 font-bold mb-2">✅ Studio Ing. Domenico Romano (Demand-Driven)</div>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>• <strong>Servizio personalizzato</strong> su tue esigenze</li>
                   <li>• <strong>Preventivo ad-hoc</strong> entro 24 ore</li>
@@ -573,9 +573,9 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-bold text-lg mb-4">Studio Ing. Romano</h3>
+              <h3 className="font-bold text-lg mb-4">Studio Ing. Domenico Romano</h3>
               <p className="text-gray-600 text-sm mb-4">
-                Ingegneria strutturale certificata ISO 9001 e ISO 27001
+                Ingegneria e architettura certificata ISO 9001 e ISO 27001
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Badge variant="outline" className="text-xs">ISO 9001:2015</Badge>
@@ -606,7 +606,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-gray-600">
-            <p>© 2025 Studio Ing. Romano - P.IVA IT12345678901</p>
+            <p>© 2025 Studio Ing. Domenico Romano - P.IVA IT12345678901</p>
             <p className="mt-2">
               Certificato <strong>ISO 9001:2015</strong> (Qualità) | <strong>ISO 27001:2022</strong> (Sicurezza) |
               <strong> PCI-DSS Compliant</strong> (Pagamenti) | <strong>GDPR Compliant</strong> (Privacy)
