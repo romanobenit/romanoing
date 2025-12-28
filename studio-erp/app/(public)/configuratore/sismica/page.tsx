@@ -1445,8 +1445,10 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
   }
 
   // Maggiorazioni per documentazione mancante
-  if (data.documentazioneDisponibile.includes('nessuna')) {
-    maggiorazioni.push({ descrizione: 'Assenza documentazione completa', importo: 1500 });
+  if (data.documentazioneDisponibile.includes('nessuna') ||
+      !data.documentazioneDisponibile.includes('progetto') ||
+      !data.documentazioneDisponibile.includes('relazione')) {
+    maggiorazioni.push({ descrizione: 'Assenza documentazione', importo: 1500 });
   }
 
   // Maggiorazione edificio vincolato
