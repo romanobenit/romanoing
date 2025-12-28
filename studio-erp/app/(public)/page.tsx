@@ -286,8 +286,8 @@ export default function HomePage() {
                   ✓ Progetto miglioramento
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-VULN-SISMICA">
-                    Preventivo →
+                  <Link href="/configuratore/sismica">
+                    🛡️ Configuratore →
                   </Link>
                 </Button>
               </div>
