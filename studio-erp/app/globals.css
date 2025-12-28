@@ -57,3 +57,97 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Print Styles for PDF Export */
+@media print {
+  @page {
+    size: A4;
+    margin: 1.5cm 1.5cm 2cm 1.5cm;
+  }
+
+  * {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+    color-adjust: exact !important;
+  }
+
+  body {
+    background: white !important;
+    font-size: 10pt;
+    line-height: 1.4;
+  }
+
+  /* Hide interactive elements */
+  button,
+  .print\:hidden,
+  [class*="print:hidden"] {
+    display: none !important;
+  }
+
+  /* Ensure content flows properly */
+  .container {
+    max-width: 100% !important;
+    padding: 0 !important;
+  }
+
+  /* Prevent page breaks inside important elements */
+  .section,
+  .card {
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Headings should stay with content */
+  h1, h2, h3, h4, h5, h6 {
+    page-break-after: avoid;
+    break-after: avoid;
+    page-break-inside: avoid;
+    break-inside: avoid;
+  }
+
+  /* Ensure gradients and colors print */
+  .bg-gradient-to-br,
+  .bg-gradient-to-r,
+  [class*="bg-gradient"] {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Optimize spacing for print */
+  section {
+    margin-bottom: 1.5rem !important;
+  }
+
+  /* Make sure borders are visible */
+  .border,
+  [class*="border-"] {
+    border-color: #e5e7eb !important;
+  }
+
+  /* Ensure background colors print */
+  .bg-gray-50,
+  .bg-blue-50,
+  .bg-orange-50,
+  .bg-green-50,
+  .bg-yellow-50 {
+    -webkit-print-color-adjust: exact !important;
+    print-color-adjust: exact !important;
+  }
+
+  /* Remove shadows for cleaner print */
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+  }
+
+  /* Links should show URL in print (optional) */
+  a[href]:after {
+    content: none !important;
+  }
+
+  /* Prevent orphans and widows */
+  p {
+    orphans: 3;
+    widows: 3;
+  }
+}

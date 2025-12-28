@@ -16,7 +16,11 @@ import {
   Clock,
   AlertCircle,
   CheckCircle2,
-  Calculator
+  Calculator,
+  Download,
+  Send,
+  Trash2,
+  Save
 } from 'lucide-react';
 
 // Costanti per regioni e costi trasferta
@@ -77,7 +81,6 @@ interface ConfiguratoreData {
   // Impianti e certificazioni
   impiantiEsistenti: string[];
   certificazioniEsistenti: string[];
-  certificazioniDaRedigere: string[];
 
   // Servizi richiesti
   servizioprincipale: string;
@@ -89,6 +92,8 @@ interface ConfiguratoreData {
   criticitaNote: string[];
   depositiSpeciali: string[];
 }
+
+const STORAGE_KEY = 'configuratore_antincendio_data';
 
 export default function ConfiguratoreAntincendio() {
   const [data, setData] = useState<ConfiguratoreData>({
@@ -111,7 +116,6 @@ export default function ConfiguratoreAntincendio() {
     compartimentazioneEsistente: [],
     impiantiEsistenti: [],
     certificazioniEsistenti: [],
-    certificazioniDaRedigere: [],
     servizioprincipale: '',
     serviziAggiuntivi: [],
     situazioneAttuale: '',
@@ -121,6 +125,15 @@ export default function ConfiguratoreAntincendio() {
   });
 
   const [preventivo, setPreventivo] = useState<any>(null);
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [emailData, setEmailData] = useState({
+    nome: '',
+    cognome: '',
+    email: '',
+    telefono: '',
+    note: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const updateData = (field: keyof ConfiguratoreData, value: any) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -137,16 +150,79 @@ export default function ConfiguratoreAntincendio() {
     });
   };
 
+  // Carica dati da localStorage all'avvio
+  useEffect(() => {
+    const savedData = localStorage.getItem(STORAGE_KEY);
+    if (savedData) {
+      try {
+        const parsed = JSON.parse(savedData);
+        setData(parsed);
+      } catch (error) {
+        console.error('Errore nel caricamento dati salvati:', error);
+      }
+    }
+  }, []);
+
+  // Salva dati in localStorage quando cambiano
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+  }, [data]);
+
   // Ricalcola preventivo ogni volta che cambiano i dati
   useEffect(() => {
     const calcolo = calcolaPreventivo(data);
     setPreventivo(calcolo);
   }, [data]);
 
+  const clearData = () => {
+    if (confirm('Sei sicuro di voler cancellare tutti i dati?')) {
+      localStorage.removeItem(STORAGE_KEY);
+      window.location.reload();
+    }
+  };
+
+  const downloadPDF = () => {
+    window.print();
+  };
+
+  const handleInviaRichiesta = async () => {
+    if (!emailData.nome || !emailData.cognome || !emailData.email) {
+      alert('Compila tutti i campi obbligatori (nome, cognome, email)');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const response = await fetch('/api/preventivo-antincendio', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          configurazione: data,
+          preventivo: preventivo,
+          cliente: emailData,
+        }),
+      });
+
+      if (response.ok) {
+        alert('Richiesta inviata con successo! Ti contatteremo presto.');
+        setShowEmailModal(false);
+        setEmailData({ nome: '', cognome: '', email: '', telefono: '', note: '' });
+      } else {
+        alert('Errore durante l\'invio. Riprova più tardi.');
+      }
+    } catch (error) {
+      console.error('Errore invio:', error);
+      alert('Errore durante l\'invio. Riprova più tardi.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-orange-50 via-white to-gray-50">
       {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
             <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
@@ -160,15 +236,21 @@ export default function ConfiguratoreAntincendio() {
                 <p className="text-xs text-gray-600">Ingegneria e architettura</p>
               </div>
             </Link>
-            <Link href="/bundle/BDL-ANTINCENDIO">
-              <Button variant="outline">← Torna al Bundle</Button>
-            </Link>
+            <div className="flex gap-2">
+              <Button onClick={clearData} variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Cancella
+              </Button>
+              <Link href="/bundle/BDL-ANTINCENDIO">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
+            </div>
           </nav>
         </div>
       </header>
 
       {/* Breadcrumb */}
-      <section className="container mx-auto px-4 py-4">
+      <section className="container mx-auto px-4 py-4 print:hidden">
         <div className="flex items-center gap-2 text-sm text-gray-600">
           <Link href="/" className="hover:text-blue-600">Home</Link>
           <ChevronRight className="w-4 h-4" />
@@ -181,19 +263,19 @@ export default function ConfiguratoreAntincendio() {
       </section>
 
       {/* Hero */}
-      <section className="container mx-auto px-4 py-8">
+      <section className="container mx-auto px-4 py-8 print:py-4">
         <div className="max-w-6xl mx-auto text-center">
-          <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-5xl mb-6 mx-auto">
+          <div className="w-20 h-20 bg-gradient-to-br from-orange-500 to-red-500 rounded-2xl flex items-center justify-center text-5xl mb-6 mx-auto print:w-16 print:h-16">
             🔥
           </div>
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+          <h1 className="text-4xl font-bold text-gray-900 mb-4 print:text-3xl">
             Configuratore Preventivo Antincendio
           </h1>
-          <p className="text-xl text-gray-600 mb-6">
+          <p className="text-xl text-gray-600 mb-6 print:text-base">
             Personalizza il tuo servizio e visualizza il preventivo in tempo reale
           </p>
-          <Badge variant="secondary" className="text-sm">
-            Preventivo indicativo non vincolante
+          <Badge variant="secondary" className="text-sm print:hidden">
+            Preventivo indicativo non vincolante • Dati salvati automaticamente
           </Badge>
         </div>
       </section>
@@ -495,7 +577,7 @@ export default function ConfiguratoreAntincendio() {
                     </div>
                     <div>
                       <CardTitle className="text-xl">Impianti e Certificazioni</CardTitle>
-                      <p className="text-sm text-gray-600">Cosa è presente e cosa serve?</p>
+                      <p className="text-sm text-gray-600">Cosa è presente nell'attività?</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -544,29 +626,6 @@ export default function ConfiguratoreAntincendio() {
                             type="checkbox"
                             checked={data.certificazioniEsistenti.includes(cert.value)}
                             onChange={() => toggleArrayValue('certificazioniEsistenti', cert.value)}
-                            className="w-4 h-4 text-orange-600"
-                          />
-                          <span className="text-sm">{cert.label}</span>
-                        </label>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="pt-4 border-t">
-                    <Label className="mb-3 block font-semibold">Certificazioni da redigere (professionista antincendio)</Label>
-                    <div className="space-y-2">
-                      {[
-                        { value: 'asseverazioneTecnica', label: 'Asseverazione tecnica' },
-                        { value: 'attestazioneFunzionalita', label: 'Attestazione funzionalità impianti' },
-                        { value: 'dichiarazioneConformita', label: 'Dichiarazione di conformità' },
-                        { value: 'certificazioneProgetto', label: 'Certificazione progetto antincendio' },
-                        { value: 'verbaleCollaudo', label: 'Verbale di collaudo' },
-                      ].map((cert) => (
-                        <label key={cert.value} className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="checkbox"
-                            checked={data.certificazioniDaRedigere.includes(cert.value)}
-                            onChange={() => toggleArrayValue('certificazioniDaRedigere', cert.value)}
                             className="w-4 h-4 text-orange-600"
                           />
                           <span className="text-sm">{cert.label}</span>
@@ -773,18 +832,120 @@ export default function ConfiguratoreAntincendio() {
             {/* Right Column - Preventivo (Sticky) */}
             <div className="lg:col-span-1">
               <div className="sticky top-24">
-                <RiepilogoPreventivo preventivo={preventivo} data={data} />
+                <RiepilogoPreventivo
+                  preventivo={preventivo}
+                  data={data}
+                  onDownloadPDF={downloadPDF}
+                  onInviaRichiesta={() => setShowEmailModal(true)}
+                />
               </div>
             </div>
           </div>
         </div>
       </section>
+
+      {/* Modal Invio Email */}
+      {showEmailModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <h2 className="text-2xl font-bold text-gray-900 mb-4">Richiedi Preventivo</h2>
+            <p className="text-sm text-gray-600 mb-6">
+              Inserisci i tuoi dati per ricevere il preventivo dettagliato via email
+            </p>
+
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="nome">Nome *</Label>
+                <Input
+                  id="nome"
+                  value={emailData.nome}
+                  onChange={(e) => setEmailData({...emailData, nome: e.target.value})}
+                  placeholder="Mario"
+                />
+              </div>
+              <div>
+                <Label htmlFor="cognome">Cognome *</Label>
+                <Input
+                  id="cognome"
+                  value={emailData.cognome}
+                  onChange={(e) => setEmailData({...emailData, cognome: e.target.value})}
+                  placeholder="Rossi"
+                />
+              </div>
+              <div>
+                <Label htmlFor="email">Email *</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={emailData.email}
+                  onChange={(e) => setEmailData({...emailData, email: e.target.value})}
+                  placeholder="mario.rossi@example.com"
+                />
+              </div>
+              <div>
+                <Label htmlFor="telefono">Telefono</Label>
+                <Input
+                  id="telefono"
+                  type="tel"
+                  value={emailData.telefono}
+                  onChange={(e) => setEmailData({...emailData, telefono: e.target.value})}
+                  placeholder="+39 123 456 7890"
+                />
+              </div>
+              <div>
+                <Label htmlFor="note">Note aggiuntive</Label>
+                <textarea
+                  id="note"
+                  value={emailData.note}
+                  onChange={(e) => setEmailData({...emailData, note: e.target.value})}
+                  className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  rows={3}
+                  placeholder="Eventuali richieste particolari..."
+                />
+              </div>
+            </div>
+
+            <div className="flex gap-3 mt-6">
+              <Button
+                onClick={() => setShowEmailModal(false)}
+                variant="outline"
+                className="flex-1"
+                disabled={isSubmitting}
+              >
+                Annulla
+              </Button>
+              <Button
+                onClick={handleInviaRichiesta}
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Invio...' : (
+                  <>
+                    <Send className="w-4 h-4 mr-2" />
+                    Invia Richiesta
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
 
 // Componente Riepilogo Preventivo
-function RiepilogoPreventivo({ preventivo, data }: { preventivo: any; data: ConfiguratoreData }) {
+function RiepilogoPreventivo({
+  preventivo,
+  data,
+  onDownloadPDF,
+  onInviaRichiesta
+}: {
+  preventivo: any;
+  data: ConfiguratoreData;
+  onDownloadPDF: () => void;
+  onInviaRichiesta: () => void;
+}) {
   if (!preventivo) {
     return (
       <Card>
@@ -802,7 +963,7 @@ function RiepilogoPreventivo({ preventivo, data }: { preventivo: any; data: Conf
   }
 
   return (
-    <Card className="border-2 border-orange-500 shadow-lg">
+    <Card className="border-2 border-orange-500 shadow-lg" id="preventivo-card">
       <CardHeader className="bg-gradient-to-r from-orange-500 to-red-500 text-white">
         <CardTitle className="text-2xl flex items-center gap-2">
           <Calculator className="w-6 h-6" />
@@ -913,11 +1074,17 @@ function RiepilogoPreventivo({ preventivo, data }: { preventivo: any; data: Conf
           <p className="font-medium text-sm">{preventivo.tempi}</p>
         </div>
 
-        {/* CTA */}
-        <Button className="w-full bg-green-600 hover:bg-green-700" size="lg">
-          <CheckCircle2 className="w-5 h-5 mr-2" />
-          Richiedi Preventivo
-        </Button>
+        {/* Actions */}
+        <div className="space-y-2 print:hidden">
+          <Button onClick={onInviaRichiesta} className="w-full bg-green-600 hover:bg-green-700" size="lg">
+            <Send className="w-5 h-5 mr-2" />
+            Richiedi Preventivo
+          </Button>
+          <Button onClick={onDownloadPDF} variant="outline" className="w-full" size="lg">
+            <Download className="w-5 h-5 mr-2" />
+            Scarica PDF
+          </Button>
+        </div>
 
         <div className="bg-blue-50 rounded-lg p-3">
           <div className="flex items-start gap-2">
