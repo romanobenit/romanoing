@@ -243,7 +243,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €8.000 - €60.000
+                  €2.000 - €20.000
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Desktop/Standard/Enhanced DD<br />
