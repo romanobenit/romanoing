@@ -1179,14 +1179,6 @@ function calcolaPreventivo(data: ConfiguratoreData) {
     maggiorazioni.push({ descrizione: 'Piano interrato', importo: 600 });
   }
 
-  // Impianti mancanti
-  if (!data.impiantiEsistenti.includes('rilevazione')) {
-    dettaglioBase.push({ descrizione: 'Progetto impianto rilevazione', importo: 900 });
-  }
-  if (!data.impiantiEsistenti.includes('idranti') && data.superficieNetta > 400) {
-    dettaglioBase.push({ descrizione: 'Progetto rete idranti', importo: 1200 });
-  }
-
   // Servizi aggiuntivi
   const prezziAggiuntivi: Record<string, { label: string; prezzo: number }> = {
     sopralluogo: { label: 'Sopralluogo tecnico', prezzo: 500 },
