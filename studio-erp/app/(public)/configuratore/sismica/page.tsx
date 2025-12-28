@@ -694,6 +694,27 @@ export default function ConfiguratoreSismica() {
                         desc: 'Verifica classi di rischio, asseverazioni ante/post operam',
                         prezzo: 3500,
                       },
+                      {
+                        value: 'intervento_locale',
+                        label: 'Intervento locale',
+                        desc: 'Rinforzo/consolidamento locale su elementi strutturali puntuali. Include progetto locale, direzione lavori e collaudo elemento.',
+                        prezzo: 2000,
+                        prezzoMax: 8000,
+                      },
+                      {
+                        value: 'direzione_lavori',
+                        label: 'Direzione Lavori (DL) interventi',
+                        desc: 'Solo DL per cantiere. Richiede progetto esistente tranne per lavori privi di rilevanza.',
+                        prezzo: 4000,
+                        disclaimer: true,
+                      },
+                      {
+                        value: 'collaudo',
+                        label: 'Collaudo statico',
+                        desc: 'Solo collaudo opere strutturali. Richiede lavori completati con DL.',
+                        prezzo: 3000,
+                        disclaimer: true,
+                      },
                     ].map((serv) => (
                       <label
                         key={serv.value}
@@ -711,8 +732,15 @@ export default function ConfiguratoreSismica() {
                           <div className="font-medium text-gray-900">{serv.label}</div>
                           <div className="text-sm text-gray-600 mt-1">{serv.desc}</div>
                           <div className="text-sm font-semibold text-blue-600 mt-2">
-                            Base: €{serv.prezzo.toLocaleString('it-IT')}
+                            {serv.prezzoMax
+                              ? `Range: €${serv.prezzo.toLocaleString('it-IT')} - €${serv.prezzoMax.toLocaleString('it-IT')}`
+                              : `Base: €${serv.prezzo.toLocaleString('it-IT')}`}
                           </div>
+                          {serv.disclaimer && (
+                            <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded mt-2 border border-amber-200">
+                              ⚠️ {serv.desc.split('.')[1]?.trim()}
+                            </div>
+                          )}
                         </div>
                       </label>
                     ))}
@@ -732,9 +760,7 @@ export default function ConfiguratoreSismica() {
                       { value: 'geologica', label: 'Relazione geologica/geotecnica', prezzo: 1800 },
                       { value: 'modellazione3d', label: 'Modellazione 3D avanzata (pushover)', prezzo: 2200 },
                       { value: 'analisiNonLineare', label: 'Analisi non lineare dinamica', prezzo: 3500 },
-                      { value: 'direzioneLavori', label: 'Direzione lavori interventi', prezzo: 4000 },
                       { value: 'coordinamento', label: 'Coordinamento sicurezza (CSP/CSE)', prezzo: 2500 },
-                      { value: 'collaudo', label: 'Collaudo statico', prezzo: 3000 },
                       { value: 'praticaGenio', label: 'Pratica Genio Civile', prezzo: 800 },
                       { value: 'durc', label: 'DURC e documentazione appalto', prezzo: 500 },
                     ].map((serv) => (
@@ -1316,6 +1342,9 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
     miglioramento: 7500,
     adeguamento: 12000,
     sismabonus: 3500,
+    intervento_locale: 2000,
+    direzione_lavori: 4000,
+    collaudo: 3000,
   };
 
   const nomiServizi: Record<string, string> = {
@@ -1326,6 +1355,9 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
     miglioramento: 'Progetto miglioramento sismico',
     adeguamento: 'Progetto adeguamento sismico',
     sismabonus: 'Sismabonus + Asseverazioni',
+    intervento_locale: 'Intervento locale',
+    direzione_lavori: 'Direzione Lavori (DL) interventi',
+    collaudo: 'Collaudo statico',
   };
 
   let prezzoBase = prezziServizi[data.servizioprincipale] || 0;
@@ -1439,9 +1471,7 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
     geologica: { label: 'Relazione geologica/geotecnica', prezzo: 1800 },
     modellazione3d: { label: 'Modellazione 3D avanzata (pushover)', prezzo: 2200 },
     analisiNonLineare: { label: 'Analisi non lineare dinamica', prezzo: 3500 },
-    direzioneLavori: { label: 'Direzione lavori interventi', prezzo: 4000 },
     coordinamento: { label: 'Coordinamento sicurezza (CSP/CSE)', prezzo: 2500 },
-    collaudo: { label: 'Collaudo statico', prezzo: 3000 },
     praticaGenio: { label: 'Pratica Genio Civile', prezzo: 800 },
     durc: { label: 'DURC e documentazione appalto', prezzo: 500 },
   };
@@ -1487,8 +1517,22 @@ function calcolaPreventivo(data: ConfiguratoreSismicaData) {
   // Totale
   const totaleAggiuntivi = serviziAggiuntivi.reduce((sum, v) => sum + v.importo, 0);
   const totaleMaggiorazioni = maggiorazioni.reduce((sum, v) => sum + v.importo, 0);
-  const totale =
+  let totale =
     prezzoBase + totaleMaggiorazioni + totaleAggiuntivi + importoUrgenza + costoTrasferta;
+
+  // Cap per intervento locale (max €8.000)
+  if (data.servizioprincipale === 'intervento_locale') {
+    const totaleServizio = prezzoBase + totaleMaggiorazioni + importoUrgenza;
+    if (totaleServizio > 8000) {
+      const differenza = totaleServizio - 8000;
+      // Riduci maggiorazioni proporzionalmente per rientrare nel cap
+      const fattoreRiduzione = (totaleMaggiorazioni - differenza) / totaleMaggiorazioni;
+      maggiorazioni.forEach(magg => {
+        magg.importo = Math.round(magg.importo * fattoreRiduzione);
+      });
+      totale = 8000 + totaleAggiuntivi + costoTrasferta;
+    }
+  }
 
   // Calcolo Sismabonus
   let sismabonus = null;
