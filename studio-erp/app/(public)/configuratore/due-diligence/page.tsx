@@ -90,8 +90,7 @@ interface Preventivo {
   prezzoBase: number;
   prezzoUnitario?: number; // Prezzo per singola unità (se numeroUnita > 1)
   numeroUnita?: number; // Numero di unità
-  percentualeScontoUnita?: number; // Sconto applicato per economia di scala
-  richiestaConsulenza?: boolean; // true se numeroUnita > 3
+  dettaglioUnita?: { unitaNumero: number; sconto: number; prezzoScontato: number }[]; // Dettaglio sconto per unità
   moltiplicatoreLivello: number;
   moltiplicatoreOperazione: number;
   moltiplicatoreUrgenza: number;
@@ -250,23 +249,30 @@ export default function ConfiguratoreDueDiligence() {
 
     // Salva prezzo unitario prima di applicare sconto
     const prezzoSingolaUnita = prezzoBase;
-    let percentualeScontoUnita = 0;
-    let richiestaConsulenza = false;
 
-    // Sconto per numero unità (economia di scala)
-    if (data.numeroUnita > 3) {
-      // Oltre 3 unità: richiedi consulenza personalizzata
-      richiestaConsulenza = true;
-    } else if (data.numeroUnita === 2) {
-      // 2 unità: 20% sconto
-      percentualeScontoUnita = 20;
-      const moltiplicatoreSconto = 1 - (percentualeScontoUnita / 100);
-      prezzoBase = Math.round(prezzoBase * data.numeroUnita * moltiplicatoreSconto);
-    } else if (data.numeroUnita === 3) {
-      // 3 unità: 40% sconto
-      percentualeScontoUnita = 40;
-      const moltiplicatoreSconto = 1 - (percentualeScontoUnita / 100);
-      prezzoBase = Math.round(prezzoBase * data.numeroUnita * moltiplicatoreSconto);
+    // Sconto progressivo per numero unità (economia di scala)
+    // 1ª unità: 0% sconto, 2ª unità: 20% sconto, 3ª unità: 40% sconto, 4ª unità: 60% sconto, ecc.
+    const dettaglioUnita: { unitaNumero: number; sconto: number; prezzoScontato: number }[] = [];
+
+    if (data.numeroUnita > 1) {
+      let totaleConSconto = 0;
+
+      for (let i = 1; i <= data.numeroUnita; i++) {
+        // Sconto progressivo: (i-1) * 20%
+        const scontoPercentuale = (i - 1) * 20;
+        const moltiplicatoreSconto = 1 - (scontoPercentuale / 100);
+        const prezzoUnitaScontato = Math.round(prezzoSingolaUnita * moltiplicatoreSconto);
+
+        dettaglioUnita.push({
+          unitaNumero: i,
+          sconto: scontoPercentuale,
+          prezzoScontato: prezzoUnitaScontato,
+        });
+
+        totaleConSconto += prezzoUnitaScontato;
+      }
+
+      prezzoBase = totaleConSconto;
     }
 
     // Moltiplicatori
@@ -383,10 +389,9 @@ export default function ConfiguratoreDueDiligence() {
 
     return {
       prezzoBase,
-      prezzoUnitario: data.numeroUnita > 1 && !richiestaConsulenza ? prezzoSingolaUnita : undefined,
+      prezzoUnitario: data.numeroUnita > 1 ? prezzoSingolaUnita : undefined,
       numeroUnita: data.numeroUnita > 1 ? data.numeroUnita : undefined,
-      percentualeScontoUnita: data.numeroUnita > 1 && !richiestaConsulenza ? percentualeScontoUnita : undefined,
-      richiestaConsulenza,
+      dettaglioUnita: data.numeroUnita > 1 ? dettaglioUnita : undefined,
       moltiplicatoreLivello,
       moltiplicatoreOperazione,
       moltiplicatoreUrgenza,
@@ -587,16 +592,8 @@ export default function ConfiguratoreDueDiligence() {
                       placeholder="1"
                     />
                     <p className="text-xs text-gray-500 mt-1">
-                      2 unità: 20% sconto • 3 unità: 40% sconto • Oltre 3: consulenza personalizzata
+                      Sconto progressivo: 1ª unità 0%, 2ª 20%, 3ª 40%, 4ª 60%, 5ª 80%, 6ª+ 100%
                     </p>
-                    {data.numeroUnita > 3 && (
-                      <div className="mt-2 flex gap-1.5 items-start">
-                        <AlertTriangle className="w-4 h-4 text-amber-600 flex-shrink-0 mt-0.5" />
-                        <p className="text-xs text-amber-700 font-medium">
-                          Richiesta consulenza necessaria per preventivo personalizzato
-                        </p>
-                      </div>
-                    )}
                   </div>
                 </div>
 
@@ -994,63 +991,52 @@ export default function ConfiguratoreDueDiligence() {
                       </div>
 
                       {/* Dettaglio unità immobiliari (se > 1) */}
-                      {preventivo.numeroUnita && preventivo.numeroUnita > 1 && (
-                        <>
-                          {preventivo.richiestaConsulenza ? (
-                            // Oltre 3 unità: richiedi consulenza
-                            <div className="pb-4 border-b bg-amber-50 -mx-6 px-6 py-3">
-                              <div className="flex gap-3 items-start">
-                                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
-                                <div>
-                                  <div className="text-sm font-medium text-amber-800 mb-1">
-                                    Richiesta consulenza - {preventivo.numeroUnita} unità immobiliari
-                                  </div>
-                                  <p className="text-xs text-amber-700">
-                                    Per portafogli oltre le 3 unità immobiliari è necessaria una valutazione personalizzata.
-                                    Il nostro team commerciale ti contatterà per fornirti un preventivo dedicato con condizioni vantaggiose.
-                                  </p>
-                                  <p className="text-xs text-amber-700 font-semibold mt-2">
-                                    📧 Invia la richiesta compilando il modulo per essere ricontattato.
-                                  </p>
+                      {preventivo.numeroUnita && preventivo.numeroUnita > 1 && preventivo.dettaglioUnita && (
+                        <div className="pb-4 border-b bg-blue-50 -mx-6 px-6 py-3">
+                          <div className="text-sm font-medium text-blue-800 mb-3">
+                            Dettaglio per unità immobiliare - {preventivo.numeroUnita} unità
+                          </div>
+                          <div className="space-y-2">
+                            {preventivo.dettaglioUnita.map((unita) => (
+                              <div
+                                key={unita.unitaNumero}
+                                className="flex justify-between items-center text-xs bg-white px-3 py-2 rounded border"
+                              >
+                                <span className="font-medium text-gray-700">
+                                  {unita.unitaNumero}ª unità
+                                </span>
+                                <div className="flex items-center gap-3">
+                                  {unita.sconto > 0 ? (
+                                    <>
+                                      <span className="text-gray-500 line-through">
+                                        €{preventivo.prezzoUnitario?.toLocaleString('it-IT')}
+                                      </span>
+                                      <span className="text-green-600 font-semibold">
+                                        -{unita.sconto}%
+                                      </span>
+                                      <span className="font-bold text-gray-900 min-w-[80px] text-right">
+                                        €{unita.prezzoScontato.toLocaleString('it-IT')}
+                                      </span>
+                                    </>
+                                  ) : (
+                                    <span className="font-bold text-gray-900 min-w-[80px] text-right">
+                                      €{unita.prezzoScontato.toLocaleString('it-IT')}
+                                    </span>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-                          ) : (
-                            // 2 o 3 unità: mostra dettaglio sconto
-                            <div className="pb-4 border-b bg-green-50 -mx-6 px-6 py-3">
-                              <div className="text-sm font-medium text-green-800 mb-2">
-                                Economia di scala - {preventivo.numeroUnita} unità immobiliari
-                              </div>
-                              <div className="space-y-1 text-xs">
-                                <div className="flex justify-between text-gray-600">
-                                  <span>Prezzo per singola unità</span>
-                                  <span className="font-medium">
-                                    €{preventivo.prezzoUnitario?.toLocaleString('it-IT')}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                  <span>Numero unità</span>
-                                  <span className="font-medium">×{preventivo.numeroUnita}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                  <span>Subtotale senza sconto</span>
-                                  <span className="font-medium">
-                                    €{((preventivo.prezzoUnitario || 0) * preventivo.numeroUnita).toLocaleString('it-IT')}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between text-green-700 font-semibold pt-1 border-t">
-                                  <span>Sconto applicato ({preventivo.percentualeScontoUnita}%)</span>
-                                  <span>
-                                    -€{(((preventivo.prezzoUnitario || 0) * preventivo.numeroUnita) - preventivo.prezzoBase).toLocaleString('it-IT')}
-                                  </span>
-                                </div>
-                              </div>
-                              <div className="text-xs text-green-700 mt-2 italic">
-                                Prezzo unitario effettivo: €{Math.round(preventivo.prezzoBase / preventivo.numeroUnita).toLocaleString('it-IT')} per unità
-                              </div>
-                            </div>
-                          )}
-                        </>
+                            ))}
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-blue-200 flex justify-between items-center">
+                            <span className="text-xs font-medium text-blue-800">Totale {preventivo.numeroUnita} unità:</span>
+                            <span className="text-sm font-bold text-blue-900">
+                              €{preventivo.prezzoBase.toLocaleString('it-IT')}
+                            </span>
+                          </div>
+                          <div className="mt-2 text-xs text-blue-700 italic">
+                            Risparmio totale: €{((preventivo.prezzoUnitario || 0) * preventivo.numeroUnita - preventivo.prezzoBase).toLocaleString('it-IT')}
+                          </div>
+                        </div>
                       )}
 
                       <div className="pb-4 border-b">
