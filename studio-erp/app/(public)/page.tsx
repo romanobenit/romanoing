@@ -184,8 +184,8 @@ export default function HomePage() {
                   ✓ Roadmap operativa
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-CONSULENZA">
-                    Preventivo →
+                  <Link href="/configuratore/consulenza">
+                    💡 Configuratore →
                   </Link>
                 </Button>
               </div>
@@ -585,7 +585,7 @@ export default function HomePage() {
             <div>
               <h3 className="font-bold text-lg mb-4">Servizi</h3>
               <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="/bundle/BDL-CONSULENZA" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
+                <li><Link href="/configuratore/consulenza" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
                 <li><Link href="/bundle/BDL-RISTR-BONUS" className="hover:text-blue-600">Ristrutturazione</Link></li>
                 <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
                 <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
