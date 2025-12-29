@@ -422,8 +422,8 @@ export default function HomePage() {
                   ✓ Accesso incentivi
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-EFF-ENERGETICO">
-                    Preventivo →
+                  <Link href="/configuratore/efficientamento">
+                    ⚡ Configuratore →
                   </Link>
                 </Button>
               </div>
@@ -588,7 +588,7 @@ export default function HomePage() {
                 <li><Link href="/bundle/BDL-CONSULENZA" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
                 <li><Link href="/bundle/BDL-RISTR-BONUS" className="hover:text-blue-600">Ristrutturazione</Link></li>
                 <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
-                <li><Link href="/bundle/BDL-EFF-ENERGETICO" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
+                <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
                 <li><Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">Ampliamento Produttivo</Link></li>
                 <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
                 <li><Link href="/bundle/BDL-ANTINCENDIO" className="hover:text-blue-600">Antincendio</Link></li>
