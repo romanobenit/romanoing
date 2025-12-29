@@ -829,7 +829,7 @@ export default function ConfiguratoreConsulenza() {
 
                         <div className="mt-4 pt-4 border-t border-green-200">
                           <div className="text-sm font-bold text-green-900 mb-2">🔒 GARANZIA</div>
-                          <div className="text-sm text-gray-700">Soddisfatti o rimborsati 100%</div>
+                          <div className="text-sm text-gray-700">Soddisfatti o Rimborsati</div>
                         </div>
                       </div>
 
