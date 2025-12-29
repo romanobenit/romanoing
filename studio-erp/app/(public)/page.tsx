@@ -600,6 +600,7 @@ export default function HomePage() {
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/legal/privacy" className="hover:text-blue-600">Privacy Policy</Link></li>
                 <li><Link href="/legal/terms" className="hover:text-blue-600">Termini e Condizioni</Link></li>
+                <li><Link href="/legal/garanzia-consulenza" className="hover:text-blue-600">🔒 Garanzia Soddisfatti o Rimborsati</Link></li>
                 <li className="pt-2 border-t">📧 info@studio-romano.it</li>
                 <li>📞 +39 XXX XXXXXXX</li>
               </ul>
