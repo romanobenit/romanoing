@@ -20,7 +20,8 @@ import {
   ArrowLeft,
   Euro,
   TrendingUp,
-  Leaf
+  Leaf,
+  Check
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-efficientamento-data';
@@ -81,9 +82,10 @@ interface ConfiguratoreEfficientamentoData {
   impiantiEsistenti: string[];
   criticita: string[];
 
-  // Sezione 6: Urgenza
+  // Sezione 6: Urgenza e servizi aggiuntivi
   urgenza: string;
-  serviziInclusi: string[];
+  serviziAggiuntivi: string[];
+  includeDiagnosiEnergetica: boolean;
 
   // Dati cliente
   nomeCliente: string;
@@ -119,7 +121,8 @@ const initialData: ConfiguratoreEfficientamentoData = {
   impiantiEsistenti: [],
   criticita: [],
   urgenza: 'standard',
-  serviziInclusi: [],
+  serviziAggiuntivi: [],
+  includeDiagnosiEnergetica: false,
   nomeCliente: '',
   emailCliente: '',
   telefonoCliente: '',
@@ -127,19 +130,22 @@ const initialData: ConfiguratoreEfficientamentoData = {
 };
 
 interface Preventivo {
-  costoInterventi: number;
-  costoServizi: number;
-  moltiplicatoreComplessita: number;
-  moltiplicatoreUrgenza: number;
+  prezzoBase: number;
+  costoDiagnosiEnergetica: number;
+  costoServiziAggiuntivi: number;
   costoTrasferta: number;
-  totaleLordo: number;
-  incentivoContoTermico: number;
-  detrazioneEcobonus: number;
-  totaleIncentivi: number;
-  esborsoCliente: number;
-  risparmioAnnuo: number;
-  paybackAnni: number;
-  dettaglioInterventi: { descrizione: string; costo: number; incentivo: number }[];
+  subtotale: number;
+  moltiplicatoreInterventi: number;
+  moltiplicatoreUrgenza: number;
+  totalePrestazioni: number;
+
+  // Scheda tecnica
+  classeEnergeticaAttuale: string;
+  classeEnergeticaObiettivo: string;
+  risparmioEnergeticoPerc: string;
+  interventiSelezionati: string[];
+  incentiviApplicabili: string[];
+  tempiRealizzazione: string;
 }
 
 export default function ConfiguratoreEfficientamento() {
@@ -187,194 +193,180 @@ export default function ConfiguratoreEfficientamento() {
   }, [data]);
 
   const calcolaPreventivo = (data: ConfiguratoreEfficientamentoData): Preventivo => {
-    // Definizione interventi residenziali con costi e incentivi
-    const interventiResidenziali: Record<string, { costo: number; incentivoCT: number; ecobonus: number; risparmio: number }> = {
-      caldaia_condensazione: { costo: 3500, incentivoCT: 0.65, ecobonus: 0.50, risparmio: 450 },
-      pompa_calore_aa: { costo: 12000, incentivoCT: 0.65, ecobonus: 0.65, risparmio: 800 },
-      pompa_calore_aw: { costo: 10000, incentivoCT: 0.65, ecobonus: 0.65, risparmio: 700 },
-      caldaia_biomassa: { costo: 8000, incentivoCT: 0.65, ecobonus: 0.50, risparmio: 600 },
-      sistema_ibrido: { costo: 9000, incentivoCT: 0.65, ecobonus: 0.50, risparmio: 650 },
-      cappotto_esterno: { costo: 0, incentivoCT: 0, ecobonus: 0.50, risparmio: 0 }, // calcolato su mq
-      isolamento_copertura: { costo: 0, incentivoCT: 0, ecobonus: 0.50, risparmio: 0 },
-      serramenti: { costo: 0, incentivoCT: 0, ecobonus: 0.50, risparmio: 0 },
-      solare_termico: { costo: 0, incentivoCT: 0.65, ecobonus: 0.65, risparmio: 0 },
-      fotovoltaico: { costo: 0, incentivoCT: 0, ecobonus: 0.50, risparmio: 0 },
-      vmc: { costo: 0, incentivoCT: 0, ecobonus: 0.50, risparmio: 0 },
-    };
+    const isResidenziale = data.macroCategoria === 'residenziale';
+    const isIndustriale = data.macroCategoria === 'industriale';
 
-    // Definizione interventi industriali
-    const interventiIndustriali: Record<string, { costo: number; incentivoCT: number; risparmio: number }> = {
-      diagnosi_energetica: { costo: 5000, incentivoCT: 0, risparmio: 0 },
-      recupero_calore: { costo: 30000, incentivoCT: 0.50, risparmio: 5000 },
-      cogenerazione: { costo: 0, incentivoCT: 0.40, risparmio: 0 }, // calcolato su kW
-      relamping_led: { costo: 0, incentivoCT: 0, risparmio: 0 },
-      inverter_motori: { costo: 8000, incentivoCT: 0.40, risparmio: 1200 },
-      isolamento_condotte: { costo: 12000, incentivoCT: 0.40, risparmio: 800 },
-    };
+    // 1. PREZZO BASE PER TIPOLOGIA E SUPERFICIE
+    let prezzoBase = 0;
 
-    let costoInterventi = 0;
-    let risparmioAnnuo = 0;
-    const dettaglioInterventi: { descrizione: string; costo: number; incentivo: number }[] = [];
-
-    // Calcolo interventi residenziali
-    if (data.macroCategoria === 'residenziale') {
-      data.interventiResidenziali.forEach((intervento) => {
-        const int = interventiResidenziali[intervento];
-        if (!int) return;
-
-        let costo = int.costo;
-        let risparmio = int.risparmio;
-
-        // Calcoli su misura per involucro
-        if (intervento === 'cappotto_esterno' && data.superficieRiscaldata > 0) {
-          costo = data.superficieRiscaldata * 70; // €70/mq
-          risparmio = data.superficieRiscaldata * 2; // €2/mq/anno
-        } else if (intervento === 'isolamento_copertura' && data.superficieRiscaldata > 0) {
-          costo = data.superficieRiscaldata * 50;
-          risparmio = data.superficieRiscaldata * 1.5;
-        } else if (intervento === 'serramenti' && data.superficieRiscaldata > 0) {
-          const mqSerramenti = data.superficieRiscaldata * 0.15; // stima 15% superficie
-          costo = mqSerramenti * 500;
-          risparmio = mqSerramenti * 8;
-        } else if (intervento === 'solare_termico' && data.superficieRiscaldata > 0) {
-          const mq = Math.min(10, data.superficieRiscaldata / 20); // stima
-          costo = mq * 1000;
-          risparmio = mq * 100;
-        } else if (intervento === 'fotovoltaico' && data.superficieRiscaldata > 0) {
-          const kWp = Math.min(6, data.superficieRiscaldata / 50); // stima
-          costo = kWp * 2000;
-          risparmio = kWp * 300;
-        } else if (intervento === 'vmc' && data.superficieRiscaldata > 0) {
-          costo = data.superficieRiscaldata * 100;
-          risparmio = data.superficieRiscaldata * 1.2;
-        }
-
-        costoInterventi += costo;
-        risparmioAnnuo += risparmio;
-
-        // Calcolo incentivo (usa il migliore tra CT e Ecobonus)
-        const incentivoCT = data.accessoIncentivi.includes('conto_termico') ? costo * int.incentivoCT : 0;
-        const incentivoBon = data.accessoIncentivi.includes('ecobonus') ? costo * int.ecobonus : 0;
-        const incentivo = Math.max(incentivoCT, incentivoBon);
-
-        dettaglioInterventi.push({
-          descrizione: getDescrizioneIntervento(intervento, true),
-          costo,
-          incentivo,
-        });
-      });
+    if (isResidenziale && data.superficieRiscaldata > 0) {
+      const superficie = data.superficieRiscaldata;
+      if (superficie <= 100) {
+        prezzoBase = 1500;
+      } else if (superficie <= 200) {
+        prezzoBase = 2000;
+      } else if (superficie <= 400) {
+        prezzoBase = 2800;
+      } else if (superficie <= 600) {
+        prezzoBase = 3500;
+      } else {
+        prezzoBase = 4500;
+      }
+    } else if (isIndustriale && data.superficieTotale > 0) {
+      const superficie = data.superficieTotale;
+      if (superficie <= 500) {
+        prezzoBase = 3000;
+      } else if (superficie <= 1000) {
+        prezzoBase = 4500;
+      } else if (superficie <= 2000) {
+        prezzoBase = 6500;
+      } else {
+        prezzoBase = 9000;
+      }
     }
 
-    // Calcolo interventi industriali
-    if (data.macroCategoria === 'industriale') {
-      data.interventiIndustriali.forEach((intervento) => {
-        const int = interventiIndustriali[intervento];
-        if (!int) return;
+    // 2. DIAGNOSI ENERGETICA COMPLETA (VARIABILE PER SUPERFICIE)
+    let costoDiagnosiEnergetica = 0;
 
-        let costo = int.costo;
-        let risparmio = int.risparmio;
-
-        if (intervento === 'cogenerazione' && data.potenzaTermica > 0) {
-          costo = data.potenzaTermica * 2000; // €2000/kW
-          risparmio = data.potenzaTermica * 400;
-        } else if (intervento === 'relamping_led' && data.superficieTotale > 0) {
-          const puntiLuce = data.superficieTotale / 20; // stima
-          costo = puntiLuce * 120;
-          risparmio = puntiLuce * 30;
+    if (data.includeDiagnosiEnergetica) {
+      if (isResidenziale && data.superficieRiscaldata > 0) {
+        const superficie = data.superficieRiscaldata;
+        if (superficie <= 100) {
+          costoDiagnosiEnergetica = 800;
+        } else if (superficie <= 200) {
+          costoDiagnosiEnergetica = 1000;
+        } else if (superficie <= 400) {
+          costoDiagnosiEnergetica = 1500;
+        } else if (superficie <= 600) {
+          costoDiagnosiEnergetica = 2000;
+        } else {
+          costoDiagnosiEnergetica = 2500;
         }
-
-        costoInterventi += costo;
-        risparmioAnnuo += risparmio;
-
-        const incentivo = data.accessoIncentivi.includes('conto_termico') ? costo * int.incentivoCT : 0;
-
-        dettaglioInterventi.push({
-          descrizione: getDescrizioneIntervento(intervento, false),
-          costo,
-          incentivo,
-        });
-      });
+      } else if (isIndustriale && data.superficieTotale > 0) {
+        const superficie = data.superficieTotale;
+        if (superficie <= 500) {
+          costoDiagnosiEnergetica = 1500;
+        } else if (superficie <= 1000) {
+          costoDiagnosiEnergetica = 2500;
+        } else if (superficie <= 2000) {
+          costoDiagnosiEnergetica = 3500;
+        } else if (superficie <= 5000) {
+          costoDiagnosiEnergetica = 5000;
+        } else {
+          costoDiagnosiEnergetica = 9000;
+        }
+      }
     }
 
-    // Costo servizi
-    const prezziServizi: Record<string, number> = {
-      sopralluogo: 300,
-      diagnosi_energetica: 2500,
-      ape_ante_post: 400,
-      relazione_legge10: 800,
-      pratiche_conto_termico: 1500,
-      pratiche_enea: 500,
-      direzione_lavori: 2000,
-      asseverazione: 1200,
+    // 3. SERVIZI AGGIUNTIVI
+    const prezziServiziAggiuntivi: Record<string, number> = {
+      pratica_conto_termico: 600,
+      asseverazione_ecobonus: 900,
+      direzione_lavori: isResidenziale ? 1200 : 2000,
+      termografia: 400,
+      blower_door_test: 350,
     };
 
-    let costoServizi = 0;
-    data.serviziInclusi.forEach((servizio) => {
-      costoServizi += prezziServizi[servizio] || 0;
+    let costoServiziAggiuntivi = 0;
+    data.serviziAggiuntivi.forEach((servizio) => {
+      costoServiziAggiuntivi += prezziServiziAggiuntivi[servizio] || 0;
     });
 
-    // Moltiplicatore complessità
-    let moltiplicatoreComplessita = 1.0;
-    if (data.macroCategoria === 'residenziale') {
-      if (data.tipologiaResidenziale === 'condominio' || data.numeroUnita > 4) {
-        moltiplicatoreComplessita = 1.5;
-      } else if (data.tipologiaResidenziale === 'villa') {
-        moltiplicatoreComplessita = 1.2;
-      }
-    } else if (data.macroCategoria === 'industriale') {
-      if (data.superficieTotale > 5000 || data.potenzaTermica > 500) {
-        moltiplicatoreComplessita = 1.5;
-      } else if (data.superficieTotale > 2000) {
-        moltiplicatoreComplessita = 1.2;
-      }
+    // 4. TRASFERTA
+    const costoTrasferta = data.regione ? calcolaCostoTrasferta(data.regione) : 0;
+
+    // 5. SUBTOTALE
+    const subtotale = prezzoBase + costoDiagnosiEnergetica + costoServiziAggiuntivi + costoTrasferta;
+
+    // 6. MOLTIPLICATORE NUMERO INTERVENTI
+    const numeroInterventi = isResidenziale
+      ? data.interventiResidenziali.length
+      : data.interventiIndustriali.length;
+
+    let moltiplicatoreInterventi = 1.0;
+    if (numeroInterventi >= 5) {
+      moltiplicatoreInterventi = 1.4;
+    } else if (numeroInterventi >= 3) {
+      moltiplicatoreInterventi = 1.2;
     }
 
-    // Moltiplicatore urgenza
+    // 7. MOLTIPLICATORE URGENZA
     const moltiplicatoriUrgenza: Record<string, number> = {
       standard: 1.0,
-      prioritaria: 1.2,
-      urgente: 1.5,
+      prioritaria: 1.3,
+      urgente: 1.6,
     };
     const moltiplicatoreUrgenza = moltiplicatoriUrgenza[data.urgenza] || 1.0;
 
-    // Applica moltiplicatori ai servizi
-    costoServizi = Math.round(costoServizi * moltiplicatoreComplessita * moltiplicatoreUrgenza);
+    // 8. TOTALE PRESTAZIONI PROFESSIONALI
+    const totalePrestazioni = Math.round(subtotale * moltiplicatoreInterventi * moltiplicatoreUrgenza);
 
-    // Costo trasferta
-    const costoTrasferta = data.regione ? calcolaCostoTrasferta(data.regione) : 0;
+    // 9. SCHEDA TECNICA
+    const classeEnergeticaAttuale = data.classeEnergeticaAttuale || 'Non specificata';
 
-    // Totale lordo
-    const totaleLordo = costoInterventi + costoServizi + costoTrasferta;
+    // Stima classe obiettivo basata su interventi
+    let classeEnergeticaObiettivo = classeEnergeticaAttuale;
+    let risparmioEnergeticoPerc = '0';
 
-    // Calcolo incentivi totali
-    const incentivoContoTermico = dettaglioInterventi.reduce((sum, int) => sum + int.incentivo, 0);
-    const detrazioneEcobonus = 0; // già considerata nel calcolo incentivo
-    const totaleIncentivi = incentivoContoTermico;
+    if (numeroInterventi > 0) {
+      // Logica semplificata per stimare miglioramento
+      if (numeroInterventi >= 4 && (data.interventiResidenziali.includes('cappotto_esterno') || data.interventiResidenziali.includes('pompa_calore_aw'))) {
+        classeEnergeticaObiettivo = 'B';
+        risparmioEnergeticoPerc = '40-45';
+      } else if (numeroInterventi >= 3) {
+        classeEnergeticaObiettivo = 'C';
+        risparmioEnergeticoPerc = '30-35';
+      } else if (numeroInterventi >= 2) {
+        classeEnergeticaObiettivo = 'D';
+        risparmioEnergeticoPerc = '20-25';
+      } else {
+        risparmioEnergeticoPerc = '10-15';
+      }
+    }
 
-    // Esborso cliente
-    const esborsoCliente = Math.max(0, totaleLordo - totaleIncentivi);
+    // Interventi selezionati
+    const interventiSelezionati = isResidenziale
+      ? data.interventiResidenziali.map(getDescrizioneIntervento)
+      : data.interventiIndustriali.map(getDescrizioneIntervento);
 
-    // Payback
-    const paybackAnni = risparmioAnnuo > 0 ? esborsoCliente / risparmioAnnuo : 0;
+    // Incentivi applicabili
+    const incentiviApplicabili: string[] = [];
+    if (data.accessoIncentivi.includes('conto_termico')) {
+      incentiviApplicabili.push('Conto Termico 3.0 (fino al 65%)');
+    }
+    if (data.accessoIncentivi.includes('ecobonus')) {
+      incentiviApplicabili.push('Ecobonus (50-65%)');
+    }
+
+    // Tempi realizzazione
+    let tempiRealizzazione = '';
+    if (data.urgenza === 'standard') {
+      tempiRealizzazione = '3-4 mesi';
+    } else if (data.urgenza === 'prioritaria') {
+      tempiRealizzazione = '2-3 mesi';
+    } else {
+      tempiRealizzazione = '1-2 mesi';
+    }
 
     return {
-      costoInterventi,
-      costoServizi,
-      moltiplicatoreComplessita,
-      moltiplicatoreUrgenza,
+      prezzoBase,
+      costoDiagnosiEnergetica,
+      costoServiziAggiuntivi,
       costoTrasferta,
-      totaleLordo,
-      incentivoContoTermico,
-      detrazioneEcobonus,
-      totaleIncentivi,
-      esborsoCliente: Math.round(esborsoCliente),
-      risparmioAnnuo: Math.round(risparmioAnnuo),
-      paybackAnni: parseFloat(paybackAnni.toFixed(1)),
-      dettaglioInterventi,
+      subtotale,
+      moltiplicatoreInterventi,
+      moltiplicatoreUrgenza,
+      totalePrestazioni,
+      classeEnergeticaAttuale,
+      classeEnergeticaObiettivo,
+      risparmioEnergeticoPerc,
+      interventiSelezionati,
+      incentiviApplicabili,
+      tempiRealizzazione,
     };
   };
 
-  const getDescrizioneIntervento = (key: string, isResidenziale: boolean): string => {
+  const getDescrizioneIntervento = (key: string): string => {
     const residenziali: Record<string, string> = {
       caldaia_condensazione: 'Caldaia a condensazione',
       pompa_calore_aa: 'Pompa di calore aria/aria',
@@ -398,7 +390,7 @@ export default function ConfiguratoreEfficientamento() {
       isolamento_condotte: 'Isolamento condotte',
     };
 
-    return isResidenziale ? residenziali[key] || key : industriali[key] || key;
+    return residenziali[key] || industriali[key] || key;
   };
 
   const clearData = () => {
@@ -454,7 +446,7 @@ export default function ConfiguratoreEfficientamento() {
           </Link>
           <h1 className="text-4xl font-bold mb-3">Configuratore Efficientamento Energetico</h1>
           <p className="text-xl text-blue-50">
-            Ottieni un preventivo personalizzato con calcolo incentivi Conto Termico 3.0
+            Preventivo prestazioni professionali con indicazioni tecniche e incentivi
           </p>
         </div>
       </div>
@@ -605,11 +597,11 @@ export default function ConfiguratoreEfficientamento() {
                       className="w-full border border-gray-300 rounded-md px-3 py-2 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     >
                       <option value="">Seleziona tipologia</option>
-                      <option value="appartamento">Appartamento (1.0x)</option>
-                      <option value="villa">Villa/Casa indipendente (1.2x)</option>
-                      <option value="condominio">Condominio (1.5x)</option>
-                      <option value="negozio">Negozio/Attività commerciale (1.2x)</option>
-                      <option value="ufficio">Ufficio (1.2x)</option>
+                      <option value="appartamento">Appartamento</option>
+                      <option value="villa">Villa/Casa indipendente</option>
+                      <option value="condominio">Condominio</option>
+                      <option value="negozio">Negozio/Attività commerciale</option>
+                      <option value="ufficio">Ufficio</option>
                     </select>
                   </div>
 
@@ -805,7 +797,7 @@ export default function ConfiguratoreEfficientamento() {
                     </div>
                     <div>
                       <CardTitle className="text-xl">3. Interventi Richiesti</CardTitle>
-                      <p className="text-sm text-blue-50">Seleziona gli interventi</p>
+                      <p className="text-sm text-blue-50">Seleziona gli interventi desiderati</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -814,11 +806,11 @@ export default function ConfiguratoreEfficientamento() {
                     <Label className="mb-3 block font-semibold">🔥 Generazione Calore</Label>
                     <div className="space-y-2">
                       {[
-                        { value: 'caldaia_condensazione', label: 'Caldaia a condensazione', costo: '€3.500' },
-                        { value: 'pompa_calore_aa', label: 'Pompa di calore aria/aria', costo: '€12.000' },
-                        { value: 'pompa_calore_aw', label: 'Pompa di calore aria/acqua', costo: '€10.000' },
-                        { value: 'caldaia_biomassa', label: 'Caldaia a biomassa', costo: '€8.000' },
-                        { value: 'sistema_ibrido', label: 'Sistema ibrido caldaia+PdC', costo: '€9.000' },
+                        { value: 'caldaia_condensazione', label: 'Caldaia a condensazione' },
+                        { value: 'pompa_calore_aa', label: 'Pompa di calore aria/aria' },
+                        { value: 'pompa_calore_aw', label: 'Pompa di calore aria/acqua' },
+                        { value: 'caldaia_biomassa', label: 'Caldaia a biomassa' },
+                        { value: 'sistema_ibrido', label: 'Sistema ibrido caldaia+PdC' },
                       ].map((int) => (
                         <label
                           key={int.value}
@@ -830,12 +822,7 @@ export default function ConfiguratoreEfficientamento() {
                             onChange={() => toggleArrayValue('interventiResidenziali', int.value)}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">{int.label}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {int.costo}
-                          </Badge>
+                          <span className="text-sm font-medium">{int.label}</span>
                         </label>
                       ))}
                     </div>
@@ -845,9 +832,9 @@ export default function ConfiguratoreEfficientamento() {
                     <Label className="mb-3 block font-semibold">🏠 Involucro Edilizio</Label>
                     <div className="space-y-2">
                       {[
-                        { value: 'cappotto_esterno', label: 'Cappotto termico esterno', costo: '€70/mq' },
-                        { value: 'isolamento_copertura', label: 'Isolamento copertura', costo: '€50/mq' },
-                        { value: 'serramenti', label: 'Sostituzione serramenti', costo: '€500/mq' },
+                        { value: 'cappotto_esterno', label: 'Cappotto termico esterno' },
+                        { value: 'isolamento_copertura', label: 'Isolamento copertura' },
+                        { value: 'serramenti', label: 'Sostituzione serramenti' },
                       ].map((int) => (
                         <label
                           key={int.value}
@@ -859,12 +846,7 @@ export default function ConfiguratoreEfficientamento() {
                             onChange={() => toggleArrayValue('interventiResidenziali', int.value)}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">{int.label}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {int.costo}
-                          </Badge>
+                          <span className="text-sm font-medium">{int.label}</span>
                         </label>
                       ))}
                     </div>
@@ -874,9 +856,9 @@ export default function ConfiguratoreEfficientamento() {
                     <Label className="mb-3 block font-semibold">☀️ Energie Rinnovabili</Label>
                     <div className="space-y-2">
                       {[
-                        { value: 'solare_termico', label: 'Solare termico', costo: '€1.000/mq' },
-                        { value: 'fotovoltaico', label: 'Fotovoltaico', costo: '€2.000/kWp' },
-                        { value: 'vmc', label: 'VMC con recupero calore', costo: '€100/mq' },
+                        { value: 'solare_termico', label: 'Solare termico' },
+                        { value: 'fotovoltaico', label: 'Fotovoltaico' },
+                        { value: 'vmc', label: 'VMC con recupero calore' },
                       ].map((int) => (
                         <label
                           key={int.value}
@@ -888,12 +870,7 @@ export default function ConfiguratoreEfficientamento() {
                             onChange={() => toggleArrayValue('interventiResidenziali', int.value)}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">{int.label}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {int.costo}
-                          </Badge>
+                          <span className="text-sm font-medium">{int.label}</span>
                         </label>
                       ))}
                     </div>
@@ -912,7 +889,7 @@ export default function ConfiguratoreEfficientamento() {
                     </div>
                     <div>
                       <CardTitle className="text-xl">3. Interventi Richiesti</CardTitle>
-                      <p className="text-sm text-blue-50">Seleziona gli interventi</p>
+                      <p className="text-sm text-blue-50">Seleziona gli interventi desiderati</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -921,12 +898,12 @@ export default function ConfiguratoreEfficientamento() {
                     <Label className="mb-3 block font-semibold">Interventi disponibili</Label>
                     <div className="space-y-2">
                       {[
-                        { value: 'diagnosi_energetica', label: 'Diagnosi energetica', costo: '€5.000' },
-                        { value: 'recupero_calore', label: 'Recupero calore da processi', costo: '€30.000' },
-                        { value: 'cogenerazione', label: 'Impianto cogenerazione', costo: '€2.000/kW' },
-                        { value: 'relamping_led', label: 'Relamping LED', costo: '€120/punto luce' },
-                        { value: 'inverter_motori', label: 'Inverter motori elettrici', costo: '€8.000' },
-                        { value: 'isolamento_condotte', label: 'Isolamento condotte', costo: '€12.000' },
+                        { value: 'diagnosi_energetica', label: 'Diagnosi energetica' },
+                        { value: 'recupero_calore', label: 'Recupero calore da processi' },
+                        { value: 'cogenerazione', label: 'Impianto cogenerazione' },
+                        { value: 'relamping_led', label: 'Relamping LED' },
+                        { value: 'inverter_motori', label: 'Inverter motori elettrici' },
+                        { value: 'isolamento_condotte', label: 'Isolamento condotte' },
                       ].map((int) => (
                         <label
                           key={int.value}
@@ -938,12 +915,7 @@ export default function ConfiguratoreEfficientamento() {
                             onChange={() => toggleArrayValue('interventiIndustriali', int.value)}
                             className="w-4 h-4 text-blue-600 rounded"
                           />
-                          <div className="flex-1">
-                            <span className="text-sm font-medium">{int.label}</span>
-                          </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {int.costo}
-                          </Badge>
+                          <span className="text-sm font-medium">{int.label}</span>
                         </label>
                       ))}
                     </div>
@@ -1066,7 +1038,7 @@ export default function ConfiguratoreEfficientamento() {
               </CardContent>
             </Card>
 
-            {/* Sezione 6: Urgenza e Servizi */}
+            {/* Sezione 6: Urgenza, Servizi Aggiuntivi e Dati Cliente */}
             <Card>
               <CardHeader className="bg-gradient-to-r from-blue-500 to-cyan-600 text-white">
                 <div className="flex items-center gap-3">
@@ -1085,8 +1057,8 @@ export default function ConfiguratoreEfficientamento() {
                   <div className="space-y-2">
                     {[
                       { value: 'standard', label: 'Standard (60-90 gg)', mult: '1.0x' },
-                      { value: 'prioritaria', label: 'Prioritaria (30-60 gg)', mult: '1.2x' },
-                      { value: 'urgente', label: 'Urgente (15-30 gg)', mult: '1.5x' },
+                      { value: 'prioritaria', label: 'Prioritaria (30-60 gg)', mult: '1.3x' },
+                      { value: 'urgente', label: 'Urgente (15-30 gg)', mult: '1.6x' },
                     ].map((urg) => (
                       <label
                         key={urg.value}
@@ -1112,32 +1084,99 @@ export default function ConfiguratoreEfficientamento() {
                 </div>
 
                 <div className="pt-4 border-t">
-                  <Label className="mb-3 block font-semibold">Servizi tecnici inclusi</Label>
-                  <div className="grid md:grid-cols-2 gap-2">
-                    {[
-                      { value: 'sopralluogo', label: 'Sopralluogo preliminare', prezzo: '€300' },
-                      { value: 'diagnosi_energetica', label: 'Diagnosi energetica', prezzo: '€2.500' },
-                      { value: 'ape_ante_post', label: 'APE ante/post', prezzo: '€400' },
-                      { value: 'relazione_legge10', label: 'Relazione Legge 10', prezzo: '€800' },
-                      { value: 'pratiche_conto_termico', label: 'Pratiche Conto Termico', prezzo: '€1.500' },
-                      { value: 'pratiche_enea', label: 'Pratiche ENEA', prezzo: '€500' },
-                      { value: 'direzione_lavori', label: 'Direzione lavori', prezzo: '€2.000' },
-                      { value: 'asseverazione', label: 'Asseverazione finale', prezzo: '€1.200' },
-                    ].map((serv) => (
-                      <label
-                        key={serv.value}
-                        className="flex items-center gap-2 p-2 border rounded cursor-pointer hover:bg-blue-50 text-sm"
-                      >
-                        <input
-                          type="checkbox"
-                          checked={data.serviziInclusi.includes(serv.value)}
-                          onChange={() => toggleArrayValue('serviziInclusi', serv.value)}
-                          className="w-4 h-4 text-blue-600 rounded"
-                        />
-                        <span className="flex-1">{serv.label}</span>
-                        <span className="text-xs text-gray-600">{serv.prezzo}</span>
-                      </label>
-                    ))}
+                  <Label className="mb-3 block font-semibold">Diagnosi Energetica Completa</Label>
+                  <label className="flex items-center gap-3 p-3 border-2 rounded-lg cursor-pointer hover:bg-blue-50">
+                    <input
+                      type="checkbox"
+                      checked={data.includeDiagnosiEnergetica}
+                      onChange={(e) => updateData('includeDiagnosiEnergetica', e.target.checked)}
+                      className="w-5 h-5 text-blue-600 rounded"
+                    />
+                    <div className="flex-1">
+                      <span className="text-sm font-medium">Includi diagnosi energetica completa</span>
+                      <p className="text-xs text-gray-600 mt-1">
+                        {isResidenziale && data.superficieRiscaldata > 0 && (
+                          <>
+                            {data.superficieRiscaldata <= 100 && '€800'}
+                            {data.superficieRiscaldata > 100 && data.superficieRiscaldata <= 200 && '€1.000'}
+                            {data.superficieRiscaldata > 200 && data.superficieRiscaldata <= 400 && '€1.500'}
+                            {data.superficieRiscaldata > 400 && data.superficieRiscaldata <= 600 && '€2.000'}
+                            {data.superficieRiscaldata > 600 && '€2.500'}
+                          </>
+                        )}
+                        {isIndustriale && data.superficieTotale > 0 && (
+                          <>
+                            {data.superficieTotale <= 500 && '€1.500'}
+                            {data.superficieTotale > 500 && data.superficieTotale <= 1000 && '€2.500'}
+                            {data.superficieTotale > 1000 && data.superficieTotale <= 2000 && '€3.500'}
+                            {data.superficieTotale > 2000 && data.superficieTotale <= 5000 && '€5.000'}
+                            {data.superficieTotale > 5000 && '€9.000'}
+                          </>
+                        )}
+                      </p>
+                    </div>
+                  </label>
+                </div>
+
+                <div className="pt-4 border-t">
+                  <Label className="mb-3 block font-semibold">Servizi Aggiuntivi</Label>
+                  <div className="space-y-2">
+                    <label className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-blue-50 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={data.serviziAggiuntivi.includes('pratica_conto_termico')}
+                        onChange={() => toggleArrayValue('serviziAggiuntivi', 'pratica_conto_termico')}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="flex-1">Pratica Conto Termico 3.0</span>
+                      <span className="text-xs text-gray-600">€600</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-blue-50 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={data.serviziAggiuntivi.includes('asseverazione_ecobonus')}
+                        onChange={() => toggleArrayValue('serviziAggiuntivi', 'asseverazione_ecobonus')}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="flex-1">Asseverazione Ecobonus</span>
+                      <span className="text-xs text-gray-600">€900</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-blue-50 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={data.serviziAggiuntivi.includes('direzione_lavori')}
+                        onChange={() => toggleArrayValue('serviziAggiuntivi', 'direzione_lavori')}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="flex-1">Direzione Lavori Energetica</span>
+                      <span className="text-xs text-gray-600">
+                        {isResidenziale ? '€1.200' : '€2.000'}
+                      </span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-blue-50 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={data.serviziAggiuntivi.includes('termografia')}
+                        onChange={() => toggleArrayValue('serviziAggiuntivi', 'termografia')}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="flex-1">Termografia edificio</span>
+                      <span className="text-xs text-gray-600">€400</span>
+                    </label>
+
+                    <label className="flex items-center gap-3 p-2 border rounded-lg cursor-pointer hover:bg-blue-50 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={data.serviziAggiuntivi.includes('blower_door_test')}
+                        onChange={() => toggleArrayValue('serviziAggiuntivi', 'blower_door_test')}
+                        className="w-4 h-4 text-blue-600 rounded"
+                      />
+                      <span className="flex-1">Blower Door Test</span>
+                      <span className="text-xs text-gray-600">€350</span>
+                    </label>
                   </div>
                 </div>
 
@@ -1214,104 +1253,149 @@ export default function ConfiguratoreEfficientamento() {
                 <CardHeader className="bg-gradient-to-r from-blue-600 to-cyan-600 text-white">
                   <CardTitle className="flex items-center gap-2">
                     <Euro className="w-5 h-5" />
-                    Preventivo con Incentivi
+                    Preventivo Prestazioni
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   {preventivo && (
                     <>
-                      {/* Interventi selezionati */}
-                      {preventivo.dettaglioInterventi.length > 0 && (
-                        <div className="pb-4 border-b">
-                          <div className="text-sm font-medium text-gray-700 mb-2">Interventi selezionati</div>
-                          <div className="space-y-1">
-                            {preventivo.dettaglioInterventi.map((int, i) => (
-                              <div key={i} className="flex justify-between text-xs">
-                                <span className="text-gray-600">{int.descrizione}</span>
-                                <span className="font-medium">€{int.costo.toLocaleString('it-IT')}</span>
-                              </div>
-                            ))}
-                          </div>
-                          <div className="mt-2 pt-2 border-t flex justify-between font-semibold text-sm">
-                            <span>Subtotale interventi</span>
-                            <span>€{preventivo.costoInterventi.toLocaleString('it-IT')}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Servizi */}
-                      {preventivo.costoServizi > 0 && (
-                        <div className="pb-4 border-b">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Servizi tecnici</span>
-                            <span className="font-medium">+€{preventivo.costoServizi.toLocaleString('it-IT')}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Trasferta */}
-                      {preventivo.costoTrasferta > 0 && (
-                        <div className="pb-4 border-b">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Trasferta ({data.regione})</span>
-                            <span className="font-medium">+€{preventivo.costoTrasferta.toLocaleString('it-IT')}</span>
-                          </div>
-                        </div>
-                      )}
-
-                      {/* Totale lordo */}
+                      {/* Prestazioni professionali base */}
                       <div className="pb-4 border-b">
-                        <div className="flex justify-between items-center">
-                          <span className="font-bold text-gray-900">TOTALE LORDO</span>
-                          <span className="text-xl font-bold text-gray-900">
-                            €{preventivo.totaleLordo.toLocaleString('it-IT')}
-                          </span>
+                        <div className="text-sm font-medium text-gray-700 mb-3">PRESTAZIONI PROFESSIONALI</div>
+
+                        {preventivo.prezzoBase > 0 && (
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Prezzo base</span>
+                            <span className="font-medium">€{preventivo.prezzoBase.toLocaleString('it-IT')}</span>
+                          </div>
+                        )}
+
+                        {preventivo.costoDiagnosiEnergetica > 0 && (
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Diagnosi energetica</span>
+                            <span className="font-medium">€{preventivo.costoDiagnosiEnergetica.toLocaleString('it-IT')}</span>
+                          </div>
+                        )}
+
+                        {preventivo.costoServiziAggiuntivi > 0 && (
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Servizi aggiuntivi</span>
+                            <span className="font-medium">€{preventivo.costoServiziAggiuntivi.toLocaleString('it-IT')}</span>
+                          </div>
+                        )}
+
+                        {preventivo.costoTrasferta > 0 && (
+                          <div className="flex justify-between text-sm mb-2">
+                            <span className="text-gray-600">Trasferta</span>
+                            <span className="font-medium">€{preventivo.costoTrasferta.toLocaleString('it-IT')}</span>
+                          </div>
+                        )}
+
+                        <div className="mt-3 pt-3 border-t flex justify-between text-sm">
+                          <span className="font-semibold">Subtotale</span>
+                          <span className="font-semibold">€{preventivo.subtotale.toLocaleString('it-IT')}</span>
                         </div>
                       </div>
 
-                      {/* Incentivi */}
-                      {preventivo.totaleIncentivi > 0 && (
-                        <div className="pb-4 border-b bg-green-50 -mx-6 px-6 py-3">
-                          <div className="text-sm font-medium text-green-800 mb-2 flex items-center gap-2">
-                            <Leaf className="w-4 h-4" />
-                            Incentivi
-                          </div>
-                          {preventivo.incentivoContoTermico > 0 && (
-                            <div className="flex justify-between text-sm text-green-700">
-                              <span>Conto Termico 3.0</span>
-                              <span className="font-bold">-€{preventivo.incentivoContoTermico.toLocaleString('it-IT')}</span>
+                      {/* Moltiplicatori */}
+                      {(preventivo.moltiplicatoreInterventi > 1.0 || preventivo.moltiplicatoreUrgenza > 1.0) && (
+                        <div className="pb-4 border-b bg-blue-50 -mx-6 px-6 py-3">
+                          <div className="text-sm font-medium text-blue-800 mb-2">Moltiplicatori</div>
+
+                          {preventivo.moltiplicatoreInterventi > 1.0 && (
+                            <div className="flex justify-between text-sm text-blue-700">
+                              <span>N° interventi</span>
+                              <span className="font-medium">{preventivo.moltiplicatoreInterventi.toFixed(1)}x</span>
+                            </div>
+                          )}
+
+                          {preventivo.moltiplicatoreUrgenza > 1.0 && (
+                            <div className="flex justify-between text-sm text-blue-700">
+                              <span>Urgenza</span>
+                              <span className="font-medium">{preventivo.moltiplicatoreUrgenza.toFixed(1)}x</span>
                             </div>
                           )}
                         </div>
                       )}
 
-                      {/* Esborso cliente */}
+                      {/* Totale prestazioni */}
                       <div className="pt-4 border-t-2 border-blue-500">
                         <div className="flex justify-between items-center mb-4">
-                          <span className="text-lg font-bold text-gray-900">ESBORSO CLIENTE</span>
+                          <span className="text-lg font-bold text-gray-900">TOTALE</span>
                           <span className="text-2xl font-bold text-blue-600">
-                            €{preventivo.esborsoCliente.toLocaleString('it-IT')}
+                            €{preventivo.totalePrestazioni.toLocaleString('it-IT')}
                           </span>
                         </div>
+                      </div>
 
-                        {/* Risparmio e payback */}
-                        {preventivo.risparmioAnnuo > 0 && (
-                          <div className="space-y-2 text-sm">
-                            <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
-                              <span className="flex items-center gap-1">
-                                <TrendingUp className="w-4 h-4 text-blue-600" />
-                                Risparmio annuo
-                              </span>
-                              <span className="font-bold text-blue-600">
-                                €{preventivo.risparmioAnnuo.toLocaleString('it-IT')}/anno
-                              </span>
+                      {/* Scheda Tecnica */}
+                      <div className="pt-4 border-t bg-gradient-to-br from-cyan-50 to-blue-50 -mx-6 px-6 py-4">
+                        <div className="text-sm font-bold text-blue-900 mb-3 flex items-center gap-2">
+                          <FileText className="w-4 h-4" />
+                          SCHEDA TECNICA
+                        </div>
+
+                        {preventivo.classeEnergeticaAttuale && (
+                          <div className="mb-3">
+                            <div className="text-xs text-gray-600 mb-1">Classe energetica</div>
+                            <div className="flex items-center gap-2 text-sm">
+                              <span className="font-bold">{preventivo.classeEnergeticaAttuale}</span>
+                              {preventivo.classeEnergeticaObiettivo !== preventivo.classeEnergeticaAttuale && (
+                                <>
+                                  <span className="text-gray-400">→</span>
+                                  <span className="font-bold text-green-600">{preventivo.classeEnergeticaObiettivo}</span>
+                                </>
+                              )}
                             </div>
-                            {preventivo.paybackAnni > 0 && (
-                              <div className="flex justify-between items-center p-2 bg-blue-50 rounded">
-                                <span>⏱️ Payback time</span>
-                                <span className="font-bold text-blue-600">{preventivo.paybackAnni} anni</span>
-                              </div>
-                            )}
+                          </div>
+                        )}
+
+                        {preventivo.risparmioEnergeticoPerc !== '0' && (
+                          <div className="mb-3">
+                            <div className="text-xs text-gray-600 mb-1">Risparmio energetico stimato</div>
+                            <div className="font-bold text-green-600 text-sm flex items-center gap-1">
+                              <TrendingUp className="w-4 h-4" />
+                              {preventivo.risparmioEnergeticoPerc}%
+                            </div>
+                          </div>
+                        )}
+
+                        {preventivo.interventiSelezionati.length > 0 && (
+                          <div className="mb-3">
+                            <div className="text-xs text-gray-600 mb-2">Interventi selezionati</div>
+                            <div className="space-y-1">
+                              {preventivo.interventiSelezionati.map((int, i) => (
+                                <div key={i} className="flex items-start gap-2 text-xs">
+                                  <Check className="w-3 h-3 text-green-600 flex-shrink-0 mt-0.5" />
+                                  <span className="text-gray-700">{int}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {preventivo.incentiviApplicabili.length > 0 && (
+                          <div className="mb-3">
+                            <div className="text-xs text-gray-600 mb-2 flex items-center gap-1">
+                              <Leaf className="w-3 h-3" />
+                              Incentivi applicabili
+                            </div>
+                            <div className="space-y-1">
+                              {preventivo.incentiviApplicabili.map((inc, i) => (
+                                <div key={i} className="text-xs text-green-700 font-medium">
+                                  ✓ {inc}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {preventivo.tempiRealizzazione && (
+                          <div>
+                            <div className="text-xs text-gray-600 mb-1">Tempi realizzazione</div>
+                            <div className="text-sm font-medium text-gray-700">
+                              ⏱️ {preventivo.tempiRealizzazione}
+                            </div>
                           </div>
                         )}
                       </div>
@@ -1322,8 +1406,8 @@ export default function ConfiguratoreEfficientamento() {
                           <div className="text-sm text-amber-800">
                             <p className="font-medium mb-1">Preventivo indicativo</p>
                             <p>
-                              Il preventivo finale e gli incentivi effettivi saranno confermati dopo sopralluogo
-                              tecnico e verifica documentazione.
+                              Questo preventivo copre solo le prestazioni professionali dello studio.
+                              I costi degli interventi edilizi saranno forniti dalle imprese esecutrici.
                             </p>
                           </div>
                         </div>
