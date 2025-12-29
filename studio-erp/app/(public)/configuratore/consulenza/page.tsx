@@ -703,6 +703,28 @@ export default function ConfiguratoreConsulenza() {
                   />
                 </div>
 
+                {/* Banner Garanzia */}
+                <div className="bg-gradient-to-r from-green-50 to-emerald-50 p-4 rounded-lg border-2 border-green-200">
+                  <div className="flex gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-semibold text-green-900 mb-1">
+                        🔒 Prenota senza rischi
+                      </p>
+                      <p className="text-sm text-gray-700 mb-2">
+                        Se non sei soddisfatto della consulenza, puoi richiedere un rimborso entro 7 giorni.
+                        Valutiamo caso per caso con massima trasparenza.
+                      </p>
+                      <Link
+                        href="/legal/garanzia-consulenza"
+                        className="text-sm text-green-700 hover:text-green-800 font-medium underline"
+                      >
+                        Scopri i dettagli della garanzia →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+
                 <div className="pt-6 border-t">
                   <div className="flex gap-3">
                     <Button onClick={clearData} variant="outline" className="flex-1">
@@ -829,7 +851,13 @@ export default function ConfiguratoreConsulenza() {
 
                         <div className="mt-4 pt-4 border-t border-green-200">
                           <div className="text-sm font-bold text-green-900 mb-2">🔒 GARANZIA</div>
-                          <div className="text-sm text-gray-700">Soddisfatti o Rimborsati</div>
+                          <div className="text-sm text-gray-700 mb-2">Soddisfatti o Rimborsati</div>
+                          <Link
+                            href="/legal/garanzia-consulenza"
+                            className="text-xs text-green-600 hover:text-green-700 underline flex items-center gap-1"
+                          >
+                            Leggi dettagli garanzia →
+                          </Link>
                         </div>
                       </div>
 
