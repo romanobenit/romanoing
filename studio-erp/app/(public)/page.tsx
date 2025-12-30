@@ -218,8 +218,8 @@ export default function HomePage() {
                   ✓ Asseverazioni bonus
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-RISTR-BONUS">
-                    Preventivo →
+                  <Link href="/configuratore/ristrutturazione">
+                    🏗️ Configuratore →
                   </Link>
                 </Button>
               </div>
@@ -586,7 +586,7 @@ export default function HomePage() {
               <h3 className="font-bold text-lg mb-4">Servizi</h3>
               <ul className="space-y-2 text-sm text-gray-600">
                 <li><Link href="/configuratore/consulenza" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
-                <li><Link href="/bundle/BDL-RISTR-BONUS" className="hover:text-blue-600">Ristrutturazione</Link></li>
+                <li><Link href="/configuratore/ristrutturazione" className="hover:text-blue-600">Ristrutturazione</Link></li>
                 <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
                 <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
                 <li><Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">Ampliamento Produttivo</Link></li>
