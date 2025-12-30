@@ -25,7 +25,10 @@ import {
   Landmark,
   Palette,
   Clock,
-  MapPin
+  MapPin,
+  FileText,
+  X,
+  Upload
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-ristrutturazione-data';
@@ -206,6 +209,7 @@ export default function ConfiguratoreRistrutturazione() {
   const [data, setData] = useState<ConfiguratoreRistrutturazioneData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
   const [emailSending, setEmailSending] = useState(false);
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
   const updateData = (field: keyof ConfiguratoreRistrutturazioneData, value: any) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -218,6 +222,49 @@ export default function ConfiguratoreRistrutturazione() {
         : [...prev.serviziAggiuntivi, servizioId];
       return { ...prev, serviziAggiuntivi: newServizi };
     });
+  };
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+
+    const newFiles = Array.from(files);
+    const maxSize = 10 * 1024 * 1024; // 10MB per file
+    const allowedTypes = [
+      'application/pdf',
+      'image/jpeg',
+      'image/jpg',
+      'image/png',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // docx
+      'application/msword', // doc
+    ];
+
+    const validFiles = newFiles.filter(file => {
+      if (file.size > maxSize) {
+        alert(`Il file ${file.name} supera i 10MB`);
+        return false;
+      }
+      if (!allowedTypes.includes(file.type)) {
+        alert(`Il file ${file.name} non è un formato supportato`);
+        return false;
+      }
+      return true;
+    });
+
+    setUploadedFiles(prev => [...prev, ...validFiles]);
+    e.target.value = ''; // Reset input
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const formatFileSize = (bytes: number): string => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
   };
 
   // Load from localStorage
@@ -329,6 +376,7 @@ export default function ConfiguratoreRistrutturazione() {
   const clearData = () => {
     if (confirm('Sei sicuro di voler cancellare tutti i dati?')) {
       localStorage.removeItem(STORAGE_KEY);
+      setUploadedFiles([]);
       window.location.reload();
     }
   };
@@ -345,10 +393,21 @@ export default function ConfiguratoreRistrutturazione() {
 
     setEmailSending(true);
     try {
+      // Prepara info file per invio (solo metadati, non i file veri)
+      const fileInfo = uploadedFiles.map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
+
       const response = await fetch('/api/configuratore/ristrutturazione/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ data, preventivo }),
+        body: JSON.stringify({
+          data,
+          preventivo,
+          files: fileInfo
+        }),
       });
 
       if (response.ok) {
@@ -752,6 +811,67 @@ export default function ConfiguratoreRistrutturazione() {
                     rows={4}
                     placeholder="Esempio: Rifacimento completo bagno e cucina, spostamento tramezzi, nuovi impianti..."
                   />
+                </div>
+
+                {/* Upload Documentazione */}
+                <div>
+                  <Label className="mb-2 block">📎 Allega documentazione (opzionale)</Label>
+                  <p className="text-xs text-gray-600 mb-3">
+                    Planimetrie, foto, preventivi esistenti (PDF, JPG, PNG, DOC - Max 10MB per file)
+                  </p>
+
+                  {/* Upload Button */}
+                  <div className="mb-4">
+                    <label className="cursor-pointer">
+                      <div className="flex items-center gap-2 px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-orange-400 hover:bg-orange-50 transition-all">
+                        <Upload className="w-5 h-5 text-orange-600" />
+                        <span className="text-sm font-medium text-gray-700">
+                          Seleziona file da caricare
+                        </span>
+                      </div>
+                      <input
+                        type="file"
+                        multiple
+                        accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
+                        onChange={handleFileUpload}
+                        className="hidden"
+                      />
+                    </label>
+                  </div>
+
+                  {/* Lista File Uploadati */}
+                  {uploadedFiles.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-xs font-semibold text-gray-700 mb-2">
+                        File allegati ({uploadedFiles.length}):
+                      </p>
+                      {uploadedFiles.map((file, index) => (
+                        <div
+                          key={index}
+                          className="flex items-center justify-between gap-3 p-3 bg-gray-50 border border-gray-200 rounded-lg"
+                        >
+                          <div className="flex items-center gap-2 flex-1 min-w-0">
+                            <FileText className="w-4 h-4 text-orange-600 flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-sm font-medium text-gray-900 truncate">
+                                {file.name}
+                              </p>
+                              <p className="text-xs text-gray-500">
+                                {formatFileSize(file.size)}
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => removeFile(index)}
+                            className="p-1 hover:bg-red-100 rounded-full transition-colors flex-shrink-0"
+                            type="button"
+                          >
+                            <X className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t">

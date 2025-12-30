@@ -3,16 +3,18 @@ import { NextResponse } from 'next/server';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { data, preventivo } = body;
+    const { data, preventivo, files } = body;
 
-    // TODO: Implementare invio email effettivo
-    // Per ora simula successo
+    // TODO: Implementare invio email effettivo con allegati
+    // Per ora simula successo e logga info
     console.log('Richiesta preventivo ristrutturazione:', {
       cliente: data.nomeCliente,
       email: data.emailCliente,
       dimensione: data.dimensione,
       tipoIntervento: data.tipoIntervento,
-      totale: preventivo?.totale
+      totale: preventivo?.totale,
+      fileAllegati: files?.length || 0,
+      files: files?.map((f: any) => `${f.name} (${(f.size / 1024).toFixed(2)} KB)`)
     });
 
     // Simula delay invio
