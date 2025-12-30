@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -8,8 +8,6 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import {
   ChevronLeft,
-  ChevronRight,
-  CheckCircle,
   Trash2,
   Download,
   Send,
@@ -217,11 +215,16 @@ interface Preventivo {
 }
 
 export default function ConfiguratoreAmpliamento() {
-  const [currentSection, setCurrentSection] = useState(1);
   const [data, setData] = useState<ConfiguratoreAmpiamentoData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
   const [emailSending, setEmailSending] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [activeSection, setActiveSection] = useState(1);
+
+  const section1Ref = useRef<HTMLDivElement>(null);
+  const section2Ref = useRef<HTMLDivElement>(null);
+  const section3Ref = useRef<HTMLDivElement>(null);
+  const section4Ref = useRef<HTMLDivElement>(null);
 
   const updateData = (field: keyof ConfiguratoreAmpiamentoData, value: any) => {
     setData((prev) => ({ ...prev, [field]: value }));
@@ -353,6 +356,34 @@ export default function ConfiguratoreAmpliamento() {
     });
   }, [data]);
 
+  // Scroll spy per evidenziare sezione attiva
+  useEffect(() => {
+    const handleScroll = () => {
+      const sections = [
+        { ref: section1Ref, id: 1 },
+        { ref: section2Ref, id: 2 },
+        { ref: section3Ref, id: 3 },
+        { ref: section4Ref, id: 4 }
+      ];
+
+      const scrollPosition = window.scrollY + 200;
+
+      for (let i = sections.length - 1; i >= 0; i--) {
+        const section = sections[i];
+        if (section.ref.current) {
+          const offsetTop = section.ref.current.offsetTop;
+          if (scrollPosition >= offsetTop) {
+            setActiveSection(section.id);
+            break;
+          }
+        }
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
   const clearData = () => {
     if (confirm('Sei sicuro di voler cancellare tutti i dati?')) {
       localStorage.removeItem(STORAGE_KEY);
@@ -412,6 +443,16 @@ export default function ConfiguratoreAmpliamento() {
     { number: 4, title: 'Finalizza', completed: data.nomeCliente && data.emailCliente && data.privacyAccettata }
   ];
 
+  const scrollToSection = (sectionNumber: number) => {
+    const refs = [section1Ref, section2Ref, section3Ref, section4Ref];
+    const targetRef = refs[sectionNumber - 1];
+    if (targetRef.current) {
+      const yOffset = -100;
+      const y = targetRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
+      window.scrollTo({ top: y, behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
       {/* Header con Gradient Hero */}
@@ -437,35 +478,38 @@ export default function ConfiguratoreAmpliamento() {
             <div>
               <h1 className="text-5xl font-bold mb-2">Configuratore Ampliamento</h1>
               <p className="text-purple-100 text-lg">
-                Progetta il tuo ampliamento ideale in 4 semplici step
+                Compila il form e ottieni il tuo preventivo personalizzato
               </p>
             </div>
           </div>
 
-          {/* Step Indicator Visuale */}
+          {/* Step Indicator Visuale - Clickable */}
           <div className="mt-10 flex items-center justify-center gap-4 max-w-2xl mx-auto">
             {steps.map((step, index) => (
               <React.Fragment key={step.number}>
-                <div className="flex flex-col items-center">
+                <button
+                  onClick={() => scrollToSection(step.number)}
+                  className="flex flex-col items-center cursor-pointer group"
+                >
                   <div className={`w-12 h-12 rounded-full flex items-center justify-center font-bold text-lg transition-all duration-300 ${
-                    currentSection === step.number
+                    activeSection === step.number
                       ? 'bg-white text-purple-600 shadow-lg scale-110'
                       : step.completed
-                      ? 'bg-purple-400 text-white'
-                      : 'bg-white/20 text-white/60'
+                      ? 'bg-purple-400 text-white group-hover:bg-purple-300'
+                      : 'bg-white/20 text-white/60 group-hover:bg-white/30'
                   }`}>
-                    {step.completed && currentSection !== step.number ? (
+                    {step.completed && activeSection !== step.number ? (
                       <Check className="w-6 h-6" />
                     ) : (
                       step.number
                     )}
                   </div>
                   <span className={`text-xs mt-2 font-medium transition-colors ${
-                    currentSection === step.number ? 'text-white' : 'text-purple-200'
+                    activeSection === step.number ? 'text-white' : 'text-purple-200 group-hover:text-white'
                   }`}>
                     {step.title}
                   </span>
-                </div>
+                </button>
                 {index < steps.length - 1 && (
                   <div className={`w-16 h-1 rounded-full transition-all duration-300 ${
                     step.completed ? 'bg-purple-400' : 'bg-white/20'
@@ -480,188 +524,188 @@ export default function ConfiguratoreAmpliamento() {
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 py-12">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Left Column - Form */}
-          <div className="lg:col-span-2">
-            <Card className="border-0 shadow-2xl">
-              <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 border-b">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center text-white font-bold">
-                    {currentSection}
+          {/* Left Column - Form Unica Pagina */}
+          <div className="lg:col-span-2 space-y-8">
+
+            {/* SEZIONE 1: Dimensione */}
+            <div ref={section1Ref} id="section-1">
+              <Card className="border-0 shadow-2xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center text-white font-bold">
+                      1
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">Dimensione Ampliamento</CardTitle>
+                      <CardDescription className="text-base">
+                        Seleziona i metri quadri che vuoi aggiungere
+                      </CardDescription>
+                    </div>
                   </div>
-                  <div>
-                    <CardTitle className="text-2xl">
-                      {currentSection === 1 && 'Dimensione Ampliamento'}
-                      {currentSection === 2 && 'Tipo Ampliamento'}
-                      {currentSection === 3 && 'Personalizzazione'}
-                      {currentSection === 4 && 'I tuoi dati'}
-                    </CardTitle>
-                    <CardDescription className="text-base">
-                      {currentSection === 1 && 'Seleziona i metri quadri che vuoi aggiungere'}
-                      {currentSection === 2 && 'Scegli la tipologia di ampliamento'}
-                      {currentSection === 3 && 'Aggiungi vincoli e servizi aggiuntivi'}
-                      {currentSection === 4 && 'Completa con i tuoi dati di contatto'}
-                    </CardDescription>
+                </CardHeader>
+
+                <CardContent className="pt-8 pb-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {DIMENSIONI_AMPLIAMENTO.map((dim) => {
+                      const Icon = dim.icon;
+                      const isSelected = data.dimensione === dim.id;
+                      return (
+                        <button
+                          key={dim.id}
+                          onClick={() => updateData('dimensione', dim.id)}
+                          className={`group relative p-8 border-3 rounded-2xl text-left transition-all duration-500 ${
+                            isSelected
+                              ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 shadow-2xl scale-105'
+                              : 'border-gray-200 hover:border-purple-300 hover:shadow-xl hover:scale-102'
+                          }`}
+                        >
+                          {dim.popular && (
+                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg">
+                              ⭐ CONSIGLIATO
+                            </div>
+                          )}
+
+                          {dim.badge && !dim.popular && (
+                            <div className="absolute top-4 right-4 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                              {dim.badge}
+                            </div>
+                          )}
+
+                          <div className={`w-20 h-20 rounded-2xl mb-4 flex items-center justify-center transition-all duration-300 ${
+                            isSelected
+                              ? 'bg-gradient-to-br from-purple-600 to-violet-600 shadow-xl'
+                              : 'bg-gray-100 group-hover:bg-purple-100'
+                          }`}>
+                            <Icon className={`w-10 h-10 transition-colors ${
+                              isSelected ? 'text-white' : 'text-gray-400 group-hover:text-purple-600'
+                            }`} />
+                          </div>
+
+                          <div className="text-2xl font-bold text-gray-900 mb-2">{dim.nome}</div>
+                          <div className="text-sm text-gray-600 mb-1">{dim.descrizione}</div>
+                          <div className="text-xs text-gray-500 mb-4">{dim.dettaglio}</div>
+
+                          <div className="flex items-baseline gap-2">
+                            <span className="text-xs text-gray-500">da</span>
+                            <span className="text-3xl font-bold text-purple-600">
+                              €{dim.prezzoBase.toLocaleString()}
+                            </span>
+                          </div>
+
+                          {isSelected && (
+                            <div className="absolute bottom-4 right-4 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                              <Check className="w-5 h-5 text-white" />
+                            </div>
+                          )}
+                        </button>
+                      );
+                    })}
                   </div>
-                </div>
-              </CardHeader>
+                </CardContent>
+              </Card>
+            </div>
 
-              <CardContent className="pt-8 pb-6">
-                {/* SEZIONE 1: Dimensione */}
-                {currentSection === 1 && (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {DIMENSIONI_AMPLIAMENTO.map((dim) => {
-                        const Icon = dim.icon;
-                        const isSelected = data.dimensione === dim.id;
-                        return (
-                          <button
-                            key={dim.id}
-                            onClick={() => updateData('dimensione', dim.id)}
-                            className={`group relative p-8 border-3 rounded-2xl text-left transition-all duration-500 ${
+            {/* SEZIONE 2: Tipo Ampliamento */}
+            <div ref={section2Ref} id="section-2">
+              <Card className="border-0 shadow-2xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center text-white font-bold">
+                      2
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">Tipo Ampliamento</CardTitle>
+                      <CardDescription className="text-base">
+                        Scegli la tipologia di ampliamento
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+
+                <CardContent className="pt-8 pb-6">
+                  <div className="space-y-4">
+                    {TIPI_AMPLIAMENTO.map((tipo) => {
+                      const Icon = tipo.icon;
+                      const isSelected = data.tipoAmpliamento === tipo.id;
+                      return (
+                        <button
+                          key={tipo.id}
+                          onClick={() => updateData('tipoAmpliamento', tipo.id)}
+                          className={`w-full p-6 border-3 rounded-2xl text-left transition-all duration-500 ${
+                            isSelected
+                              ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 shadow-2xl scale-102'
+                              : 'border-gray-200 hover:border-purple-300 hover:shadow-lg'
+                          }`}
+                        >
+                          <div className="flex items-start gap-6">
+                            <div className={`w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
                               isSelected
-                                ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 shadow-2xl scale-105'
-                                : 'border-gray-200 hover:border-purple-300 hover:shadow-xl hover:scale-102'
-                            }`}
-                          >
-                            {dim.popular && (
-                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg">
-                                ⭐ CONSIGLIATO
-                              </div>
-                            )}
-
-                            {dim.badge && !dim.popular && (
-                              <div className="absolute top-4 right-4 px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                                {dim.badge}
-                              </div>
-                            )}
-
-                            <div className={`w-20 h-20 rounded-2xl mb-4 flex items-center justify-center transition-all duration-300 ${
-                              isSelected
-                                ? 'bg-gradient-to-br from-purple-600 to-violet-600 shadow-xl'
-                                : 'bg-gray-100 group-hover:bg-purple-100'
+                                ? 'bg-gradient-to-br from-purple-600 to-violet-600 shadow-lg'
+                                : 'bg-gray-100'
                             }`}>
-                              <Icon className={`w-10 h-10 transition-colors ${
-                                isSelected ? 'text-white' : 'text-gray-400 group-hover:text-purple-600'
-                              }`} />
+                              <Icon className={`w-8 h-8 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
                             </div>
 
-                            <div className="text-2xl font-bold text-gray-900 mb-2">{dim.nome}</div>
-                            <div className="text-sm text-gray-600 mb-1">{dim.descrizione}</div>
-                            <div className="text-xs text-gray-500 mb-4">{dim.dettaglio}</div>
+                            <div className="flex-1">
+                              <div className="flex items-center gap-3 mb-2">
+                                <span className="text-2xl font-bold text-gray-900">{tipo.nome}</span>
+                                <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
+                                  {tipo.badge}
+                                </span>
+                              </div>
 
-                            <div className="flex items-baseline gap-2">
-                              <span className="text-xs text-gray-500">da</span>
-                              <span className="text-3xl font-bold text-purple-600">
-                                €{dim.prezzoBase.toLocaleString()}
-                              </span>
+                              <div className="text-base text-gray-700 mb-2">{tipo.descrizione}</div>
+                              <div className="text-sm text-gray-500 mb-3">{tipo.dettaglio}</div>
+
+                              <div className="flex flex-wrap gap-3 text-sm">
+                                <div className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg">
+                                  <FileCheck className="w-4 h-4 text-purple-600" />
+                                  <span className="text-gray-700">{tipo.pratica}</span>
+                                </div>
+                                <div className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg">
+                                  <Info className="w-4 h-4 text-purple-600" />
+                                  <span className="text-gray-700">Tempi: {tipo.tempi}</span>
+                                </div>
+                                {tipo.moltiplicatore !== 1.0 && (
+                                  <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-semibold">
+                                    +{Math.round((tipo.moltiplicatore - 1) * 100)}% complessità
+                                  </div>
+                                )}
+                              </div>
                             </div>
 
                             {isSelected && (
-                              <div className="absolute bottom-4 right-4 w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center">
+                              <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
                                 <Check className="w-5 h-5 text-white" />
                               </div>
                             )}
-                          </button>
-                        );
-                      })}
-                    </div>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                    <div className="flex justify-end pt-6">
-                      <Button
-                        onClick={() => setCurrentSection(2)}
-                        disabled={!data.dimensione}
-                        size="lg"
-                        className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-8 py-6 text-lg shadow-xl hover:shadow-2xl transition-all"
-                      >
-                        Continua <ChevronRight className="w-5 h-5 ml-2" />
-                      </Button>
+            {/* SEZIONE 3: Personalizzazione */}
+            <div ref={section3Ref} id="section-3">
+              <Card className="border-0 shadow-2xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center text-white font-bold">
+                      3
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">Personalizzazione</CardTitle>
+                      <CardDescription className="text-base">
+                        Aggiungi vincoli e servizi aggiuntivi
+                      </CardDescription>
                     </div>
                   </div>
-                )}
+                </CardHeader>
 
-                {/* SEZIONE 2: Tipo Ampliamento */}
-                {currentSection === 2 && (
-                  <div className="space-y-6">
-                    <div className="space-y-4">
-                      {TIPI_AMPLIAMENTO.map((tipo) => {
-                        const Icon = tipo.icon;
-                        const isSelected = data.tipoAmpliamento === tipo.id;
-                        return (
-                          <button
-                            key={tipo.id}
-                            onClick={() => updateData('tipoAmpliamento', tipo.id)}
-                            className={`w-full p-6 border-3 rounded-2xl text-left transition-all duration-500 ${
-                              isSelected
-                                ? 'border-purple-500 bg-gradient-to-br from-purple-50 to-violet-50 shadow-2xl scale-102'
-                                : 'border-gray-200 hover:border-purple-300 hover:shadow-lg'
-                            }`}
-                          >
-                            <div className="flex items-start gap-6">
-                              <div className={`w-16 h-16 rounded-xl flex items-center justify-center flex-shrink-0 transition-all ${
-                                isSelected
-                                  ? 'bg-gradient-to-br from-purple-600 to-violet-600 shadow-lg'
-                                  : 'bg-gray-100'
-                              }`}>
-                                <Icon className={`w-8 h-8 ${isSelected ? 'text-white' : 'text-gray-400'}`} />
-                              </div>
-
-                              <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-2">
-                                  <span className="text-2xl font-bold text-gray-900">{tipo.nome}</span>
-                                  <span className="px-3 py-1 bg-purple-100 text-purple-700 text-xs font-bold rounded-full">
-                                    {tipo.badge}
-                                  </span>
-                                </div>
-
-                                <div className="text-base text-gray-700 mb-2">{tipo.descrizione}</div>
-                                <div className="text-sm text-gray-500 mb-3">{tipo.dettaglio}</div>
-
-                                <div className="flex flex-wrap gap-3 text-sm">
-                                  <div className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg">
-                                    <FileCheck className="w-4 h-4 text-purple-600" />
-                                    <span className="text-gray-700">{tipo.pratica}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1 px-3 py-1 bg-white border border-gray-200 rounded-lg">
-                                    <Info className="w-4 h-4 text-purple-600" />
-                                    <span className="text-gray-700">Tempi: {tipo.tempi}</span>
-                                  </div>
-                                  {tipo.moltiplicatore !== 1.0 && (
-                                    <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-lg font-semibold">
-                                      +{Math.round((tipo.moltiplicatore - 1) * 100)}% complessità
-                                    </div>
-                                  )}
-                                </div>
-                              </div>
-
-                              {isSelected && (
-                                <div className="w-8 h-8 bg-purple-600 rounded-full flex items-center justify-center flex-shrink-0">
-                                  <Check className="w-5 h-5 text-white" />
-                                </div>
-                              )}
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="flex justify-between pt-6">
-                      <Button onClick={() => setCurrentSection(1)} variant="outline" size="lg">
-                        <ChevronLeft className="w-5 h-5 mr-2" /> Indietro
-                      </Button>
-                      <Button
-                        onClick={() => setCurrentSection(3)}
-                        disabled={!data.tipoAmpliamento}
-                        size="lg"
-                        className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-8 py-6 text-lg shadow-xl"
-                      >
-                        Continua <ChevronRight className="w-5 h-5 ml-2" />
-                      </Button>
-                    </div>
-                  </div>
-                )}
-
-                {/* SEZIONE 3: Personalizzazione */}
-                {currentSection === 3 && (
+                <CardContent className="pt-8 pb-6">
                   <div className="space-y-8">
                     {/* Vincoli */}
                     <div>
@@ -834,24 +878,29 @@ export default function ConfiguratoreAmpliamento() {
                         )}
                       </div>
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                    <div className="flex justify-between pt-6">
-                      <Button onClick={() => setCurrentSection(2)} variant="outline" size="lg">
-                        <ChevronLeft className="w-5 h-5 mr-2" /> Indietro
-                      </Button>
-                      <Button
-                        onClick={() => setCurrentSection(4)}
-                        size="lg"
-                        className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-8 py-6 text-lg shadow-xl"
-                      >
-                        Continua <ChevronRight className="w-5 h-5 ml-2" />
-                      </Button>
+            {/* SEZIONE 4: Dati Cliente */}
+            <div ref={section4Ref} id="section-4">
+              <Card className="border-0 shadow-2xl">
+                <CardHeader className="bg-gradient-to-r from-purple-50 to-violet-50 border-b">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-600 to-violet-600 flex items-center justify-center text-white font-bold">
+                      4
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl">I tuoi dati</CardTitle>
+                      <CardDescription className="text-base">
+                        Completa con i tuoi dati di contatto
+                      </CardDescription>
                     </div>
                   </div>
-                )}
+                </CardHeader>
 
-                {/* SEZIONE 4: Dati Cliente */}
-                {currentSection === 4 && (
+                <CardContent className="pt-8 pb-6">
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <div>
@@ -980,34 +1029,31 @@ export default function ConfiguratoreAmpliamento() {
                       </div>
                     </div>
 
-                    <div className="flex justify-between pt-6">
-                      <Button onClick={() => setCurrentSection(3)} variant="outline" size="lg">
-                        <ChevronLeft className="w-5 h-5 mr-2" /> Indietro
+                    {/* Bottoni Finali */}
+                    <div className="flex flex-wrap gap-3 pt-6">
+                      <Button onClick={clearData} variant="outline" size="lg">
+                        <Trash2 className="w-5 h-5 mr-2" />
+                        Cancella
                       </Button>
-                      <div className="flex gap-3">
-                        <Button onClick={clearData} variant="outline" size="lg">
-                          <Trash2 className="w-5 h-5 mr-2" />
-                          Cancella
-                        </Button>
-                        <Button onClick={downloadPDF} variant="outline" size="lg">
-                          <Download className="w-5 h-5 mr-2" />
-                          PDF
-                        </Button>
-                        <Button
-                          onClick={sendEmail}
-                          disabled={!data.privacyAccettata || !data.termsAccettati || emailSending}
-                          size="lg"
-                          className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-8 py-6 text-lg shadow-2xl hover:shadow-3xl transition-all"
-                        >
-                          <Send className="w-5 h-5 mr-2" />
-                          {emailSending ? 'Invio in corso...' : 'Richiedi Preventivo'}
-                        </Button>
-                      </div>
+                      <Button onClick={downloadPDF} variant="outline" size="lg">
+                        <Download className="w-5 h-5 mr-2" />
+                        PDF
+                      </Button>
+                      <Button
+                        onClick={sendEmail}
+                        disabled={!data.privacyAccettata || !data.termsAccettati || emailSending}
+                        size="lg"
+                        className="bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white px-8 py-6 text-lg shadow-2xl hover:shadow-3xl transition-all flex-1"
+                      >
+                        <Send className="w-5 h-5 mr-2" />
+                        {emailSending ? 'Invio in corso...' : 'Richiedi Preventivo'}
+                      </Button>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            </div>
+
           </div>
 
           {/* Right Column - Preview Sticky */}
