@@ -297,31 +297,31 @@ export default function HomePage() {
           {/* Bundle 5: Ampliamento */}
           <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
             <CardHeader>
-              <div className="w-12 h-12 bg-indigo-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🏭
+              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-3xl mb-4">
+                🏗️
               </div>
-              <CardTitle className="text-lg">Ampliamento Produttivo</CardTitle>
+              <CardTitle className="text-lg">Ampliamento</CardTitle>
               <CardDescription className="text-sm">
-                Espansione capannoni industriali
+                Progetto ampliamento residenziale
               </CardDescription>
             </CardHeader>
             <CardContent>
               <div className="space-y-3">
                 <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
+                  <Badge variant="secondary" className="text-xs">Privati/Aziende</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €12.000 - €35.000
+                  €3.000 - €12.000
                 </div>
                 <div className="text-xs text-gray-600">
+                  ✓ Progetto architettonico<br />
+                  ✓ Permesso di costruire<br />
                   ✓ Progetto strutturale<br />
-                  ✓ Pratiche autorizzative<br />
-                  ✓ Calcoli carichi<br />
-                  ✓ Direzione lavori
+                  ✓ Verifica fattibilità
                 </div>
                 <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/bundle/BDL-AMPLIAMENTO">
-                    Preventivo →
+                  <Link href="/configuratore/ampliamento">
+                    🏗️ Configuratore →
                   </Link>
                 </Button>
               </div>
@@ -589,7 +589,7 @@ export default function HomePage() {
                 <li><Link href="/configuratore/ristrutturazione" className="hover:text-blue-600">Ristrutturazione</Link></li>
                 <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
                 <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
-                <li><Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">Ampliamento Produttivo</Link></li>
+                <li><Link href="/configuratore/ampliamento" className="hover:text-blue-600">Ampliamento</Link></li>
                 <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
                 <li><Link href="/bundle/BDL-ANTINCENDIO" className="hover:text-blue-600">Antincendio</Link></li>
                 <li><Link href="/bundle/BDL-VULN-SISMICA" className="hover:text-blue-600">Vulnerabilità Sismica</Link></li>
