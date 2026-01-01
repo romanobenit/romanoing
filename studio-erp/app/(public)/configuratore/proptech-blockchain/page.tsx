@@ -20,34 +20,47 @@ import {
   Blocks,
   Globe,
   Users,
-  ChevronDown,
   Upload,
-  X
+  X,
+  ChevronDown,
+  ChevronUp,
+  AlertCircle,
+  Info
 } from 'lucide-react';
 import Link from 'next/link';
 
 interface FormData {
-  // Sezione 1: Servizi
+  // Servizi base
   servizioFattibilita: boolean;
-  servizioPoc: boolean;
+  servizioSmartContract: boolean;
+  servizioDashboard: boolean;
   servizioArchitettura: boolean;
 
-  // Sezione 2: Opzioni PoC
-  opzionePoc: 'essential' | 'interactive' | null;
+  // Add-on Fattibilità
+  addonSpv: boolean;
+  addonTokenomics: boolean;
+  addonMarket: boolean;
 
-  // Sezione 3: Personalizzazione
+  // Add-on Smart Contract
+  addonRestrictions: boolean;
+  addonDividend: boolean;
+  addonGovernance: boolean;
+  addonAudit: boolean;
+
+  // Add-on Dashboard
+  addonGovernanceUI: boolean;
+  addonAnalytics: boolean;
+
+  // Altri dati
   tipologiaAsset: string;
-  valoreStimatoAsset: string;
-  obiettiviProgetto: string;
-  tempisticheDesiderate: string;
-  requirementsAggiuntivi: string;
+  timeline: 'standard' | 'priority' | 'express' | '';
 
-  // Sezione 4: Dati Cliente
+  // Dati cliente
   nomeCliente: string;
   emailCliente: string;
   telefonoCliente: string;
   azienda: string;
-  noteAggiuntive: string;
+  note: string;
 }
 
 interface FileUpload {
@@ -57,55 +70,68 @@ interface FileUpload {
   data: string;
 }
 
-const SERVIZI_RD = [
+const SERVIZI_BASE = [
   {
     id: 'fattibilita',
     nome: 'Studio di Fattibilità',
     sottotitolo: 'Tokenizzazione Immobiliare',
     descrizione: 'Analisi completa di fattibilità tecnica, economica e legale',
     icon: FileText,
-    prezzoMin: 8000,
-    prezzoMax: 15000,
+    prezzo: 8000,
     durata: '4-6 settimane',
     deliverables: [
       'Analisi asset e valutazione',
-      'Struttura SPV e token economics',
-      'Whitepaper tecnico',
-      'Roadmap implementazione',
-      'Framework compliance (MiFID II, MICA)',
-      'File di lavoro (Excel, templates, diagrammi)'
+      'Token economics essenziali',
+      'Compliance framework (MiFID II, MICA)',
+      'Whitepaper tecnico base',
+      'File di lavoro (Excel, templates)'
     ],
+    hasAddons: true,
     popular: true
   },
   {
-    id: 'poc',
-    nome: 'Proof of Concept',
-    sottotitolo: 'Smart Contract + Dashboard MVP',
-    descrizione: 'Sviluppo prototipo smart contract su testnet con interfaccia',
+    id: 'smartcontract',
+    nome: 'Smart Contract PoC',
+    sottotitolo: 'Prototipo su Testnet',
+    descrizione: 'Sviluppo smart contract prototipale con test e deploy testnet',
     icon: Code,
-    prezzoMinEssential: 12000,
-    prezzoMaxEssential: 18000,
-    prezzoMinInteractive: 18000,
-    prezzoMaxInteractive: 28000,
-    durata: '6-12 settimane',
+    prezzo: 12000,
+    durata: '6-10 settimane',
     deliverables: [
       'Smart contract Solidity (ERC-20/ERC-1400)',
-      'Test suite completa',
-      'Security assessment',
-      'Deployment testnet',
-      'Repository GitHub',
-      'Dashboard Test MVP (opzione Interactive)'
+      'Funzioni base: Mint, Burn, Transfer con whitelist',
+      'Testing suite completa',
+      'Security scan automatico',
+      'Deploy testnet (Sepolia/Goerli)',
+      'Documentazione e repository GitHub'
     ],
+    hasAddons: true,
     popular: true
+  },
+  {
+    id: 'dashboard',
+    nome: 'Dashboard Test MVP',
+    sottotitolo: 'Interfaccia Web Prototipo',
+    descrizione: 'Applicazione web basilare per interazione con smart contract',
+    icon: Globe,
+    prezzo: 8000,
+    durata: '4-6 settimane',
+    deliverables: [
+      'Web app Next.js responsive',
+      'Connessione wallet (MetaMask, WalletConnect)',
+      'UI operazioni token base',
+      'Dashboard overview holdings',
+      'Deploy Vercel testnet'
+    ],
+    hasAddons: true
   },
   {
     id: 'architettura',
     nome: 'Linee Guida Architettura',
     sottotitolo: 'Blockchain Infrastructure',
-    descrizione: 'Raccomandazioni architetturali e scelta tecnologie',
+    descrizione: 'Raccomandazioni architetturali ad alto livello',
     icon: Network,
-    prezzoMin: 3000,
-    prezzoMax: 5000,
+    prezzo: 4000,
     durata: '1-2 settimane',
     deliverables: [
       'Comparazione layer (Ethereum, Polygon, Arbitrum)',
@@ -113,44 +139,80 @@ const SERVIZI_RD = [
       'Raccomandazioni tech stack',
       'Stime costi operativi',
       'Documento linee guida (10-15 pagine)'
-    ]
+    ],
+    hasAddons: false
   }
 ];
 
-const OPZIONI_POC = [
+const ADDONS_FATTIBILITA = [
   {
-    id: 'essential',
-    nome: 'Essential',
-    descrizione: 'Solo Smart Contract',
-    icon: Blocks,
-    prezzoMin: 12000,
-    prezzoMax: 18000,
-    features: [
-      'Smart contract Solidity',
-      'Funzioni core (mint, burn, transfer)',
-      'Test suite completa',
-      'Security assessment',
-      'Deployment testnet',
-      'Documentazione tecnica'
-    ]
+    id: 'spv',
+    nome: 'SPV Structure Dettagliata',
+    descrizione: 'Design veicolo societario completo',
+    prezzo: 2000,
+    details: ['Forma giuridica ottimale', 'Statuto societario draft', 'Mappatura token-quote sociali']
   },
   {
-    id: 'interactive',
-    nome: 'Interactive + Dashboard',
-    descrizione: 'Smart Contract + Interfaccia Web',
-    icon: Globe,
-    prezzoMin: 18000,
-    prezzoMax: 28000,
-    features: [
-      'Tutto di Essential, più:',
-      'Dashboard Test MVP Next.js',
-      'Connessione wallet (MetaMask, WalletConnect)',
-      'UI operazioni token',
-      'Interfaccia governance',
-      'Gestione rewards',
-      'Deploy su Vercel testnet'
-    ],
-    popular: true
+    id: 'tokenomics',
+    nome: 'Token Economics Avanzato',
+    descrizione: 'Meccanismi governance e incentivi',
+    prezzo: 2000,
+    details: ['Staking rewards design', 'Governance voting mechanism', 'Incentive structure modeling']
+  },
+  {
+    id: 'market',
+    nome: 'Market Analysis',
+    descrizione: 'Analisi mercato e posizionamento',
+    prezzo: 1500,
+    details: ['Target investor profiling', 'Competitive landscape', 'Go-to-market strategy']
+  }
+];
+
+const ADDONS_SMARTCONTRACT = [
+  {
+    id: 'restrictions',
+    nome: 'Transfer Restrictions Avanzate',
+    descrizione: 'Timelock, vesting, transfer limits',
+    prezzo: 3000,
+    details: ['Vesting periods configurabili', 'Transfer limits per wallet', 'Timelock mechanisms']
+  },
+  {
+    id: 'dividend',
+    nome: 'Dividend Distribution Automation',
+    descrizione: 'Distribuzione dividendi automatica on-chain',
+    prezzo: 4000,
+    details: ['Calcolo pro-rata automatico', 'Batch distribution gas-optimized', 'Claim selettivo investitori']
+  },
+  {
+    id: 'governance',
+    nome: 'Governance On-Chain Completa',
+    descrizione: 'Sistema votazione e proposte on-chain',
+    prezzo: 5000,
+    details: ['Propose, vote, execute functions', 'Quorum e majority requirements', 'Timelock per sicurezza']
+  },
+  {
+    id: 'audit',
+    nome: 'Security Audit Manuale',
+    descrizione: 'Code review professionale approfondito',
+    prezzo: 4000,
+    details: ['Manual code review completo', 'OWASP checklist verification', 'Report audit + remediation']
+  }
+];
+
+const ADDONS_DASHBOARD = [
+  {
+    id: 'governanceui',
+    nome: 'Governance UI Module',
+    descrizione: 'Interfaccia per proposals e voting',
+    prezzo: 3000,
+    details: ['Proposals list e dettaglio', 'Voting interface', 'Proposal creation form']
+  },
+  {
+    id: 'analytics',
+    nome: 'Analytics Dashboard',
+    descrizione: 'Charts, metrics, holder analytics',
+    prezzo: 2500,
+    details: ['Token metrics e KPI', 'Holder distribution charts', 'Transaction volume analytics']
   }
 ];
 
@@ -163,36 +225,73 @@ const TIPOLOGIE_ASSET = [
   { id: 'altro', nome: 'Altro Asset', icon: '💼' }
 ];
 
+const TIMELINE_OPTIONS = [
+  {
+    id: 'standard',
+    nome: 'Standard',
+    descrizione: 'Timeline normale, nessuna urgenza',
+    settimane: 12,
+    moltiplicatore: 1.0,
+    icon: '📅'
+  },
+  {
+    id: 'priority',
+    nome: 'Priority',
+    descrizione: 'Priorità alta, consegna anticipata',
+    settimane: 8,
+    moltiplicatore: 1.15,
+    surcharge: '+15%',
+    icon: '⚡'
+  },
+  {
+    id: 'express',
+    nome: 'Express',
+    descrizione: 'Massima urgenza, team dedicato',
+    settimane: 4,
+    moltiplicatore: 1.30,
+    surcharge: '+30%',
+    icon: '🚀'
+  }
+];
+
 export default function ConfiguratorePropTechBlockchain() {
   const [formData, setFormData] = useState<FormData>({
     servizioFattibilita: false,
-    servizioPoc: false,
+    servizioSmartContract: false,
+    servizioDashboard: false,
     servizioArchitettura: false,
-    opzionePoc: null,
+    addonSpv: false,
+    addonTokenomics: false,
+    addonMarket: false,
+    addonRestrictions: false,
+    addonDividend: false,
+    addonGovernance: false,
+    addonAudit: false,
+    addonGovernanceUI: false,
+    addonAnalytics: false,
     tipologiaAsset: '',
-    valoreStimatoAsset: '',
-    obiettiviProgetto: '',
-    tempisticheDesiderate: '',
-    requirementsAggiuntivi: '',
+    timeline: '',
     nomeCliente: '',
     emailCliente: '',
     telefonoCliente: '',
     azienda: '',
-    noteAggiuntive: ''
+    note: ''
   });
 
   const [files, setFiles] = useState<FileUpload[]>([]);
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [activeSection, setActiveSection] = useState(1);
+  const [expandedAddons, setExpandedAddons] = useState<string[]>([]);
 
-  // Refs per le sezioni
+  // Refs
   const section1Ref = useRef<HTMLDivElement>(null);
   const section2Ref = useRef<HTMLDivElement>(null);
   const section3Ref = useRef<HTMLDivElement>(null);
   const section4Ref = useRef<HTMLDivElement>(null);
+  const section5Ref = useRef<HTMLDivElement>(null);
 
-  // Auto-save su localStorage
+  // Auto-save
   useEffect(() => {
     const savedData = localStorage.getItem('configuratore-proptech-data');
     if (savedData) {
@@ -200,7 +299,7 @@ export default function ConfiguratorePropTechBlockchain() {
         const parsed = JSON.parse(savedData);
         setFormData(parsed);
       } catch (e) {
-        console.error('Errore nel caricamento dei dati salvati:', e);
+        console.error('Errore caricamento dati:', e);
       }
     }
   }, []);
@@ -213,12 +312,12 @@ export default function ConfiguratorePropTechBlockchain() {
   useEffect(() => {
     const handleScroll = () => {
       const scrollPosition = window.scrollY + 200;
-
       const sections = [
         { id: 1, ref: section1Ref },
         { id: 2, ref: section2Ref },
         { id: 3, ref: section3Ref },
-        { id: 4, ref: section4Ref }
+        { id: 4, ref: section4Ref },
+        { id: 5, ref: section5Ref }
       ];
 
       for (let i = sections.length - 1; i >= 0; i--) {
@@ -238,14 +337,21 @@ export default function ConfiguratorePropTechBlockchain() {
   }, []);
 
   const scrollToSection = (sectionNumber: number) => {
-    const refs = [section1Ref, section2Ref, section3Ref, section4Ref];
+    const refs = [section1Ref, section2Ref, section3Ref, section4Ref, section5Ref];
     const targetRef = refs[sectionNumber - 1];
-
     if (targetRef.current) {
       const yOffset = -100;
       const y = targetRef.current.getBoundingClientRect().top + window.pageYOffset + yOffset;
       window.scrollTo({ top: y, behavior: 'smooth' });
     }
+  };
+
+  const toggleAddonSection = (serviceId: string) => {
+    setExpandedAddons(prev =>
+      prev.includes(serviceId)
+        ? prev.filter(id => id !== serviceId)
+        : [...prev, serviceId]
+    );
   };
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -257,13 +363,11 @@ export default function ConfiguratorePropTechBlockchain() {
     for (let i = 0; i < selectedFiles.length; i++) {
       const file = selectedFiles[i];
 
-      // Validazione dimensione (max 10MB)
       if (file.size > 10 * 1024 * 1024) {
         alert(`Il file ${file.name} supera il limite di 10MB`);
         continue;
       }
 
-      // Validazione tipo
       const allowedTypes = [
         'application/pdf',
         'application/msword',
@@ -280,7 +384,6 @@ export default function ConfiguratorePropTechBlockchain() {
         continue;
       }
 
-      // Converti in base64
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -305,78 +408,116 @@ export default function ConfiguratorePropTechBlockchain() {
   };
 
   const calcolaPreventivo = () => {
-    let totaleMin = 0;
-    let totaleMax = 0;
+    let totale = 0;
     const serviziInclusi: string[] = [];
+    const addonsInclusi: string[] = [];
 
+    // Servizi base
     if (formData.servizioFattibilita) {
-      totaleMin += SERVIZI_RD[0].prezzoMin;
-      totaleMax += SERVIZI_RD[0].prezzoMax;
+      totale += 8000;
       serviziInclusi.push('Studio di Fattibilità');
     }
-
-    if (formData.servizioPoc) {
-      if (formData.opzionePoc === 'essential') {
-        totaleMin += SERVIZI_RD[1].prezzoMinEssential;
-        totaleMax += SERVIZI_RD[1].prezzoMaxEssential;
-        serviziInclusi.push('PoC Essential');
-      } else if (formData.opzionePoc === 'interactive') {
-        totaleMin += SERVIZI_RD[1].prezzoMinInteractive;
-        totaleMax += SERVIZI_RD[1].prezzoMaxInteractive;
-        serviziInclusi.push('PoC Interactive + Dashboard');
-      }
+    if (formData.servizioSmartContract) {
+      totale += 12000;
+      serviziInclusi.push('Smart Contract PoC');
     }
-
+    if (formData.servizioDashboard) {
+      totale += 8000;
+      serviziInclusi.push('Dashboard Test MVP');
+    }
     if (formData.servizioArchitettura) {
-      totaleMin += SERVIZI_RD[2].prezzoMin;
-      totaleMax += SERVIZI_RD[2].prezzoMax;
+      totale += 4000;
       serviziInclusi.push('Linee Guida Architettura');
     }
 
-    // Sconto bundle se prende più servizi
-    let scontoPercentuale = 0;
-    if (serviziInclusi.length === 2) {
-      scontoPercentuale = 10;
-    } else if (serviziInclusi.length === 3) {
-      scontoPercentuale = 15;
+    // Add-on Fattibilità
+    if (formData.addonSpv) {
+      totale += 2000;
+      addonsInclusi.push('SPV Structure (+€2K)');
+    }
+    if (formData.addonTokenomics) {
+      totale += 2000;
+      addonsInclusi.push('Token Economics (+€2K)');
+    }
+    if (formData.addonMarket) {
+      totale += 1500;
+      addonsInclusi.push('Market Analysis (+€1.5K)');
     }
 
-    const totaleMinConSconto = Math.round(totaleMin * (1 - scontoPercentuale / 100));
-    const totaleMaxConSconto = Math.round(totaleMax * (1 - scontoPercentuale / 100));
+    // Add-on Smart Contract
+    if (formData.addonRestrictions) {
+      totale += 3000;
+      addonsInclusi.push('Transfer Restrictions (+€3K)');
+    }
+    if (formData.addonDividend) {
+      totale += 4000;
+      addonsInclusi.push('Dividend Distribution (+€4K)');
+    }
+    if (formData.addonGovernance) {
+      totale += 5000;
+      addonsInclusi.push('Governance On-Chain (+€5K)');
+    }
+    if (formData.addonAudit) {
+      totale += 4000;
+      addonsInclusi.push('Security Audit (+€4K)');
+    }
+
+    // Add-on Dashboard
+    if (formData.addonGovernanceUI) {
+      totale += 3000;
+      addonsInclusi.push('Governance UI (+€3K)');
+    }
+    if (formData.addonAnalytics) {
+      totale += 2500;
+      addonsInclusi.push('Analytics Dashboard (+€2.5K)');
+    }
+
+    const subtotale = totale;
+
+    // Timeline multiplier
+    const timelineData = TIMELINE_OPTIONS.find(t => t.id === formData.timeline);
+    const moltiplicatore = timelineData?.moltiplicatore || 1.0;
+    const settimane = timelineData?.settimane || 12;
+
+    totale = Math.round(totale * moltiplicatore);
 
     return {
-      totaleMin: totaleMinConSconto,
-      totaleMax: totaleMaxConSconto,
-      scontoPercentuale,
-      serviziInclusi
+      subtotale,
+      totale,
+      moltiplicatore,
+      settimane,
+      serviziInclusi,
+      addonsInclusi,
+      timelineSurcharge: timelineData?.surcharge
     };
   };
 
   const preventivo = calcolaPreventivo();
 
   const handleSubmit = async () => {
-    // Validazione
-    if (!formData.servizioFattibilita && !formData.servizioPoc && !formData.servizioArchitettura) {
-      alert('Seleziona almeno un servizio');
+    // Validazioni
+    if (!formData.servizioFattibilita && !formData.servizioSmartContract &&
+        !formData.servizioDashboard && !formData.servizioArchitettura) {
+      alert('Seleziona almeno un servizio base');
       scrollToSection(1);
-      return;
-    }
-
-    if (formData.servizioPoc && !formData.opzionePoc) {
-      alert('Seleziona un\'opzione per il Proof of Concept');
-      scrollToSection(2);
       return;
     }
 
     if (!formData.tipologiaAsset) {
       alert('Seleziona la tipologia di asset');
+      scrollToSection(2);
+      return;
+    }
+
+    if (!formData.timeline) {
+      alert('Seleziona la timeline del progetto');
       scrollToSection(3);
       return;
     }
 
     if (!formData.nomeCliente || !formData.emailCliente || !formData.telefonoCliente) {
       alert('Compila tutti i campi obbligatori dei dati cliente');
-      scrollToSection(4);
+      scrollToSection(5);
       return;
     }
 
@@ -385,14 +526,8 @@ export default function ConfiguratorePropTechBlockchain() {
     try {
       const response = await fetch('/api/configuratore/proptech-blockchain/send-email', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          data: formData,
-          preventivo,
-          files
-        }),
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ data: formData, preventivo, files }),
       });
 
       const result = await response.json();
@@ -426,13 +561,11 @@ export default function ConfiguratorePropTechBlockchain() {
             <p className="text-gray-600 mb-8">
               Grazie per il tuo interesse nei nostri servizi di R&D PropTech/Blockchain.
               <br />
-              Ti contatteremo entro 24-48 ore per discutere i dettagli del progetto.
+              Ti contatteremo entro 24-48 ore per la <strong>consulenza online obbligatoria</strong> e conferma del preventivo definitivo.
             </p>
             <div className="space-y-3">
               <Button asChild size="lg" className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700">
-                <Link href="/">
-                  Torna alla Home
-                </Link>
+                <Link href="/">Torna alla Home</Link>
               </Button>
               <Button
                 variant="outline"
@@ -442,19 +575,25 @@ export default function ConfiguratorePropTechBlockchain() {
                   setSubmitted(false);
                   setFormData({
                     servizioFattibilita: false,
-                    servizioPoc: false,
+                    servizioSmartContract: false,
+                    servizioDashboard: false,
                     servizioArchitettura: false,
-                    opzionePoc: null,
+                    addonSpv: false,
+                    addonTokenomics: false,
+                    addonMarket: false,
+                    addonRestrictions: false,
+                    addonDividend: false,
+                    addonGovernance: false,
+                    addonAudit: false,
+                    addonGovernanceUI: false,
+                    addonAnalytics: false,
                     tipologiaAsset: '',
-                    valoreStimatoAsset: '',
-                    obiettiviProgetto: '',
-                    tempisticheDesiderate: '',
-                    requirementsAggiuntivi: '',
+                    timeline: '',
                     nomeCliente: '',
                     emailCliente: '',
                     telefonoCliente: '',
                     azienda: '',
-                    noteAggiuntive: ''
+                    note: ''
                   });
                   setFiles([]);
                 }}
@@ -469,10 +608,11 @@ export default function ConfiguratorePropTechBlockchain() {
   }
 
   const steps = [
-    { number: 1, title: 'Servizi R&D', icon: Lightbulb, completed: formData.servizioFattibilita || formData.servizioPoc || formData.servizioArchitettura, ref: section1Ref },
-    { number: 2, title: 'Opzioni PoC', icon: Code, completed: !formData.servizioPoc || formData.opzionePoc !== null, ref: section2Ref },
-    { number: 3, title: 'Dettagli Progetto', icon: BarChart3, completed: formData.tipologiaAsset !== '', ref: section3Ref },
-    { number: 4, title: 'Dati Cliente', icon: Users, completed: formData.nomeCliente !== '' && formData.emailCliente !== '', ref: section4Ref }
+    { number: 1, title: 'Servizi R&D', icon: Lightbulb, completed: formData.servizioFattibilita || formData.servizioSmartContract || formData.servizioDashboard || formData.servizioArchitettura },
+    { number: 2, title: 'Tipologia Asset', icon: BarChart3, completed: formData.tipologiaAsset !== '' },
+    { number: 3, title: 'Timeline', icon: Code, completed: formData.timeline !== '' },
+    { number: 4, title: 'Documenti', icon: FileText, completed: files.length > 0 },
+    { number: 5, title: 'Dati Cliente', icon: Users, completed: formData.nomeCliente !== '' && formData.emailCliente !== '' }
   ];
 
   return (
@@ -510,18 +650,52 @@ export default function ConfiguratorePropTechBlockchain() {
         </div>
       </div>
 
+      {/* Disclaimer Box */}
+      <div className="container mx-auto px-4 -mt-8 relative z-10">
+        <Card className="max-w-5xl mx-auto border-3 border-amber-300 bg-gradient-to-br from-amber-50 to-orange-50 shadow-xl">
+          <CardContent className="p-6">
+            <div className="flex items-start gap-4">
+              <AlertCircle className="w-8 h-8 text-amber-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <h3 className="text-lg font-bold text-amber-900 mb-3">⚠️ Informazioni Importanti - Leggere Attentamente</h3>
+                <div className="space-y-2 text-sm text-amber-800">
+                  <p>
+                    <strong>📋 Preventivo Non Vincolante:</strong> Il preventivo calcolato è indicativo e soggetto a conferma durante la consulenza online obbligatoria. Il prezzo finale dipenderà dalla complessità specifica del progetto.
+                  </p>
+                  <p>
+                    <strong>💼 Consulenza Obbligatoria:</strong> Prima di procedere è richiesta una consulenza tecnica online (inclusa nel servizio) per validare requirements e confermare fattibilità.
+                  </p>
+                  <p>
+                    <strong>🧪 Servizi di R&D (ATECO 72.19):</strong> Questi sono servizi di Ricerca e Sviluppo, non produzione software. I deliverables sono prototipi, studi di fattibilità e proof-of-concept a scopo di validazione tecnica.
+                  </p>
+                  <p>
+                    <strong>🧪 Testnet Only:</strong> Gli smart contract vengono deployati esclusivamente su reti test pubbliche (Sepolia/Goerli). Non è incluso deploy su mainnet né gestione fondi reali.
+                  </p>
+                  <p>
+                    <strong>🔒 Sicurezza Informatica:</strong> Il security assessment incluso è preliminare (automated scanning + code review interno). Per produzione è fortemente raccomandato un audit esterno professionale (non incluso).
+                  </p>
+                  <p>
+                    <strong>📱 Dashboard MVP:</strong> La dashboard è un'interfaccia prototipale essenziale per testing, non un'applicazione di produzione completa. Non include backend scalabile, monitoring, o supporto operativo.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Step Indicator */}
-      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b-2 border-teal-100 shadow-lg">
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm border-b-2 border-teal-100 shadow-lg mt-8">
         <div className="container mx-auto px-4 py-6">
-          <div className="flex justify-between items-center max-w-4xl mx-auto">
+          <div className="flex justify-between items-center max-w-4xl mx-auto overflow-x-auto">
             {steps.map((step, index) => (
-              <div key={step.number} className="flex items-center flex-1">
+              <div key={step.number} className="flex items-center flex-1 min-w-fit">
                 <button
                   onClick={() => scrollToSection(step.number)}
                   className="flex flex-col items-center group cursor-pointer"
                 >
                   <div className={`
-                    w-14 h-14 rounded-full flex items-center justify-center text-lg font-bold
+                    w-12 h-12 rounded-full flex items-center justify-center text-base font-bold
                     transition-all duration-500 transform
                     ${activeSection === step.number
                       ? 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white scale-110 shadow-xl'
@@ -531,7 +705,7 @@ export default function ConfiguratorePropTechBlockchain() {
                     }
                   `}>
                     {step.completed && activeSection !== step.number ? (
-                      <Check className="w-6 h-6" />
+                      <Check className="w-5 h-5" />
                     ) : (
                       step.number
                     )}
@@ -558,7 +732,7 @@ export default function ConfiguratorePropTechBlockchain() {
           {/* Main Content */}
           <div className="flex-1 space-y-8">
 
-            {/* Sezione 1: Servizi R&D */}
+            {/* Sezione 1: Servizi Base + Add-on */}
             <div ref={section1Ref} id="section-1">
               <Card className="border-3 border-teal-100 shadow-2xl overflow-hidden">
                 <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white p-8">
@@ -569,104 +743,301 @@ export default function ConfiguratorePropTechBlockchain() {
                     <div>
                       <CardTitle className="text-3xl">Servizi di R&D</CardTitle>
                       <CardDescription className="text-teal-50 text-base mt-1">
-                        Seleziona i servizi di ricerca e sviluppo di cui hai bisogno
+                        Seleziona i servizi di ricerca e sviluppo necessari
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="p-8">
-                  <div className="space-y-6">
-                    {SERVIZI_RD.map((servizio) => {
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {SERVIZI_BASE.map((servizio) => {
                       const isSelected =
                         (servizio.id === 'fattibilita' && formData.servizioFattibilita) ||
-                        (servizio.id === 'poc' && formData.servizioPoc) ||
+                        (servizio.id === 'smartcontract' && formData.servizioSmartContract) ||
+                        (servizio.id === 'dashboard' && formData.servizioDashboard) ||
                         (servizio.id === 'architettura' && formData.servizioArchitettura);
 
+                      const isExpanded = expandedAddons.includes(servizio.id);
+
                       return (
-                        <button
-                          key={servizio.id}
-                          onClick={() => {
-                            if (servizio.id === 'fattibilita') {
-                              setFormData({ ...formData, servizioFattibilita: !formData.servizioFattibilita });
-                            } else if (servizio.id === 'poc') {
-                              setFormData({
-                                ...formData,
-                                servizioPoc: !formData.servizioPoc,
-                                opzionePoc: !formData.servizioPoc ? formData.opzionePoc : null
-                              });
-                            } else if (servizio.id === 'architettura') {
-                              setFormData({ ...formData, servizioArchitettura: !formData.servizioArchitettura });
-                            }
-                          }}
-                          className={`group relative w-full p-8 border-3 rounded-2xl text-left transition-all duration-500 ${
-                            isSelected
-                              ? 'border-teal-500 bg-gradient-to-br from-teal-50 to-cyan-50 shadow-2xl scale-102'
-                              : 'border-gray-200 hover:border-teal-300 hover:shadow-xl hover:scale-101'
-                          }`}
-                        >
-                          {servizio.popular && (
-                            <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
-                              ⭐ CONSIGLIATO
+                        <div key={servizio.id} className="space-y-3">
+                          <button
+                            onClick={() => {
+                              if (servizio.id === 'fattibilita') {
+                                setFormData({ ...formData, servizioFattibilita: !formData.servizioFattibilita });
+                              } else if (servizio.id === 'smartcontract') {
+                                setFormData({ ...formData, servizioSmartContract: !formData.servizioSmartContract });
+                              } else if (servizio.id === 'dashboard') {
+                                setFormData({ ...formData, servizioDashboard: !formData.servizioDashboard });
+                              } else if (servizio.id === 'architettura') {
+                                setFormData({ ...formData, servizioArchitettura: !formData.servizioArchitettura });
+                              }
+                            }}
+                            className={`group relative w-full p-6 border-3 rounded-2xl text-left transition-all duration-500 ${
+                              isSelected
+                                ? 'border-teal-500 bg-gradient-to-br from-teal-50 to-cyan-50 shadow-2xl'
+                                : 'border-gray-200 hover:border-teal-300 hover:shadow-xl'
+                            }`}
+                          >
+                            {servizio.popular && (
+                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 bg-gradient-to-r from-amber-500 to-orange-500 text-white text-xs font-bold rounded-full shadow-lg">
+                                ⭐ CONSIGLIATO
+                              </div>
+                            )}
+
+                            <div className="flex items-start justify-between mb-4">
+                              <div className={`flex-shrink-0 w-14 h-14 rounded-xl flex items-center justify-center transition-all duration-500 ${
+                                isSelected
+                                  ? 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-lg'
+                                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 group-hover:from-teal-100 group-hover:to-cyan-100 group-hover:text-teal-600'
+                              }`}>
+                                <servizio.icon className="w-7 h-7" />
+                              </div>
+
+                              <div className={`w-7 h-7 rounded-full border-3 flex items-center justify-center transition-all duration-300 ${
+                                isSelected
+                                  ? 'border-teal-500 bg-teal-500'
+                                  : 'border-gray-300 group-hover:border-teal-400'
+                              }`}>
+                                {isSelected && <Check className="w-4 h-4 text-white" />}
+                              </div>
+                            </div>
+
+                            <h3 className="text-xl font-bold text-gray-900 mb-1">
+                              {servizio.nome}
+                            </h3>
+                            <p className="text-sm text-teal-600 font-semibold mb-2">
+                              {servizio.sottotitolo}
+                            </p>
+                            <p className="text-sm text-gray-600 mb-3">
+                              {servizio.descrizione}
+                            </p>
+
+                            <div className="flex items-center gap-2 mb-3">
+                              <Badge variant="outline" className="text-teal-600 border-teal-300 font-bold">
+                                €{servizio.prezzo.toLocaleString()}
+                              </Badge>
+                              <Badge variant="outline" className="text-cyan-600 border-cyan-300 text-xs">
+                                {servizio.durata}
+                              </Badge>
+                            </div>
+
+                            <div className="bg-white/50 rounded-lg p-3 border border-teal-100">
+                              <p className="text-xs font-semibold text-gray-700 mb-2">Deliverables:</p>
+                              <ul className="text-xs text-gray-600 space-y-1">
+                                {servizio.deliverables.slice(0, 3).map((item, idx) => (
+                                  <li key={idx} className="flex items-start gap-2">
+                                    <Check className="w-3 h-3 text-teal-500 flex-shrink-0 mt-0.5" />
+                                    <span>{item}</span>
+                                  </li>
+                                ))}
+                                {servizio.deliverables.length > 3 && (
+                                  <li className="text-teal-600 text-xs">+{servizio.deliverables.length - 3} altri...</li>
+                                )}
+                              </ul>
+                            </div>
+                          </button>
+
+                          {/* Add-on Section (condizionale) */}
+                          {servizio.hasAddons && isSelected && (
+                            <div className="border-3 border-teal-200 rounded-xl p-4 bg-gradient-to-br from-teal-50/50 to-cyan-50/50">
+                              <button
+                                onClick={() => toggleAddonSection(servizio.id)}
+                                className="w-full flex items-center justify-between text-left mb-3"
+                              >
+                                <div className="flex items-center gap-2">
+                                  <Sparkles className="w-5 h-5 text-teal-600" />
+                                  <span className="font-semibold text-gray-900">Personalizza con Add-on</span>
+                                </div>
+                                {isExpanded ? (
+                                  <ChevronUp className="w-5 h-5 text-teal-600" />
+                                ) : (
+                                  <ChevronDown className="w-5 h-5 text-teal-600" />
+                                )}
+                              </button>
+
+                              {isExpanded && (
+                                <div className="space-y-3 pt-2">
+                                  {servizio.id === 'fattibilita' && ADDONS_FATTIBILITA.map(addon => (
+                                    <label key={addon.id} className="flex items-start gap-3 p-3 rounded-lg border-2 border-teal-100 bg-white hover:border-teal-300 cursor-pointer transition-all">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData[`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}` as keyof FormData] as boolean}
+                                        onChange={(e) => setFormData({ ...formData, [`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}`]: e.target.checked })}
+                                        className="mt-1 w-4 h-4 text-teal-600"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-start justify-between mb-1">
+                                          <span className="font-semibold text-sm text-gray-900">{addon.nome}</span>
+                                          <Badge className="bg-teal-600 text-white">+€{addon.prezzo.toLocaleString()}</Badge>
+                                        </div>
+                                        <p className="text-xs text-gray-600 mb-2">{addon.descrizione}</p>
+                                        <ul className="text-xs text-gray-500 space-y-1">
+                                          {addon.details.map((detail, idx) => (
+                                            <li key={idx} className="flex items-start gap-1">
+                                              <span className="text-teal-500">•</span>
+                                              <span>{detail}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </label>
+                                  ))}
+
+                                  {servizio.id === 'smartcontract' && ADDONS_SMARTCONTRACT.map(addon => (
+                                    <label key={addon.id} className="flex items-start gap-3 p-3 rounded-lg border-2 border-teal-100 bg-white hover:border-teal-300 cursor-pointer transition-all">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData[`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}` as keyof FormData] as boolean}
+                                        onChange={(e) => setFormData({ ...formData, [`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}`]: e.target.checked })}
+                                        className="mt-1 w-4 h-4 text-teal-600"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-start justify-between mb-1">
+                                          <span className="font-semibold text-sm text-gray-900">{addon.nome}</span>
+                                          <Badge className="bg-teal-600 text-white">+€{addon.prezzo.toLocaleString()}</Badge>
+                                        </div>
+                                        <p className="text-xs text-gray-600 mb-2">{addon.descrizione}</p>
+                                        <ul className="text-xs text-gray-500 space-y-1">
+                                          {addon.details.map((detail, idx) => (
+                                            <li key={idx} className="flex items-start gap-1">
+                                              <span className="text-teal-500">•</span>
+                                              <span>{detail}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </label>
+                                  ))}
+
+                                  {servizio.id === 'dashboard' && ADDONS_DASHBOARD.map(addon => (
+                                    <label key={addon.id} className="flex items-start gap-3 p-3 rounded-lg border-2 border-teal-100 bg-white hover:border-teal-300 cursor-pointer transition-all">
+                                      <input
+                                        type="checkbox"
+                                        checked={formData[`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}` as keyof FormData] as boolean}
+                                        onChange={(e) => setFormData({ ...formData, [`addon${addon.id.charAt(0).toUpperCase() + addon.id.slice(1)}`]: e.target.checked })}
+                                        className="mt-1 w-4 h-4 text-teal-600"
+                                      />
+                                      <div className="flex-1">
+                                        <div className="flex items-start justify-between mb-1">
+                                          <span className="font-semibold text-sm text-gray-900">{addon.nome}</span>
+                                          <Badge className="bg-teal-600 text-white">+€{addon.prezzo.toLocaleString()}</Badge>
+                                        </div>
+                                        <p className="text-xs text-gray-600 mb-2">{addon.descrizione}</p>
+                                        <ul className="text-xs text-gray-500 space-y-1">
+                                          {addon.details.map((detail, idx) => (
+                                            <li key={idx} className="flex items-start gap-1">
+                                              <span className="text-teal-500">•</span>
+                                              <span>{detail}</span>
+                                            </li>
+                                          ))}
+                                        </ul>
+                                      </div>
+                                    </label>
+                                  ))}
+                                </div>
+                              )}
                             </div>
                           )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
 
-                          <div className="flex items-start gap-6">
-                            <div className={`flex-shrink-0 w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-500 ${
-                              isSelected
-                                ? 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white shadow-xl scale-110'
-                                : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 group-hover:from-teal-100 group-hover:to-cyan-100 group-hover:text-teal-600'
-                            }`}>
-                              <servizio.icon className="w-10 h-10" />
+            {/* Sezione 2: Tipologia Asset */}
+            <div ref={section2Ref} id="section-2">
+              <Card className="border-3 border-cyan-100 shadow-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <BarChart3 className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-3xl">Tipologia Asset</CardTitle>
+                      <CardDescription className="text-cyan-50 text-base mt-1">
+                        Seleziona il tipo di asset immobiliare da tokenizzare
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {TIPOLOGIE_ASSET.map((tipo) => {
+                      const isSelected = formData.tipologiaAsset === tipo.id;
+                      return (
+                        <button
+                          key={tipo.id}
+                          onClick={() => setFormData({ ...formData, tipologiaAsset: tipo.id })}
+                          className={`p-6 border-3 rounded-xl text-center transition-all duration-300 ${
+                            isSelected
+                              ? 'border-cyan-500 bg-gradient-to-br from-cyan-50 to-blue-50 shadow-lg scale-105'
+                              : 'border-gray-200 hover:border-cyan-300 hover:shadow-md'
+                          }`}
+                        >
+                          <div className="text-4xl mb-3">{tipo.icon}</div>
+                          <div className="text-sm font-semibold text-gray-900">{tipo.nome}</div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Sezione 3: Timeline */}
+            <div ref={section3Ref} id="section-3">
+              <Card className="border-3 border-teal-100 shadow-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white p-8">
+                  <div className="flex items-center gap-4">
+                    <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
+                      <Code className="w-8 h-8" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-3xl">Timeline Progetto</CardTitle>
+                      <CardDescription className="text-teal-50 text-base mt-1">
+                        Scegli la timeline di consegna desiderata
+                      </CardDescription>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-8">
+                  <div className="space-y-4">
+                    {TIMELINE_OPTIONS.map((option) => {
+                      const isSelected = formData.timeline === option.id;
+                      return (
+                        <button
+                          key={option.id}
+                          onClick={() => setFormData({ ...formData, timeline: option.id as 'standard' | 'priority' | 'express' })}
+                          className={`w-full p-6 border-3 rounded-xl text-left transition-all duration-300 flex items-center gap-4 ${
+                            isSelected
+                              ? 'border-teal-500 bg-gradient-to-r from-teal-50 to-cyan-50 shadow-lg'
+                              : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
+                          }`}
+                        >
+                          <div className={`flex-shrink-0 w-12 h-12 rounded-xl flex items-center justify-center text-2xl transition-all ${
+                            isSelected ? 'bg-gradient-to-br from-teal-500 to-cyan-500 text-white scale-110' : 'bg-gray-100'
+                          }`}>
+                            {option.icon}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              <h3 className="text-xl font-bold text-gray-900">{option.nome}</h3>
+                              {option.surcharge && (
+                                <Badge className="bg-amber-500 text-white">{option.surcharge}</Badge>
+                              )}
                             </div>
-
-                            <div className="flex-1">
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <h3 className="text-2xl font-bold text-gray-900 mb-1">
-                                    {servizio.nome}
-                                  </h3>
-                                  <p className="text-teal-600 font-semibold">
-                                    {servizio.sottotitolo}
-                                  </p>
-                                </div>
-                                <div className={`w-8 h-8 rounded-full border-3 flex items-center justify-center transition-all duration-300 ${
-                                  isSelected
-                                    ? 'border-teal-500 bg-teal-500'
-                                    : 'border-gray-300 group-hover:border-teal-400'
-                                }`}>
-                                  {isSelected && <Check className="w-5 h-5 text-white" />}
-                                </div>
-                              </div>
-
-                              <p className="text-gray-600 mb-4">
-                                {servizio.descrizione}
-                              </p>
-
-                              <div className="grid md:grid-cols-2 gap-4 mb-4">
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Badge variant="outline" className="text-teal-600 border-teal-300">
-                                    💰 €{servizio.id === 'poc' ? servizio.prezzoMinEssential.toLocaleString() : servizio.prezzoMin.toLocaleString()} - €{servizio.id === 'poc' ? servizio.prezzoMaxInteractive.toLocaleString() : servizio.prezzoMax.toLocaleString()}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-2 text-sm">
-                                  <Badge variant="outline" className="text-cyan-600 border-cyan-300">
-                                    ⏱️ {servizio.durata}
-                                  </Badge>
-                                </div>
-                              </div>
-
-                              <div className="bg-white/50 rounded-lg p-4 border border-teal-100">
-                                <p className="text-xs font-semibold text-gray-700 mb-2">Deliverables:</p>
-                                <ul className="text-xs text-gray-600 space-y-1">
-                                  {servizio.deliverables.map((item, idx) => (
-                                    <li key={idx} className="flex items-start gap-2">
-                                      <Check className="w-3 h-3 text-teal-500 flex-shrink-0 mt-0.5" />
-                                      <span>{item}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
+                            <p className="text-sm text-gray-600 mb-1">{option.descrizione}</p>
+                            <p className="text-sm font-semibold text-teal-600">
+                              Durata: ~{option.settimane} settimane
+                            </p>
+                          </div>
+                          <div className={`w-6 h-6 rounded-full border-3 flex items-center justify-center transition-all ${
+                            isSelected ? 'border-teal-500 bg-teal-500' : 'border-gray-300'
+                          }`}>
+                            {isSelected && <div className="w-3 h-3 bg-white rounded-full" />}
                           </div>
                         </button>
                       );
@@ -676,269 +1047,82 @@ export default function ConfiguratorePropTechBlockchain() {
               </Card>
             </div>
 
-            {/* Sezione 2: Opzioni PoC */}
-            {formData.servizioPoc && (
-              <div ref={section2Ref} id="section-2">
-                <Card className="border-3 border-cyan-100 shadow-2xl overflow-hidden">
-                  <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-8">
-                    <div className="flex items-center gap-4">
-                      <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                        <Code className="w-8 h-8" />
-                      </div>
-                      <div>
-                        <CardTitle className="text-3xl">Opzioni Proof of Concept</CardTitle>
-                        <CardDescription className="text-cyan-50 text-base mt-1">
-                          Scegli il livello di sviluppo del PoC
-                        </CardDescription>
-                      </div>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-8">
-                    <div className="grid md:grid-cols-2 gap-6">
-                      {OPZIONI_POC.map((opzione) => {
-                        const isSelected = formData.opzionePoc === opzione.id;
-
-                        return (
-                          <button
-                            key={opzione.id}
-                            onClick={() => setFormData({ ...formData, opzionePoc: opzione.id as 'essential' | 'interactive' })}
-                            className={`group relative p-8 border-3 rounded-2xl text-left transition-all duration-500 ${
-                              isSelected
-                                ? 'border-cyan-500 bg-gradient-to-br from-cyan-50 to-blue-50 shadow-2xl scale-105'
-                                : 'border-gray-200 hover:border-cyan-300 hover:shadow-xl hover:scale-102'
-                            }`}
-                          >
-                            {opzione.popular && (
-                              <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 bg-gradient-to-r from-blue-500 to-blue-600 text-white text-xs font-bold rounded-full shadow-lg">
-                                ⭐ CONSIGLIATO
-                              </div>
-                            )}
-
-                            <div className="flex flex-col h-full">
-                              <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mb-4 transition-all duration-500 ${
-                                isSelected
-                                  ? 'bg-gradient-to-br from-cyan-500 to-blue-500 text-white shadow-xl scale-110'
-                                  : 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-400 group-hover:from-cyan-100 group-hover:to-blue-100 group-hover:text-cyan-600'
-                              }`}>
-                                <opzione.icon className="w-8 h-8" />
-                              </div>
-
-                              <div className="flex items-start justify-between mb-3">
-                                <div>
-                                  <h3 className="text-xl font-bold text-gray-900 mb-1">
-                                    {opzione.nome}
-                                  </h3>
-                                  <p className="text-sm text-cyan-600 font-semibold">
-                                    {opzione.descrizione}
-                                  </p>
-                                </div>
-                                <div className={`w-7 h-7 rounded-full border-3 flex items-center justify-center transition-all duration-300 flex-shrink-0 ml-2 ${
-                                  isSelected
-                                    ? 'border-cyan-500 bg-cyan-500'
-                                    : 'border-gray-300 group-hover:border-cyan-400'
-                                }`}>
-                                  {isSelected && <Check className="w-4 h-4 text-white" />}
-                                </div>
-                              </div>
-
-                              <div className="mb-4">
-                                <Badge variant="outline" className="text-cyan-600 border-cyan-300">
-                                  💰 €{opzione.prezzoMin.toLocaleString()} - €{opzione.prezzoMax.toLocaleString()}
-                                </Badge>
-                              </div>
-
-                              <div className="bg-white/50 rounded-lg p-4 border border-cyan-100 flex-1">
-                                <ul className="text-sm text-gray-600 space-y-2">
-                                  {opzione.features.map((feature, idx) => (
-                                    <li key={idx} className="flex items-start gap-2">
-                                      <Check className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" />
-                                      <span>{feature}</span>
-                                    </li>
-                                  ))}
-                                </ul>
-                              </div>
-                            </div>
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="mt-6 p-4 bg-blue-50 border-2 border-blue-200 rounded-xl">
-                      <p className="text-sm text-blue-800">
-                        <Shield className="w-4 h-4 inline mr-2" />
-                        <strong>Nota:</strong> Il PoC viene deployato su testnet (Sepolia/Goerli). Non è software di produzione ma un prototipo R&D per validazione tecnica.
-                      </p>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
-            )}
-
-            {!formData.servizioPoc && (
-              <div ref={section2Ref} id="section-2" className="h-20"></div>
-            )}
-
-            {/* Sezione 3: Dettagli Progetto */}
-            <div ref={section3Ref} id="section-3">
-              <Card className="border-3 border-teal-100 shadow-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white p-8">
+            {/* Sezione 4: Upload Documenti */}
+            <div ref={section4Ref} id="section-4">
+              <Card className="border-3 border-cyan-100 shadow-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                      <BarChart3 className="w-8 h-8" />
+                      <FileText className="w-8 h-8" />
                     </div>
                     <div>
-                      <CardTitle className="text-3xl">Dettagli Progetto</CardTitle>
-                      <CardDescription className="text-teal-50 text-base mt-1">
-                        Fornisci informazioni sul tuo asset e obiettivi
+                      <CardTitle className="text-3xl">Documenti Opzionali</CardTitle>
+                      <CardDescription className="text-cyan-50 text-base mt-1">
+                        Carica eventuali documenti utili per il progetto
                       </CardDescription>
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent className="p-8 space-y-6">
-                  {/* Tipologia Asset */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-3">
-                      Tipologia Asset *
-                    </label>
-                    <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                      {TIPOLOGIE_ASSET.map((tipo) => {
-                        const isSelected = formData.tipologiaAsset === tipo.id;
-                        return (
-                          <button
-                            key={tipo.id}
-                            onClick={() => setFormData({ ...formData, tipologiaAsset: tipo.id })}
-                            className={`p-4 border-2 rounded-xl text-left transition-all duration-300 ${
-                              isSelected
-                                ? 'border-teal-500 bg-gradient-to-br from-teal-50 to-cyan-50 shadow-lg scale-105'
-                                : 'border-gray-200 hover:border-teal-300 hover:shadow-md'
-                            }`}
-                          >
-                            <div className="text-2xl mb-2">{tipo.icon}</div>
-                            <div className="text-sm font-semibold text-gray-900">{tipo.nome}</div>
-                          </button>
-                        );
-                      })}
+                <CardContent className="p-8">
+                  <div className="border-2 border-dashed border-teal-300 rounded-xl p-8 bg-teal-50/30 hover:bg-teal-50/50 transition-colors">
+                    <div className="text-center">
+                      <Upload className="w-16 h-16 text-teal-400 mx-auto mb-4" />
+                      <label className="cursor-pointer">
+                        <span className="text-teal-600 font-semibold hover:text-teal-700 text-lg">
+                          Carica documenti
+                        </span>
+                        <input
+                          type="file"
+                          multiple
+                          accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
+                          onChange={handleFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+                      <p className="text-sm text-gray-500 mt-3">
+                        PDF, Word, Excel, Immagini<br />
+                        Max 10MB per file • Max 5 files totali
+                      </p>
                     </div>
-                  </div>
 
-                  {/* Valore Stimato */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Valore Stimato Asset (€)
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="es. 500.000"
-                      value={formData.valoreStimatoAsset}
-                      onChange={(e) => setFormData({ ...formData, valoreStimatoAsset: e.target.value })}
-                      className="border-2 focus:border-teal-500 text-lg p-3"
-                    />
-                  </div>
-
-                  {/* Obiettivi */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Obiettivi del Progetto
-                    </label>
-                    <Textarea
-                      placeholder="Descrivi gli obiettivi principali: fundraising, liquidità, governance, altro..."
-                      value={formData.obiettiviProgetto}
-                      onChange={(e) => setFormData({ ...formData, obiettiviProgetto: e.target.value })}
-                      className="border-2 focus:border-teal-500 min-h-[100px]"
-                    />
-                  </div>
-
-                  {/* Tempistiche */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Tempistiche Desiderate
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="es. Entro 3 mesi, Q2 2026, etc."
-                      value={formData.tempisticheDesiderate}
-                      onChange={(e) => setFormData({ ...formData, tempisticheDesiderate: e.target.value })}
-                      className="border-2 focus:border-teal-500 text-lg p-3"
-                    />
-                  </div>
-
-                  {/* Requirements Aggiuntivi */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Requirements Tecnici/Legali Specifici
-                    </label>
-                    <Textarea
-                      placeholder="Eventuali vincoli normativi, preferenze tecnologiche, compliance specifica..."
-                      value={formData.requirementsAggiuntivi}
-                      onChange={(e) => setFormData({ ...formData, requirementsAggiuntivi: e.target.value })}
-                      className="border-2 focus:border-teal-500 min-h-[100px]"
-                    />
-                  </div>
-
-                  {/* Upload Documenti */}
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Documenti Opzionali
-                    </label>
-                    <div className="border-2 border-dashed border-teal-300 rounded-xl p-6 bg-teal-50/30 hover:bg-teal-50/50 transition-colors">
-                      <div className="text-center">
-                        <Upload className="w-12 h-12 text-teal-400 mx-auto mb-3" />
-                        <label className="cursor-pointer">
-                          <span className="text-teal-600 font-semibold hover:text-teal-700">
-                            Carica documenti
-                          </span>
-                          <input
-                            type="file"
-                            multiple
-                            accept=".pdf,.doc,.docx,.xls,.xlsx,.jpg,.jpeg,.png,.gif"
-                            onChange={handleFileUpload}
-                            className="hidden"
-                          />
-                        </label>
-                        <p className="text-xs text-gray-500 mt-2">
-                          PDF, Word, Excel, Immagini (max 10MB, max 5 files)
-                        </p>
-                      </div>
-
-                      {files.length > 0 && (
-                        <div className="mt-4 space-y-2">
-                          {files.map((file, index) => (
-                            <div key={index} className="flex items-center justify-between bg-white p-3 rounded-lg border border-teal-200">
-                              <div className="flex items-center gap-3">
-                                <FileText className="w-5 h-5 text-teal-500" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                                  <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
-                                </div>
+                    {files.length > 0 && (
+                      <div className="mt-6 space-y-3">
+                        {files.map((file, index) => (
+                          <div key={index} className="flex items-center justify-between bg-white p-4 rounded-lg border-2 border-teal-200 shadow-sm">
+                            <div className="flex items-center gap-3">
+                              <FileText className="w-6 h-6 text-teal-500" />
+                              <div>
+                                <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                <p className="text-xs text-gray-500">{(file.size / 1024).toFixed(2)} KB</p>
                               </div>
-                              <button
-                                onClick={() => removeFile(index)}
-                                className="text-red-500 hover:text-red-700 transition-colors"
-                              >
-                                <X className="w-5 h-5" />
-                              </button>
                             </div>
-                          ))}
-                        </div>
-                      )}
-                    </div>
+                            <button
+                              onClick={() => removeFile(index)}
+                              className="text-red-500 hover:text-red-700 transition-colors p-1"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {/* Sezione 4: Dati Cliente */}
-            <div ref={section4Ref} id="section-4">
-              <Card className="border-3 border-cyan-100 shadow-2xl overflow-hidden">
-                <CardHeader className="bg-gradient-to-r from-cyan-500 to-blue-500 text-white p-8">
+            {/* Sezione 5: Dati Cliente */}
+            <div ref={section5Ref} id="section-5">
+              <Card className="border-3 border-teal-100 shadow-2xl overflow-hidden">
+                <CardHeader className="bg-gradient-to-r from-teal-500 to-cyan-500 text-white p-8">
                   <div className="flex items-center gap-4">
                     <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                       <Users className="w-8 h-8" />
                     </div>
                     <div>
                       <CardTitle className="text-3xl">Dati Cliente</CardTitle>
-                      <CardDescription className="text-cyan-50 text-base mt-1">
-                        Informazioni di contatto per il preventivo
+                      <CardDescription className="text-teal-50 text-base mt-1">
+                        I tuoi dati di contatto per il preventivo
                       </CardDescription>
                     </div>
                   </div>
@@ -954,7 +1138,7 @@ export default function ConfiguratorePropTechBlockchain() {
                         placeholder="Mario Rossi"
                         value={formData.nomeCliente}
                         onChange={(e) => setFormData({ ...formData, nomeCliente: e.target.value })}
-                        className="border-2 focus:border-cyan-500 text-lg p-3"
+                        className="border-2 focus:border-teal-500 text-lg p-3"
                       />
                     </div>
 
@@ -967,7 +1151,7 @@ export default function ConfiguratorePropTechBlockchain() {
                         placeholder="mario.rossi@example.com"
                         value={formData.emailCliente}
                         onChange={(e) => setFormData({ ...formData, emailCliente: e.target.value })}
-                        className="border-2 focus:border-cyan-500 text-lg p-3"
+                        className="border-2 focus:border-teal-500 text-lg p-3"
                       />
                     </div>
 
@@ -980,33 +1164,33 @@ export default function ConfiguratorePropTechBlockchain() {
                         placeholder="+39 333 1234567"
                         value={formData.telefonoCliente}
                         onChange={(e) => setFormData({ ...formData, telefonoCliente: e.target.value })}
-                        className="border-2 focus:border-cyan-500 text-lg p-3"
+                        className="border-2 focus:border-teal-500 text-lg p-3"
                       />
                     </div>
 
                     <div>
                       <label className="block text-sm font-semibold text-gray-700 mb-2">
-                        Azienda/Ente
+                        Azienda/Ente (opzionale)
                       </label>
                       <Input
                         type="text"
-                        placeholder="Nome azienda (opzionale)"
+                        placeholder="Nome azienda"
                         value={formData.azienda}
                         onChange={(e) => setFormData({ ...formData, azienda: e.target.value })}
-                        className="border-2 focus:border-cyan-500 text-lg p-3"
+                        className="border-2 focus:border-teal-500 text-lg p-3"
                       />
                     </div>
                   </div>
 
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">
-                      Note Aggiuntive
+                      Note sul Progetto
                     </label>
                     <Textarea
-                      placeholder="Eventuali informazioni aggiuntive o domande..."
-                      value={formData.noteAggiuntive}
-                      onChange={(e) => setFormData({ ...formData, noteAggiuntive: e.target.value })}
-                      className="border-2 focus:border-cyan-500 min-h-[100px]"
+                      placeholder="Descrivi brevemente il tuo progetto: obiettivi, tempistiche specifiche, requirements tecnici o legali particolari..."
+                      value={formData.note}
+                      onChange={(e) => setFormData({ ...formData, note: e.target.value })}
+                      className="border-2 focus:border-teal-500 min-h-[120px]"
                     />
                   </div>
 
@@ -1017,25 +1201,44 @@ export default function ConfiguratorePropTechBlockchain() {
                         <p className="font-semibold mb-2">Privacy & Sicurezza</p>
                         <p className="text-xs leading-relaxed">
                           I tuoi dati saranno trattati in conformità al GDPR. Li utilizzeremo esclusivamente per contattarti
-                          e preparare il preventivo personalizzato. Non verranno condivisi con terze parti.
+                          e preparare il preventivo personalizzato durante la consulenza online obbligatoria. Non verranno condivisi con terze parti.
                         </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Final Disclaimer before Submit */}
+                  <div className="bg-gradient-to-br from-blue-50 to-cyan-50 border-2 border-blue-200 rounded-xl p-6">
+                    <div className="flex items-start gap-3">
+                      <Info className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+                      <div className="text-sm text-blue-800">
+                        <p className="font-semibold mb-2">Prima di inviare la richiesta</p>
+                        <ul className="text-xs space-y-1 leading-relaxed">
+                          <li>✓ Il preventivo mostrato è <strong>indicativo e non vincolante</strong></li>
+                          <li>✓ È richiesta una <strong>consulenza online gratuita</strong> per conferma definitiva</li>
+                          <li>✓ I servizi sono di <strong>Ricerca & Sviluppo</strong>, non produzione software</li>
+                          <li>✓ Gli smart contract sono deployati solo su <strong>testnet</strong> (Sepolia/Goerli)</li>
+                          <li>✓ La dashboard è un <strong>prototipo MVP</strong>, non applicazione di produzione</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
                 </CardContent>
               </Card>
             </div>
+
           </div>
 
-          {/* Sidebar Preventivo */}
+          {/* Sidebar Preventivo Sticky */}
           <div className="lg:w-96">
             <div className="sticky top-32 space-y-6">
               <Card className="border-3 border-teal-200 shadow-2xl overflow-hidden">
                 <CardHeader className="bg-gradient-to-br from-teal-500 via-cyan-500 to-blue-500 text-white p-6">
                   <CardTitle className="text-2xl flex items-center gap-2">
                     <Coins className="w-6 h-6" />
-                    Riepilogo Preventivo
+                    Preventivo Immediato
                   </CardTitle>
+                  <p className="text-xs text-teal-50 mt-2">Non vincolante - Soggetto a conferma</p>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
                   {preventivo.serviziInclusi.length === 0 ? (
@@ -1046,7 +1249,7 @@ export default function ConfiguratorePropTechBlockchain() {
                   ) : (
                     <>
                       <div className="space-y-3">
-                        <p className="text-sm font-semibold text-gray-700">Servizi selezionati:</p>
+                        <p className="text-sm font-semibold text-gray-700">Servizi Base:</p>
                         {preventivo.serviziInclusi.map((servizio, index) => (
                           <div key={index} className="flex items-start gap-2 text-sm">
                             <Check className="w-4 h-4 text-teal-500 flex-shrink-0 mt-0.5" />
@@ -1055,25 +1258,47 @@ export default function ConfiguratorePropTechBlockchain() {
                         ))}
                       </div>
 
-                      {preventivo.scontoPercentuale > 0 && (
-                        <div className="bg-amber-50 border-2 border-amber-200 rounded-lg p-3">
-                          <p className="text-sm font-bold text-amber-800 flex items-center gap-2">
-                            <Sparkles className="w-4 h-4" />
-                            Sconto Bundle {preventivo.scontoPercentuale}%
-                          </p>
+                      {preventivo.addonsInclusi.length > 0 && (
+                        <div className="space-y-2 pt-3 border-t border-gray-200">
+                          <p className="text-sm font-semibold text-gray-700">Add-on:</p>
+                          {preventivo.addonsInclusi.map((addon, index) => (
+                            <div key={index} className="flex items-start gap-2 text-sm">
+                              <Sparkles className="w-4 h-4 text-cyan-500 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-600">{addon}</span>
+                            </div>
+                          ))}
                         </div>
                       )}
 
                       <div className="border-t-2 border-gray-200 pt-4">
                         <div className="flex justify-between items-center mb-2">
-                          <span className="text-sm text-gray-600">Range investimento:</span>
+                          <span className="text-sm text-gray-600">Subtotale:</span>
+                          <span className="text-lg font-bold text-gray-900">€{preventivo.subtotale.toLocaleString()}</span>
                         </div>
-                        <div className="text-3xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent">
-                          €{preventivo.totaleMin.toLocaleString()} - €{preventivo.totaleMax.toLocaleString()}
+
+                        {formData.timeline && preventivo.moltiplicatore !== 1.0 && (
+                          <div className="flex justify-between items-center mb-2">
+                            <span className="text-sm text-gray-600">Timeline {preventivo.timelineSurcharge}:</span>
+                            <span className="text-sm font-semibold text-amber-600">
+                              {preventivo.moltiplicatore > 1 ? '+' : ''}€{Math.round(preventivo.subtotale * (preventivo.moltiplicatore - 1)).toLocaleString()}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="border-t-2 border-teal-200 pt-3 mt-3">
+                          <div className="flex justify-between items-center mb-1">
+                            <span className="text-sm font-semibold text-gray-700">TOTALE:</span>
+                          </div>
+                          <div className="text-4xl font-bold bg-gradient-to-r from-teal-600 to-cyan-600 bg-clip-text text-transparent transition-all duration-500">
+                            €{preventivo.totale.toLocaleString()}
+                          </div>
                         </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          Il preventivo finale dipenderà dalla complessità del progetto
-                        </p>
+
+                        {formData.timeline && (
+                          <p className="text-xs text-gray-500 mt-3">
+                            ⏱️ Durata stimata: ~{preventivo.settimane} settimane
+                          </p>
+                        )}
                       </div>
 
                       <Button
@@ -1094,6 +1319,10 @@ export default function ConfiguratorePropTechBlockchain() {
                           </>
                         )}
                       </Button>
+
+                      <p className="text-xs text-center text-gray-500 italic">
+                        Preventivo non vincolante. Verrà confermato dopo consulenza online gratuita.
+                      </p>
                     </>
                   )}
                 </CardContent>
@@ -1116,16 +1345,16 @@ export default function ConfiguratorePropTechBlockchain() {
                     <div>
                       <p className="text-sm font-semibold text-gray-900 mb-1">Consulenza Inclusa</p>
                       <p className="text-xs text-gray-600">
-                        Ogni servizio include supporto consulenziale durante tutto il progetto.
+                        Ogni richiesta include una consulenza online gratuita per validare il progetto.
                       </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
-                    <Check className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <Code className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
                     <div>
-                      <p className="text-sm font-semibold text-gray-900 mb-1">Deliverables Garantiti</p>
+                      <p className="text-sm font-semibold text-gray-900 mb-1">Testnet Only</p>
                       <p className="text-xs text-gray-600">
-                        Tutti i deliverables sono documentati e rilasciati al cliente.
+                        Smart contract deployati su reti test (Sepolia/Goerli), non mainnet.
                       </p>
                     </div>
                   </div>
