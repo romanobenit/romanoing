@@ -31,7 +31,6 @@ export const authConfig: NextAuthConfig = {
         '/bundle',
         '/checkout',
         '/configuratore',
-        '/api/richiesta-consulenza',
       ].some((path) => nextUrl.pathname.startsWith(path))
 
       if (isOnPublicPage) {
