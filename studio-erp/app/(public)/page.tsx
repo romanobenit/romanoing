@@ -1,16 +1,71 @@
+'use client';
+
 import Link from "next/link";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { ChevronDown, X, Send } from "lucide-react";
+
+const SERVIZI = [
+  { nome: "Consulenza Tecnica", icon: "💡", href: "/configuratore/consulenza" },
+  { nome: "Ristrutturazione", icon: "🏗️", href: "/configuratore/ristrutturazione" },
+  { nome: "Due Diligence Tecnica", icon: "🏢", href: "/configuratore/due-diligence" },
+  { nome: "Vulnerabilità Sismica", icon: "🏛️", href: "/configuratore/sismica" },
+  { nome: "Ampliamento", icon: "🏗️", href: "/configuratore/ampliamento" },
+  { nome: "Collaudo Statico", icon: "✅", href: "/configuratore/collaudo" },
+  { nome: "Antincendio", icon: "🔥", href: "/configuratore/antincendio" },
+  { nome: "Efficientamento Energetico", icon: "⚡", href: "/configuratore/efficientamento" },
+  { nome: "PropTech/Blockchain R&D", icon: "✨", href: "/configuratore/proptech-blockchain" }
+];
 
 export default function HomePage() {
+  const [showServicesDropdown, setShowServicesDropdown] = useState(false);
+  const [showConsulenzaModal, setShowConsulenzaModal] = useState(false);
+  const [consulenzaForm, setConsulenzaForm] = useState({
+    nome: '',
+    email: '',
+    telefono: '',
+    servizio: '',
+    messaggio: ''
+  });
+  const [loading, setLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+
+  const handleConsulenzaSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await fetch('/api/richiesta-consulenza', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(consulenzaForm)
+      });
+
+      if (response.ok) {
+        setSubmitted(true);
+        setTimeout(() => {
+          setShowConsulenzaModal(false);
+          setSubmitted(false);
+          setConsulenzaForm({ nome: '', email: '', telefono: '', servizio: '', messaggio: '' });
+        }, 3000);
+      }
+    } catch (error) {
+      console.error('Errore invio richiesta consulenza:', error);
+      alert('Errore durante l\'invio. Riprova più tardi.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-gray-50">
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
           <nav className="flex items-center justify-between">
-            <div className="flex items-center space-x-2">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
               <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
                 SR
               </div>
@@ -20,17 +75,46 @@ export default function HomePage() {
                 </h1>
                 <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
-            </div>
+            </Link>
             <div className="flex items-center space-x-4">
+              <div className="relative">
+                <Button
+                  variant="ghost"
+                  onClick={() => setShowServicesDropdown(!showServicesDropdown)}
+                  className="flex items-center gap-2"
+                >
+                  Esplora Servizi
+                  <ChevronDown className={`w-4 h-4 transition-transform ${showServicesDropdown ? 'rotate-180' : ''}`} />
+                </Button>
+
+                {showServicesDropdown && (
+                  <>
+                    <div
+                      className="fixed inset-0 z-10"
+                      onClick={() => setShowServicesDropdown(false)}
+                    />
+                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
+                      {SERVIZI.map((servizio, idx) => (
+                        <Link
+                          key={idx}
+                          href={servizio.href}
+                          className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
+                          onClick={() => setShowServicesDropdown(false)}
+                        >
+                          <span className="text-2xl">{servizio.icon}</span>
+                          <span className="text-sm font-medium text-gray-900">{servizio.nome}</span>
+                        </Link>
+                      ))}
+                    </div>
+                  </>
+                )}
+              </div>
               <Link
                 href="/login"
                 className="text-gray-700 hover:text-gray-900 font-medium"
               >
                 Accedi
               </Link>
-              <Button asChild>
-                <Link href="/quiz">Richiedi Preventivo</Link>
-              </Button>
             </div>
           </nav>
         </div>
@@ -59,10 +143,10 @@ export default function HomePage() {
             <br />
             <span className="font-semibold">Qualità certificata ISO 9001 | Sicurezza dati ISO 27001</span>
           </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <Button asChild size="lg" className="text-lg px-8 py-6">
-              <Link href="/quiz">
-                🎯 Richiedi Preventivo Gratuito
+              <Link href="#servizi">
+                🎯 Configura il Tuo Servizio in 3 Minuti
               </Link>
             </Button>
             <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
@@ -71,6 +155,12 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
+          <button
+            onClick={() => setShowConsulenzaModal(true)}
+            className="text-sm text-blue-600 hover:text-blue-700 underline"
+          >
+            Hai bisogno di una consulenza preliminare?
+          </button>
         </div>
       </section>
 
@@ -144,7 +234,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      {/* Services Section - 8 Bundle */}
+      {/* Services Section - 9 Bundle */}
       <section id="servizi" className="container mx-auto px-4 py-20">
         <div className="text-center mb-16">
           <Badge className="mb-4">Catalogo Servizi Professionali</Badge>
@@ -186,12 +276,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/consulenza">
-                      💡 Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-CONSULENZA">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -227,12 +317,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/ristrutturazione">
-                      🏗️ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-RISTR-BONUS">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -268,12 +358,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/due-diligence">
-                      🔍 Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-DUE-DILIGENCE">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -309,12 +399,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/sismica">
-                      🛡️ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-VULN-SISMICA">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -350,12 +440,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/ampliamento">
-                      🏗️ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-AMPLIAMENTO">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -391,12 +481,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/collaudo">
-                      ✅ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-COLLAUDO">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -432,12 +522,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/antincendio">
-                      🔥 Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-ANTINCENDIO">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -473,12 +563,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/efficientamento">
-                      ⚡ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-EFF-ENERGETICO">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -514,12 +604,12 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/proptech-blockchain">
-                      ✨ Configuratore →
+                      ⚙️ Configura Servizio →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
                     <Link href="/bundle/BDL-PROPTECH-BLOCKCHAIN">
-                      📋 Scopri Bundle →
+                      ℹ️ Info Dettagliate
                     </Link>
                   </Button>
                 </div>
@@ -592,9 +682,9 @@ export default function HomePage() {
               <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
                 1
               </div>
-              <h3 className="font-bold text-base mb-2">Richiesta Preventivo</h3>
+              <h3 className="font-bold text-base mb-2">Configura Servizio</h3>
               <p className="text-gray-600 text-sm">
-                Compila quiz (2 min) o contattaci direttamente
+                Usa il configuratore online (2-3 min)
               </p>
             </div>
 
@@ -645,21 +735,24 @@ export default function HomePage() {
       <section className="container mx-auto px-4 py-20">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-12 text-center text-white">
           <h2 className="text-4xl font-bold mb-4">
-            Pronto per un Preventivo Personalizzato?
+            Pronto per Configurare il Tuo Servizio?
           </h2>
           <p className="text-xl mb-8 text-blue-100">
-            Servizi certificati ISO 9001 e ISO 27001. Preventivo gratuito in 24 ore.
+            Servizi certificati ISO 9001 e ISO 27001. Preventivo personalizzato in 24 ore.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
-              <Link href="/quiz">
-                Richiedi Preventivo Gratuito →
+              <Link href="#servizi">
+                Esplora i 9 Servizi →
               </Link>
             </Button>
-            <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6 bg-transparent text-white border-white hover:bg-white hover:text-blue-600">
-              <Link href="/login">
-                Accedi Area Riservata
-              </Link>
+            <Button
+              size="lg"
+              variant="outline"
+              className="text-lg px-8 py-6 bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
+              onClick={() => setShowConsulenzaModal(true)}
+            >
+              Richiedi Consulenza
             </Button>
           </div>
         </div>
@@ -713,6 +806,110 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
+
+      {/* Modal Consulenza */}
+      {showConsulenzaModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
+            <button
+              onClick={() => setShowConsulenzaModal(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
+            >
+              <X className="w-5 h-5" />
+            </button>
+
+            {submitted ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-900 mb-2">Richiesta Inviata!</h3>
+                <p className="text-gray-600">Ti contatteremo entro 24 ore.</p>
+              </div>
+            ) : (
+              <>
+                <h2 className="text-2xl font-bold text-gray-900 mb-2">Richiedi Consulenza</h2>
+                <p className="text-sm text-gray-600 mb-6">
+                  Compila il form e ti contatteremo entro 24 ore per una consulenza preliminare gratuita.
+                </p>
+
+                <form onSubmit={handleConsulenzaSubmit} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
+                    <input
+                      type="text"
+                      required
+                      value={consulenzaForm.nome}
+                      onChange={(e) => setConsulenzaForm({...consulenzaForm, nome: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
+                    <input
+                      type="email"
+                      required
+                      value={consulenzaForm.email}
+                      onChange={(e) => setConsulenzaForm({...consulenzaForm, email: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono *</label>
+                    <input
+                      type="tel"
+                      required
+                      value={consulenzaForm.telefono}
+                      onChange={(e) => setConsulenzaForm({...consulenzaForm, telefono: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Servizio di Interesse</label>
+                    <select
+                      value={consulenzaForm.servizio}
+                      onChange={(e) => setConsulenzaForm({...consulenzaForm, servizio: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Seleziona un servizio...</option>
+                      {SERVIZI.map((s, idx) => (
+                        <option key={idx} value={s.nome}>{s.icon} {s.nome}</option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Domanda/Dubbio</label>
+                    <textarea
+                      rows={4}
+                      value={consulenzaForm.messaggio}
+                      onChange={(e) => setConsulenzaForm({...consulenzaForm, messaggio: e.target.value})}
+                      placeholder="Descrivi brevemente la tua esigenza..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+
+                  <Button type="submit" className="w-full" disabled={loading}>
+                    {loading ? (
+                      <>Invio in corso...</>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4 mr-2" />
+                        Richiedi Consulenza
+                      </>
+                    )}
+                  </Button>
+                </form>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

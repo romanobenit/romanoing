@@ -44,7 +44,7 @@ function CheckoutContent() {
 
   useEffect(() => {
     if (!bundleCode) {
-      router.push("/quiz");
+      router.push("/#servizi");
       return;
     }
 
