@@ -16,9 +16,9 @@ export default function HomePage() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Studio Ing. Domenico Romano
+                  Technical Advisory Ing. Domenico Romano
                 </h1>
-                <p className="text-xs text-gray-600">Ingegneria e architettura</p>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
             </div>
             <div className="flex items-center space-x-4">
@@ -51,11 +51,11 @@ export default function HomePage() {
             </Badge>
           </div>
           <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Servizi di Ingegneria{" "}
-            <span className="text-blue-600">Certificati</span> e su Misura
+            Technical Advisory{" "}
+            <span className="text-blue-600">Certificato</span> e su Misura
           </h2>
           <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-            Preventivo online in 24 ore. Pagamenti milestone-based sicuri.
+            Preventivi online immediati con configuratori intelligenti. Pagamenti milestone-based sicuri.
             <br />
             <span className="font-semibold">Qualità certificata ISO 9001 | Sicurezza dati ISO 27001</span>
           </p>
@@ -67,7 +67,7 @@ export default function HomePage() {
             </Button>
             <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
               <Link href="#servizi">
-                Esplora Catalogo (8 Servizi)
+                Esplora Catalogo (9 Servizi)
               </Link>
             </Button>
           </div>
@@ -149,7 +149,7 @@ export default function HomePage() {
         <div className="text-center mb-16">
           <Badge className="mb-4">Catalogo Servizi Professionali</Badge>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            8 Soluzioni per Ogni Esigenza
+            9 Soluzioni per Ogni Esigenza
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Servizi completi con preventivo personalizzato online. <br/>
@@ -429,6 +429,40 @@ export default function HomePage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* Bundle 9: PropTech/Blockchain R&D */}
+          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
+            <CardHeader>
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center text-3xl mb-4">
+                ✨
+              </div>
+              <CardTitle className="text-lg">PropTech/Blockchain R&D</CardTitle>
+              <CardDescription className="text-sm">
+                Ricerca tokenizzazione immobiliare
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">
+                  €3.000 - €48.000
+                </div>
+                <div className="text-xs text-gray-600">
+                  ✓ Studio fattibilità tokenizzazione<br />
+                  ✓ PoC Smart Contract + Dashboard<br />
+                  ✓ Linee guida architettura<br />
+                  ✓ Servizi R&D (ATECO 72.19)
+                </div>
+                <Button asChild className="w-full" size="sm" variant="outline">
+                  <Link href="/configuratore/proptech-blockchain">
+                    ✨ Configuratore →
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         </div>
       </section>
 
@@ -460,7 +494,7 @@ export default function HomePage() {
               </div>
 
               <div className="bg-white rounded-lg p-6 border-2 border-green-500">
-                <div className="text-green-600 font-bold mb-2">✅ Studio Ing. Domenico Romano (Demand-Driven)</div>
+                <div className="text-green-600 font-bold mb-2">✅ Technical Advisory Ing. Domenico Romano (Demand-Driven)</div>
                 <ul className="space-y-2 text-sm text-gray-600">
                   <li>• <strong>Servizio personalizzato</strong> su tue esigenze</li>
                   <li>• <strong>Preventivo ad-hoc</strong> entro 24 ore</li>
@@ -573,9 +607,9 @@ export default function HomePage() {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8">
             <div>
-              <h3 className="font-bold text-lg mb-4">Studio Ing. Domenico Romano</h3>
+              <h3 className="font-bold text-lg mb-4">Technical Advisory Ing. Domenico Romano</h3>
               <p className="text-gray-600 text-sm mb-4">
-                Ingegneria e architettura certificata ISO 9001 e ISO 27001
+                Consulenza tecnica avanzata certificata ISO 9001 e ISO 27001
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Badge variant="outline" className="text-xs">ISO 9001:2015</Badge>
@@ -590,6 +624,7 @@ export default function HomePage() {
                 <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
                 <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
                 <li><Link href="/configuratore/ampliamento" className="hover:text-blue-600">Ampliamento</Link></li>
+                <li><Link href="/configuratore/proptech-blockchain" className="hover:text-blue-600">PropTech/Blockchain R&D</Link></li>
                 <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
                 <li><Link href="/bundle/BDL-ANTINCENDIO" className="hover:text-blue-600">Antincendio</Link></li>
                 <li><Link href="/bundle/BDL-VULN-SISMICA" className="hover:text-blue-600">Vulnerabilità Sismica</Link></li>
@@ -607,7 +642,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="mt-8 pt-8 border-t text-center text-sm text-gray-600">
-            <p>© 2025 Studio Ing. Domenico Romano - P.IVA IT12345678901</p>
+            <p>© 2025 Technical Advisory Ing. Domenico Romano - P.IVA IT12345678901</p>
             <p className="mt-2">
               Certificato <strong>ISO 9001:2015</strong> (Qualità) | <strong>ISO 27001:2022</strong> (Sicurezza) |
               <strong> PCI-DSS Compliant</strong> (Pagamenti) | <strong>GDPR Compliant</strong> (Privacy)
