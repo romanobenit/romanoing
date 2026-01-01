@@ -31,7 +31,8 @@ import {
   X,
   Upload,
   Sparkles,
-  Check
+  Check,
+  ChevronRight
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-ampliamento-data';
@@ -455,10 +456,51 @@ export default function ConfiguratoreAmpliamento() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-violet-50">
-      {/* Header con Gradient Hero */}
-      <div className="relative bg-gradient-to-br from-purple-600 via-violet-600 to-purple-700 text-white py-16 overflow-hidden">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                SR
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Technical Advisory Ing. Domenico Romano
+                </h1>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
+              </div>
+            </Link>
+            <div className="flex gap-2">
+              <Button onClick={clearData} variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Cancella
+              </Button>
+              <Link href="/bundle/BDL-AMPLIAMENTO">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Breadcrumb */}
+      <section className="container mx-auto px-4 py-4 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/bundle/BDL-AMPLIAMENTO" className="hover:text-blue-600">
+            Bundle Ampliamento
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Configuratore Preventivo</span>
+        </div>
+      </section>
+
+      {/* Hero */}
+      <div className="relative bg-gradient-to-br from-purple-600 via-violet-600 to-purple-700 text-white py-12 overflow-hidden print:py-4">
         {/* Background Pattern */}
-        <div className="absolute inset-0 opacity-10">
+        <div className="absolute inset-0 opacity-10 print:hidden">
           <div className="absolute inset-0" style={{
             backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)',
             backgroundSize: '40px 40px'
@@ -466,18 +508,13 @@ export default function ConfiguratoreAmpliamento() {
         </div>
 
         <div className="max-w-7xl mx-auto px-4 relative z-10">
-          <Link href="/" className="inline-flex items-center text-purple-100 hover:text-white mb-6 text-sm transition-colors">
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            Torna alla home
-          </Link>
-
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-              <Sparkles className="w-8 h-8 text-white" />
+            <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center print:w-12 print:h-12">
+              <Sparkles className="w-8 h-8 text-white print:w-6 print:h-6" />
             </div>
             <div>
-              <h1 className="text-5xl font-bold mb-2">Configuratore Ampliamento</h1>
-              <p className="text-purple-100 text-lg">
+              <h1 className="text-4xl font-bold mb-2 print:text-3xl">Configuratore Ampliamento</h1>
+              <p className="text-purple-100 text-lg print:text-base">
                 Compila il form e ottieni il tuo preventivo personalizzato
               </p>
             </div>

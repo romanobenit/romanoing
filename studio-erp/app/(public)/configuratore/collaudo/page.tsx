@@ -18,7 +18,8 @@ import {
   Trash2,
   ArrowLeft,
   CheckCircle2,
-  Euro
+  Euro,
+  ChevronRight
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-collaudo-data';
@@ -297,14 +298,51 @@ export default function ConfiguratoreCollaudo() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-green-50 to-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white py-12">
-        <div className="container mx-auto px-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-4">
-            <ArrowLeft className="w-4 h-4" />
-            Torna alla home
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                SR
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Technical Advisory Ing. Domenico Romano
+                </h1>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
+              </div>
+            </Link>
+            <div className="flex gap-2">
+              <Button onClick={clearData} variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Cancella
+              </Button>
+              <Link href="/bundle/BDL-COLLAUDO">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Breadcrumb */}
+      <section className="container mx-auto px-4 py-4 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">
+            Bundle Collaudo
           </Link>
-          <h1 className="text-4xl font-bold mb-3">Configuratore Collaudo Statico</h1>
-          <p className="text-xl text-green-50">
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Configuratore Preventivo</span>
+        </div>
+      </section>
+
+      {/* Hero */}
+      <div className="bg-gradient-to-r from-green-600 to-emerald-700 text-white py-8 print:py-4">
+        <div className="container mx-auto px-4">
+          <h1 className="text-4xl font-bold mb-3 print:text-3xl">Configuratore Collaudo Statico</h1>
+          <p className="text-xl text-green-50 print:text-base">
             Ottieni un preventivo personalizzato per il collaudo della tua struttura
           </p>
         </div>

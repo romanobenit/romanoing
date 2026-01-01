@@ -231,9 +231,9 @@ export default function ConfiguratoreAntincendio() {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Studio Ing. Domenico Romano
+                  Technical Advisory Ing. Domenico Romano
                 </h1>
-                <p className="text-xs text-gray-600">Ingegneria e architettura</p>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
             </Link>
             <div className="flex gap-2">
