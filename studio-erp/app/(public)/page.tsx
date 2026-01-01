@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, X, Send } from "lucide-react";
+import { ChevronDown } from "lucide-react";
 
 const SERVIZI = [
   { nome: "Consulenza Tecnica", icon: "💡", href: "/configuratore/consulenza" },
@@ -19,45 +19,14 @@ const SERVIZI = [
   { nome: "PropTech/Blockchain R&D", icon: "✨", href: "/configuratore/proptech-blockchain" }
 ];
 
+// Numero WhatsApp
+const WHATSAPP_NUMBER = "393476336545"; // Formato: 39 + numero senza spazi
+const WHATSAPP_MESSAGE = "Ciao, vorrei fissare una chiamata preliminare per discutere di un servizio.";
+
 export default function HomePage() {
   const [showServicesDropdown, setShowServicesDropdown] = useState(false);
-  const [showConsulenzaModal, setShowConsulenzaModal] = useState(false);
-  const [consulenzaForm, setConsulenzaForm] = useState({
-    nome: '',
-    email: '',
-    telefono: '',
-    servizio: '',
-    messaggio: ''
-  });
-  const [loading, setLoading] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
 
-  const handleConsulenzaSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      const response = await fetch('/api/richiesta-consulenza', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(consulenzaForm)
-      });
-
-      if (response.ok) {
-        setSubmitted(true);
-        setTimeout(() => {
-          setShowConsulenzaModal(false);
-          setSubmitted(false);
-          setConsulenzaForm({ nome: '', email: '', telefono: '', servizio: '', messaggio: '' });
-        }, 3000);
-      }
-    } catch (error) {
-      console.error('Errore invio richiesta consulenza:', error);
-      alert('Errore durante l\'invio. Riprova più tardi.');
-    } finally {
-      setLoading(false);
-    }
-  };
+  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-gray-50">
@@ -155,12 +124,17 @@ export default function HomePage() {
               </Link>
             </Button>
           </div>
-          <button
-            onClick={() => setShowConsulenzaModal(true)}
-            className="text-sm text-blue-600 hover:text-blue-700 underline"
+          <a
+            href={whatsappUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
           >
-            Hai bisogno di una consulenza preliminare?
-          </button>
+            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+            </svg>
+            Fissa una chiamata preliminare su WhatsApp
+          </a>
         </div>
       </section>
 
@@ -747,12 +721,17 @@ export default function HomePage() {
               </Link>
             </Button>
             <Button
+              asChild
               size="lg"
               variant="outline"
               className="text-lg px-8 py-6 bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
-              onClick={() => setShowConsulenzaModal(true)}
             >
-              Richiedi Consulenza
+              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
+                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
+                </svg>
+                Contattaci su WhatsApp
+              </a>
             </Button>
           </div>
         </div>
@@ -806,110 +785,6 @@ export default function HomePage() {
           </div>
         </div>
       </footer>
-
-      {/* Modal Consulenza */}
-      {showConsulenzaModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6 relative">
-            <button
-              onClick={() => setShowConsulenzaModal(false)}
-              className="absolute top-4 right-4 text-gray-400 hover:text-gray-600"
-            >
-              <X className="w-5 h-5" />
-            </button>
-
-            {submitted ? (
-              <div className="text-center py-8">
-                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <svg className="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                </div>
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Richiesta Inviata!</h3>
-                <p className="text-gray-600">Ti contatteremo entro 24 ore.</p>
-              </div>
-            ) : (
-              <>
-                <h2 className="text-2xl font-bold text-gray-900 mb-2">Richiedi Consulenza</h2>
-                <p className="text-sm text-gray-600 mb-6">
-                  Compila il form e ti contatteremo entro 24 ore per una consulenza preliminare gratuita.
-                </p>
-
-                <form onSubmit={handleConsulenzaSubmit} className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Nome *</label>
-                    <input
-                      type="text"
-                      required
-                      value={consulenzaForm.nome}
-                      onChange={(e) => setConsulenzaForm({...consulenzaForm, nome: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Email *</label>
-                    <input
-                      type="email"
-                      required
-                      value={consulenzaForm.email}
-                      onChange={(e) => setConsulenzaForm({...consulenzaForm, email: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Telefono *</label>
-                    <input
-                      type="tel"
-                      required
-                      value={consulenzaForm.telefono}
-                      onChange={(e) => setConsulenzaForm({...consulenzaForm, telefono: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Servizio di Interesse</label>
-                    <select
-                      value={consulenzaForm.servizio}
-                      onChange={(e) => setConsulenzaForm({...consulenzaForm, servizio: e.target.value})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    >
-                      <option value="">Seleziona un servizio...</option>
-                      {SERVIZI.map((s, idx) => (
-                        <option key={idx} value={s.nome}>{s.icon} {s.nome}</option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Domanda/Dubbio</label>
-                    <textarea
-                      rows={4}
-                      value={consulenzaForm.messaggio}
-                      onChange={(e) => setConsulenzaForm({...consulenzaForm, messaggio: e.target.value})}
-                      placeholder="Descrivi brevemente la tua esigenza..."
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                    />
-                  </div>
-
-                  <Button type="submit" className="w-full" disabled={loading}>
-                    {loading ? (
-                      <>Invio in corso...</>
-                    ) : (
-                      <>
-                        <Send className="w-4 h-4 mr-2" />
-                        Richiedi Consulenza
-                      </>
-                    )}
-                  </Button>
-                </form>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
