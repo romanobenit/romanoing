@@ -25,7 +25,11 @@ import {
   ChevronDown,
   ChevronUp,
   AlertCircle,
-  Info
+  Info,
+  Trash2,
+  ChevronRight,
+  Download,
+  Send
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -494,6 +498,17 @@ export default function ConfiguratorePropTechBlockchain() {
 
   const preventivo = calcolaPreventivo();
 
+  const clearData = () => {
+    if (confirm('Sei sicuro di voler cancellare tutti i dati?')) {
+      localStorage.removeItem('configuratore-proptech-data');
+      window.location.reload();
+    }
+  };
+
+  const downloadPDF = () => {
+    window.print();
+  };
+
   const handleSubmit = async () => {
     // Validazioni
     if (!formData.servizioFattibilita && !formData.servizioSmartContract &&
@@ -617,33 +632,70 @@ export default function ConfiguratorePropTechBlockchain() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-teal-50 via-cyan-50 to-blue-50">
-      {/* Header Hero */}
-      <div className="relative bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white overflow-hidden">
-        <div className="absolute inset-0 opacity-10">
+      {/* Header */}
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
+        <div className="container mx-auto px-4 py-4">
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                SR
+              </div>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Technical Advisory Ing. Domenico Romano
+                </h1>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
+              </div>
+            </Link>
+            <div className="flex gap-2">
+              <Button onClick={clearData} variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Cancella
+              </Button>
+              <Link href="/bundle/BDL-PROPTECH-BLOCKCHAIN">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Breadcrumb */}
+      <section className="container mx-auto px-4 py-4 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/bundle/BDL-PROPTECH-BLOCKCHAIN" className="hover:text-blue-600">
+            Bundle PropTech/Blockchain
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Configuratore Preventivo</span>
+        </div>
+      </section>
+
+      {/* Hero */}
+      <div className="relative bg-gradient-to-r from-teal-600 via-cyan-600 to-blue-600 text-white overflow-hidden print:py-4">
+        <div className="absolute inset-0 opacity-10 print:hidden">
           <div className="absolute inset-0" style={{
             backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
           }} />
         </div>
-        <div className="container mx-auto px-4 py-12 relative">
-          <Link href="/" className="inline-flex items-center text-white/90 hover:text-white mb-6 transition-colors">
-            <ArrowLeft className="mr-2 h-5 w-5" />
-            Torna alla Home
-          </Link>
+        <div className="container mx-auto px-4 py-8 relative print:py-4">
           <div className="max-w-4xl">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center">
-                <Sparkles className="w-8 h-8" />
+              <div className="w-16 h-16 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center print:w-12 print:h-12">
+                <Sparkles className="w-8 h-8 print:w-6 print:h-6" />
               </div>
               <div>
-                <Badge className="bg-white/20 text-white border-white/30 mb-2">
+                <Badge className="bg-white/20 text-white border-white/30 mb-2 print:hidden">
                   R&D Services • ATECO 72.19
                 </Badge>
-                <h1 className="text-4xl md:text-5xl font-bold">
+                <h1 className="text-4xl md:text-5xl font-bold print:text-3xl">
                   Configuratore PropTech/Blockchain
                 </h1>
               </div>
             </div>
-            <p className="text-xl text-teal-50 max-w-3xl">
+            <p className="text-xl text-teal-50 max-w-3xl print:text-base">
               Servizi di Ricerca & Sviluppo per tokenizzazione immobiliare, smart contract e architetture blockchain
             </p>
           </div>
@@ -1301,24 +1353,30 @@ export default function ConfiguratorePropTechBlockchain() {
                         )}
                       </div>
 
-                      <Button
-                        onClick={handleSubmit}
-                        disabled={loading}
-                        size="lg"
-                        className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold py-6 text-lg shadow-xl"
-                      >
-                        {loading ? (
-                          <>
-                            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
-                            Invio in corso...
-                          </>
-                        ) : (
-                          <>
-                            <Sparkles className="w-5 h-5 mr-2" />
-                            Richiedi Preventivo
-                          </>
-                        )}
-                      </Button>
+                      <div className="space-y-2 print:hidden">
+                        <Button
+                          onClick={handleSubmit}
+                          disabled={loading}
+                          size="lg"
+                          className="w-full bg-gradient-to-r from-teal-600 to-cyan-600 hover:from-teal-700 hover:to-cyan-700 text-white font-bold py-6 text-lg shadow-xl"
+                        >
+                          {loading ? (
+                            <>
+                              <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2" />
+                              Invio in corso...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="w-5 h-5 mr-2" />
+                              Richiedi Preventivo
+                            </>
+                          )}
+                        </Button>
+                        <Button onClick={downloadPDF} variant="outline" className="w-full" size="lg">
+                          <Download className="w-5 h-5 mr-2" />
+                          Scarica PDF
+                        </Button>
+                      </div>
 
                       <p className="text-xs text-center text-gray-500 italic">
                         Preventivo non vincolante. Verrà confermato dopo consulenza online gratuita.

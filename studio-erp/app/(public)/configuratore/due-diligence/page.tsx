@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -16,6 +17,7 @@ import {
   Euro,
   MapPin,
   Settings,
+  ChevronRight,
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-due-diligence-data';
@@ -447,31 +449,56 @@ export default function ConfiguratoreDueDiligence() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       {/* Header */}
-      <div className="print:hidden bg-white border-b sticky top-0 z-10 shadow-sm">
+      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-slate-600 rounded-lg flex items-center justify-center">
-                <Building2 className="w-6 h-6 text-white" />
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                SR
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">Configuratore Due Diligence</h1>
-                <p className="text-sm text-gray-600">Preventivo tecnico immobiliare</p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Technical Advisory Ing. Domenico Romano
+                </h1>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
-            </div>
+            </Link>
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={clearData}>
+              <Button onClick={clearData} variant="outline" size="sm">
                 <Trash2 className="w-4 h-4 mr-2" />
                 Cancella
               </Button>
-              <Button variant="outline" size="sm" onClick={downloadPDF}>
-                <Download className="w-4 h-4 mr-2" />
-                PDF
-              </Button>
-              <Button size="sm" onClick={() => setShowEmailModal(true)}>
-                <Send className="w-4 h-4 mr-2" />
-                Invia
-              </Button>
+              <Link href="/bundle/BDL-DUE-DILIGENCE">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
+            </div>
+          </nav>
+        </div>
+      </header>
+
+      {/* Breadcrumb */}
+      <section className="container mx-auto px-4 py-4 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/bundle/BDL-DUE-DILIGENCE" className="hover:text-blue-600">
+            Bundle Due Diligence
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Configuratore Preventivo</span>
+        </div>
+      </section>
+
+      {/* Hero */}
+      <div className="bg-gradient-to-r from-slate-600 to-blue-600 text-white py-8 print:py-4">
+        <div className="container mx-auto px-4">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="w-12 h-12 bg-white/20 rounded-lg flex items-center justify-center print:w-10 print:h-10">
+              <Building2 className="w-6 h-6 print:w-5 print:h-5" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold print:text-2xl">Configuratore Due Diligence</h1>
+              <p className="text-sm text-slate-100 print:text-xs">Preventivo tecnico immobiliare</p>
             </div>
           </div>
         </div>
@@ -1128,7 +1155,7 @@ export default function ConfiguratoreDueDiligence() {
                         </div>
                       )}
 
-                      <div className="pt-4 bg-slate-50 -mx-6 -mb-6 px-6 py-4 rounded-b-lg">
+                      <div className="pt-4 bg-slate-50 -mx-6 px-6 py-4">
                         <div className="flex justify-between items-center">
                           <span className="text-lg font-bold text-gray-900">Totale</span>
                           <span className="text-2xl font-bold text-slate-600">
@@ -1136,6 +1163,18 @@ export default function ConfiguratoreDueDiligence() {
                           </span>
                         </div>
                         <p className="text-xs text-gray-600 mt-2">IVA esclusa (22%)</p>
+                      </div>
+
+                      {/* Actions */}
+                      <div className="space-y-2 print:hidden -mx-6 -mb-6 px-6 py-4 bg-slate-50">
+                        <Button onClick={() => setShowEmailModal(true)} className="w-full bg-slate-600 hover:bg-slate-700" size="lg">
+                          <Send className="w-5 h-5 mr-2" />
+                          Richiedi Preventivo
+                        </Button>
+                        <Button onClick={downloadPDF} variant="outline" className="w-full" size="lg">
+                          <Download className="w-5 h-5 mr-2" />
+                          Scarica PDF
+                        </Button>
                       </div>
                     </>
                   )}

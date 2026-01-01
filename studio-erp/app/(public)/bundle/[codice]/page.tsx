@@ -16,7 +16,8 @@ type BundleCode =
   | 'BDL-AMPLIAMENTO'
   | 'BDL-COLLAUDO'
   | 'BDL-ANTINCENDIO'
-  | 'BDL-EFF-ENERGETICO';
+  | 'BDL-EFF-ENERGETICO'
+  | 'BDL-PROPTECH-BLOCKCHAIN';
 
 interface Milestone {
   numero: number;
@@ -701,6 +702,116 @@ const BUNDLES_DATA: Record<BundleCode, Bundle> = {
         domanda: 'Quali interventi sono consigliabili per un edificio datato?',
         risposta:
           'Per edifici datati: isolamento pareti, sostituzione infissi, nuovi sistemi di riscaldamento/raffrescamento, installazione solare termico/fotovoltaico. Priorità: involucro, poi impianti.',
+      },
+    ],
+  },
+
+  'BDL-PROPTECH-BLOCKCHAIN': {
+    codice: 'BDL-PROPTECH-BLOCKCHAIN',
+    nome: 'PropTech/Blockchain R&D',
+    descrizione: 'Ricerca tokenizzazione immobiliare',
+    descrizioneLunga:
+      'Servizi di Ricerca e Sviluppo (ATECO 72.19) per l\'esplorazione della tokenizzazione immobiliare tramite blockchain. Include studio di fattibilità, sviluppo PoC smart contract su testnet, dashboard MVP e linee guida architetturali. Orientato a start-up, fondi immobiliari e aziende PropTech che vogliono esplorare le opportunità della tokenizzazione.',
+    icon: '✨',
+    prezzoMin: 3000,
+    prezzoMax: 48000,
+    durata: '4-12 settimane',
+    target: 'Aziende/Fondi/Start-up',
+    caratteristiche: [
+      'Servizi di R&D (ATECO 72.19) - Non produzione',
+      'Studio di fattibilità tokenizzazione immobiliare',
+      'PoC Smart Contract su testnet (Sepolia/Goerli)',
+      'Dashboard test MVP per visualizzazione token',
+      'Linee guida architettura tecnica',
+      'Analisi compliance (MiFID II, MICA Regulation)',
+    ],
+    cosaInclude: [
+      'Studio di fattibilità: analisi giuridica, economica e tecnica della tokenizzazione',
+      'Analisi struttura SPV (Special Purpose Vehicle) per emissione token',
+      'Design token economics e governance mechanisms',
+      'Market analysis e studio comparativo piattaforme esistenti',
+      'Sviluppo PoC Smart Contract (ERC-20/ERC-1400) su testnet',
+      'Transfer restrictions avanzate (whitelist, lockup, vesting)',
+      'Dividend distribution automation e governance on-chain',
+      'Security audit manuale preliminare del codice',
+      'Dashboard test MVP: interfaccia web essenziale per visualizzazione token',
+      'Analytics dashboard con metriche base (holders, supply, transactions)',
+      'Governance UI module per voting e proposals',
+      'Linee guida architettura: documentazione tecnica per produzione',
+      'Deployment instructions per mainnet',
+      'Best practices sicurezza e scalabilità',
+      '✅ Consulenza obbligatoria pre-progetto (2 ore)',
+    ],
+    cosaEsclude: [
+      'Deployment su rete mainnet (solo testnet)',
+      'Smart contract production-ready (solo PoC di ricerca)',
+      'Security audit formale certificato di terze parti',
+      'Dashboard production-ready (solo MVP essenziale)',
+      'Consulenza legale specialistica su securities',
+      'Integrazione con exchange o piattaforme terze',
+      'Marketing, tokenomics dettagliata o investor deck',
+      'Conformità normativa completa (solo assessment preliminare)',
+    ],
+    milestone: [
+      {
+        numero: 1,
+        titolo: 'Studio di Fattibilità',
+        descrizione: 'Analisi giuridica, economica e tecnica. Verifica compliance preliminare MiFID II/MICA. Assessment SPV structure.',
+        durata: '4-6 settimane',
+        pagamento: '25%',
+      },
+      {
+        numero: 2,
+        titolo: 'Smart Contract PoC',
+        descrizione: 'Sviluppo PoC smart contract su testnet (ERC-20/ERC-1400). Transfer restrictions, dividend automation, governance. Security audit manuale preliminare.',
+        durata: '6-10 settimane',
+        pagamento: '40%',
+      },
+      {
+        numero: 3,
+        titolo: 'Dashboard Test MVP',
+        descrizione: 'Interfaccia web essenziale per visualizzazione token, analytics base, governance UI. Solo ambiente test.',
+        durata: '4-6 settimane',
+        pagamento: '25%',
+      },
+      {
+        numero: 4,
+        titolo: 'Linee Guida Architettura',
+        descrizione: 'Documentazione tecnica completa per produzione. Deployment instructions, best practices sicurezza e scalabilità.',
+        durata: '1-2 settimane',
+        pagamento: '10%',
+      },
+    ],
+    faq: [
+      {
+        domanda: 'Cos\'è un servizio di R&D (ATECO 72.19)?',
+        risposta:
+          'I servizi di Ricerca e Sviluppo sono attività sperimentali finalizzate all\'esplorazione di nuove tecnologie. Non producono software production-ready, ma PoC (Proof of Concept) per validare fattibilità tecnica ed economica.',
+      },
+      {
+        domanda: 'Perché solo testnet e non mainnet?',
+        risposta:
+          'I servizi R&D includono smart contract su reti test (Sepolia/Goerli) per validare la fattibilità senza rischi economici. Il deployment su mainnet richiede audit certificati, coperture assicurative e conformità normativa completa, che sono fuori dallo scope di un progetto di ricerca.',
+      },
+      {
+        domanda: 'La dashboard MVP è production-ready?',
+        risposta:
+          'No. La dashboard è un\'interfaccia prototipale essenziale per visualizzare i token su testnet. Per un ambiente di produzione serve: design UX/UI professionale, test di sicurezza approfonditi, integrazione con wallet provider, monitoraggio errori e molto altro.',
+      },
+      {
+        domanda: 'Posso usare il PoC per lanciare un security token?',
+        risposta:
+          'No. Il PoC è uno strumento di ricerca per validare la fattibilità tecnica. Per lanciare un security token vero servono: audit certificati, parere legale su securities, piattaforma production con tutte le certificazioni, compliance KYC/AML, e molto altro che va oltre lo scope R&D.',
+      },
+      {
+        domanda: 'Quali normative devo considerare?',
+        risposta:
+          'Le principali sono: MiFID II (se il token è un security), MICA Regulation (cripto-asset), GDPR (privacy dati), normative AML/KYC. Il nostro servizio include un assessment preliminare, ma per conformità completa serve consulenza legale specializzata.',
+      },
+      {
+        domanda: 'Quanto costa passare dalla PoC alla produzione?',
+        risposta:
+          'Dipende dalla complessità. Generalmente: audit certificato €15K-50K, sviluppo piattaforma production €50K-200K, consulenza legale €20K-100K, setup operativo (KYC/AML) €30K-80K. Il nostro studio di fattibilità fornisce una stima preliminare.',
       },
     ],
   },
