@@ -231,23 +231,43 @@ export default function ConfiguratoreSismica() {
       {/* Header */}
       <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50 print:hidden">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-blue-800 rounded-xl flex items-center justify-center">
-                <Shield className="w-7 h-7 text-white" />
+          <nav className="flex items-center justify-between">
+            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
+              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
+                SR
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Configuratore Vulnerabilità Sismica</h1>
-                <p className="text-sm text-gray-600">Studio Ing. Romano - NTC 2018</p>
+                <h1 className="text-xl font-bold text-gray-900">
+                  Technical Advisory Ing. Domenico Romano
+                </h1>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
+            </Link>
+            <div className="flex gap-2">
+              <Button onClick={clearData} variant="outline" size="sm">
+                <Trash2 className="w-4 h-4 mr-2" />
+                Cancella
+              </Button>
+              <Link href="/bundle/BDL-VULN-SISMICA">
+                <Button variant="outline">← Torna al Bundle</Button>
+              </Link>
             </div>
-            <Button onClick={clearData} variant="outline" size="sm">
-              <Trash2 className="w-4 h-4 mr-2" />
-              Cancella
-            </Button>
-          </div>
+          </nav>
         </div>
       </header>
+
+      {/* Breadcrumb */}
+      <section className="container mx-auto px-4 py-4 print:hidden">
+        <div className="flex items-center gap-2 text-sm text-gray-600">
+          <Link href="/" className="hover:text-blue-600">Home</Link>
+          <ChevronRight className="w-4 h-4" />
+          <Link href="/bundle/BDL-VULN-SISMICA" className="hover:text-blue-600">
+            Bundle Vulnerabilità Sismica
+          </Link>
+          <ChevronRight className="w-4 h-4" />
+          <span className="text-gray-900 font-medium">Configuratore Preventivo</span>
+        </div>
+      </section>
 
       {/* Hero */}
       <section className="container mx-auto px-4 py-8 print:py-4">

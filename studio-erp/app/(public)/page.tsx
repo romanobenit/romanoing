@@ -183,11 +183,18 @@ export default function HomePage() {
                   ✓ Stima costi intervento<br />
                   ✓ Roadmap operativa
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/consulenza">
-                    💡 Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/consulenza">
+                      💡 Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-CONSULENZA">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -217,11 +224,18 @@ export default function HomePage() {
                   ✓ Pratiche edilizie<br />
                   ✓ Asseverazioni bonus
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/ristrutturazione">
-                    🏗️ Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/ristrutturazione">
+                      🏗️ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-RISTR-BONUS">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -251,11 +265,18 @@ export default function HomePage() {
                   ✓ Red Flag Report<br />
                   ✓ Stima costi interventi
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/due-diligence">
-                    🔍 Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/due-diligence">
+                      🔍 Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-DUE-DILIGENCE">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -285,11 +306,18 @@ export default function HomePage() {
                   ✓ Modellazione FEM<br />
                   ✓ Progetto miglioramento
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/sismica">
-                    🛡️ Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/sismica">
+                      🛡️ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-VULN-SISMICA">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -319,11 +347,18 @@ export default function HomePage() {
                   ✓ Progetto strutturale<br />
                   ✓ Verifica fattibilità
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/ampliamento">
-                    🏗️ Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/ampliamento">
+                      🏗️ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-AMPLIAMENTO">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -353,11 +388,18 @@ export default function HomePage() {
                   ✓ Prove carico<br />
                   ✓ Certificato collaudo
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/collaudo">
-                    Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/collaudo">
+                      ✅ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-COLLAUDO">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -387,11 +429,18 @@ export default function HomePage() {
                   ✓ SCIA VVF<br />
                   ✓ Assistenza sopralluogo
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/antincendio">
-                    🔥 Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/antincendio">
+                      🔥 Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-ANTINCENDIO">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -421,11 +470,18 @@ export default function HomePage() {
                   ✓ Progetto interventi<br />
                   ✓ Accesso incentivi
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/efficientamento">
-                    ⚡ Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/efficientamento">
+                      ⚡ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-EFF-ENERGETICO">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -455,11 +511,18 @@ export default function HomePage() {
                   ✓ Linee guida architettura<br />
                   ✓ Servizi R&D (ATECO 72.19)
                 </div>
-                <Button asChild className="w-full" size="sm" variant="outline">
-                  <Link href="/configuratore/proptech-blockchain">
-                    ✨ Configuratore →
-                  </Link>
-                </Button>
+                <div className="space-y-2">
+                  <Button asChild className="w-full" size="sm">
+                    <Link href="/configuratore/proptech-blockchain">
+                      ✨ Configuratore →
+                    </Link>
+                  </Button>
+                  <Button asChild className="w-full" size="sm" variant="outline">
+                    <Link href="/bundle/BDL-PROPTECH-BLOCKCHAIN">
+                      📋 Scopri Bundle →
+                    </Link>
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
