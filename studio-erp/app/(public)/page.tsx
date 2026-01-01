@@ -67,7 +67,7 @@ export default function HomePage() {
             </Button>
             <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
               <Link href="#servizi">
-                Esplora Catalogo (8 Servizi)
+                Esplora Catalogo (9 Servizi)
               </Link>
             </Button>
           </div>
@@ -149,7 +149,7 @@ export default function HomePage() {
         <div className="text-center mb-16">
           <Badge className="mb-4">Catalogo Servizi Professionali</Badge>
           <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            8 Soluzioni per Ogni Esigenza
+            9 Soluzioni per Ogni Esigenza
           </h2>
           <p className="text-lg text-gray-600 max-w-2xl mx-auto">
             Servizi completi con preventivo personalizzato online. <br/>
@@ -424,6 +424,40 @@ export default function HomePage() {
                 <Button asChild className="w-full" size="sm" variant="outline">
                   <Link href="/configuratore/efficientamento">
                     ⚡ Configuratore →
+                  </Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Bundle 9: PropTech/Blockchain R&D */}
+          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
+            <CardHeader>
+              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center text-3xl mb-4">
+                ✨
+              </div>
+              <CardTitle className="text-lg">PropTech/Blockchain R&D</CardTitle>
+              <CardDescription className="text-sm">
+                Ricerca tokenizzazione immobiliare
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div>
+                  <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
+                </div>
+                <div className="text-2xl font-bold text-gray-900">
+                  €3.000 - €48.000
+                </div>
+                <div className="text-xs text-gray-600">
+                  ✓ Studio fattibilità tokenizzazione<br />
+                  ✓ PoC Smart Contract + Dashboard<br />
+                  ✓ Linee guida architettura<br />
+                  ✓ Servizi R&D (ATECO 72.19)
+                </div>
+                <Button asChild className="w-full" size="sm" variant="outline">
+                  <Link href="/configuratore/proptech-blockchain">
+                    ✨ Configuratore →
                   </Link>
                 </Button>
               </div>
