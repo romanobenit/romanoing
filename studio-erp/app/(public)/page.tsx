@@ -19,8 +19,8 @@ const SERVIZI = [
   { nome: "PropTech/Blockchain R&D", icon: "✨", href: "/configuratore/proptech-blockchain" }
 ];
 
-// Numero WhatsApp (sostituire con il numero reale)
-const WHATSAPP_NUMBER = "393123456789"; // Formato: 39 + numero senza spazi
+// Numero WhatsApp
+const WHATSAPP_NUMBER = "393476336545"; // Formato: 39 + numero senza spazi
 const WHATSAPP_MESSAGE = "Ciao, vorrei fissare una chiamata preliminare per discutere di un servizio.";
 
 export default function HomePage() {
