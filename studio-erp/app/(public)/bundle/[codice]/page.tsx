@@ -866,21 +866,24 @@ export default async function BundlePage({ params }: PageProps) {
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">
-                  Studio Ing. Domenico Romano
+                  Technical Advisory Ing. Domenico Romano
                 </h1>
-                <p className="text-xs text-gray-600">Ingegneria e architettura</p>
+                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
               </div>
             </Link>
             <div className="flex items-center space-x-4">
+              <Link
+                href="/#servizi"
+                className="text-gray-700 hover:text-gray-900 font-medium"
+              >
+                Esplora Servizi
+              </Link>
               <Link
                 href="/login"
                 className="text-gray-700 hover:text-gray-900 font-medium"
               >
                 Accedi
               </Link>
-              <Button asChild>
-                <Link href="/quiz">Richiedi Preventivo</Link>
-              </Button>
             </div>
           </nav>
         </div>
@@ -1116,30 +1119,30 @@ export default async function BundlePage({ params }: PageProps) {
       <section className="container mx-auto px-4 py-20">
         <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-12 text-center text-white">
           <h2 className="text-4xl font-bold mb-4">
-            Pronto a Richiedere il Preventivo?
+            Pronto a Configurare il Tuo Servizio?
           </h2>
           <p className="text-xl mb-8 text-blue-100">
-            {bundle.codice === 'BDL-ANTINCENDIO'
-              ? 'Usa il nostro configuratore intelligente per ottenere un preventivo personalizzato in tempo reale.'
-              : 'Compila il quiz per ottenere un preventivo personalizzato entro 24 ore.'
-            }
+            Usa il nostro configuratore intelligente per ottenere un preventivo personalizzato in tempo reale.
             <br />
             <span className="font-semibold">Certificato ISO 9001 | Sicurezza dati ISO 27001</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {bundle.codice === 'BDL-ANTINCENDIO' ? (
-              <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
-                <Link href="/configuratore/antincendio">
-                  🔥 Configuratore Preventivo Antincendio
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
-                <Link href={`/quiz?bundle=${bundle.codice}`}>
-                  🎯 Richiedi Preventivo per {bundle.nome}
-                </Link>
-              </Button>
-            )}
+            <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
+              <Link href={
+                bundle.codice === 'BDL-CONSULENZA' ? '/configuratore/consulenza' :
+                bundle.codice === 'BDL-RISTR-BONUS' ? '/configuratore/ristrutturazione' :
+                bundle.codice === 'BDL-DUE-DILIGENCE' ? '/configuratore/due-diligence' :
+                bundle.codice === 'BDL-VULN-SISMICA' ? '/configuratore/sismica' :
+                bundle.codice === 'BDL-AMPLIAMENTO' ? '/configuratore/ampliamento' :
+                bundle.codice === 'BDL-COLLAUDO' ? '/configuratore/collaudo' :
+                bundle.codice === 'BDL-ANTINCENDIO' ? '/configuratore/antincendio' :
+                bundle.codice === 'BDL-EFF-ENERGETICO' ? '/configuratore/efficientamento' :
+                bundle.codice === 'BDL-PROPTECH-BLOCKCHAIN' ? '/configuratore/proptech-blockchain' :
+                '/#servizi'
+              }>
+                ⚙️ Configura {bundle.nome} →
+              </Link>
+            </Button>
             <Button
               asChild
               size="lg"
@@ -1159,9 +1162,9 @@ export default async function BundlePage({ params }: PageProps) {
         <div className="container mx-auto px-4">
           <div className="grid md:grid-cols-3 gap-8 mb-8">
             <div>
-              <h3 className="font-bold text-lg mb-4">Studio Ing. Domenico Romano</h3>
+              <h3 className="font-bold text-lg mb-4">Technical Advisory Ing. Domenico Romano</h3>
               <p className="text-gray-600 text-sm mb-4">
-                Ingegneria e architettura certificata ISO 9001 e ISO 27001
+                Consulenza tecnica avanzata certificata ISO 9001 e ISO 27001
               </p>
               <div className="flex gap-2 flex-wrap">
                 <Badge variant="outline" className="text-xs">
