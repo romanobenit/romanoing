@@ -94,10 +94,10 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto text-center">
           <div className="flex flex-wrap gap-2 justify-center mb-4">
             <Badge className="bg-green-100 text-green-900 hover:bg-green-200">
-              ✓ Certificato ISO 9001:2015
+              ✓ GDPR Compliant
             </Badge>
             <Badge className="bg-blue-100 text-blue-900 hover:bg-blue-200">
-              ✓ Certificato ISO 27001:2022
+              ✓ Crittografia SSL/TLS
             </Badge>
             <Badge className="bg-purple-100 text-purple-900 hover:bg-purple-200">
               E-Commerce Demand-Driven
@@ -110,7 +110,7 @@ export default function HomePage() {
           <p className="text-xl text-gray-600 mb-10 leading-relaxed">
             Preventivi online immediati con configuratori intelligenti. Pagamenti milestone-based sicuri.
             <br />
-            <span className="font-semibold">Qualità certificata ISO 9001 | Sicurezza dati ISO 27001</span>
+            <span className="font-semibold">Privacy GDPR | Backup Automatici | Best Practices Sicurezza</span>
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
             <Button asChild size="lg" className="text-lg px-8 py-6">
@@ -151,12 +151,12 @@ export default function HomePage() {
               <div className="text-blue-100">Progetti Completati</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">ISO 9001</div>
-              <div className="text-blue-100">Qualità Certificata</div>
+              <div className="text-4xl font-bold mb-2">24h</div>
+              <div className="text-blue-100">Preventivo Personalizzato</div>
             </div>
             <div>
-              <div className="text-4xl font-bold mb-2">ISO 27001</div>
-              <div className="text-blue-100">Sicurezza Dati</div>
+              <div className="text-4xl font-bold mb-2">100%</div>
+              <div className="text-blue-100">GDPR Compliant</div>
             </div>
           </div>
         </div>
@@ -167,21 +167,21 @@ export default function HomePage() {
         <div className="max-w-4xl mx-auto">
           <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 border border-green-200">
             <div className="text-center mb-6">
-              <Badge className="bg-green-600 text-white mb-4">Piattaforma Certificata</Badge>
+              <Badge className="bg-green-600 text-white mb-4">Piattaforma Sicura</Badge>
               <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Compliance Totale per i Tuoi Dati
+                Sicurezza e Privacy dei Tuoi Dati
               </h3>
             </div>
             <div className="grid md:grid-cols-3 gap-6 text-sm">
               <div className="bg-white rounded-lg p-4 border">
                 <div className="text-3xl mb-2">🏆</div>
-                <div className="font-bold mb-1">ISO 9001:2015</div>
-                <div className="text-gray-600">Sistema Gestione Qualità certificato</div>
+                <div className="font-bold mb-1">Best Practices</div>
+                <div className="text-gray-600">Processi qualità certificabili</div>
               </div>
               <div className="bg-white rounded-lg p-4 border">
                 <div className="text-3xl mb-2">🔒</div>
-                <div className="font-bold mb-1">ISO 27001:2022</div>
-                <div className="text-gray-600">Sicurezza Informazioni certificata</div>
+                <div className="font-bold mb-1">Crittografia SSL/TLS</div>
+                <div className="text-gray-600">Comunicazioni protette end-to-end</div>
               </div>
               <div className="bg-white rounded-lg p-4 border">
                 <div className="text-3xl mb-2">💳</div>
@@ -200,8 +200,8 @@ export default function HomePage() {
               </div>
               <div className="bg-white rounded-lg p-4 border">
                 <div className="text-3xl mb-2">📦</div>
-                <div className="font-bold mb-1">Backup Giornalieri</div>
-                <div className="text-gray-600">Strategia 3-2-1 certificata</div>
+                <div className="font-bold mb-1">Backup Automatici</div>
+                <div className="text-gray-600">Strategia 3-2-1 su Hetzner Cloud</div>
               </div>
             </div>
           </div>
@@ -712,7 +712,7 @@ export default function HomePage() {
             Pronto per Configurare il Tuo Servizio?
           </h2>
           <p className="text-xl mb-8 text-blue-100">
-            Servizi certificati ISO 9001 e ISO 27001. Preventivo personalizzato in 24 ore.
+            Piattaforma sicura GDPR compliant. Preventivo personalizzato in 24 ore.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
@@ -744,11 +744,12 @@ export default function HomePage() {
             <div>
               <h3 className="font-bold text-lg mb-4">Technical Advisory Ing. Domenico Romano</h3>
               <p className="text-gray-600 text-sm mb-4">
-                Consulenza tecnica avanzata certificata ISO 9001 e ISO 27001
+                Consulenza tecnica avanzata con best practices di sicurezza
               </p>
               <div className="flex gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs">ISO 9001:2015</Badge>
-                <Badge variant="outline" className="text-xs">ISO 27001:2022</Badge>
+                <Badge variant="outline" className="text-xs">GDPR Compliant</Badge>
+                <Badge variant="outline" className="text-xs">Backup Automatici</Badge>
+                <Badge variant="outline" className="text-xs">SSL/TLS</Badge>
               </div>
             </div>
             <div>
@@ -779,8 +780,8 @@ export default function HomePage() {
           <div className="mt-8 pt-8 border-t text-center text-sm text-gray-600">
             <p>© 2025 Technical Advisory Ing. Domenico Romano - P.IVA IT12345678901</p>
             <p className="mt-2">
-              Certificato <strong>ISO 9001:2015</strong> (Qualità) | <strong>ISO 27001:2022</strong> (Sicurezza) |
-              <strong> PCI-DSS Compliant</strong> (Pagamenti) | <strong>GDPR Compliant</strong> (Privacy)
+              <strong>Best Practices Sicurezza</strong> | <strong>PCI-DSS Compliant</strong> (Pagamenti) |
+              <strong> GDPR Compliant</strong> (Privacy) | <strong>Backup Automatici</strong>
             </p>
           </div>
         </div>
