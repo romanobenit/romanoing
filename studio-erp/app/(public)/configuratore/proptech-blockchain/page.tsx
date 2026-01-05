@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect } from 'react';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -29,7 +30,8 @@ import {
   Trash2,
   ChevronRight,
   Download,
-  Send
+  Send,
+  Lock
 } from 'lucide-react';
 import Link from 'next/link';
 
@@ -259,6 +261,9 @@ const TIMELINE_OPTIONS = [
 ];
 
 export default function ConfiguratorePropTechBlockchain() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   const [formData, setFormData] = useState<FormData>({
     servizioFattibilita: false,
     servizioSmartContract: false,
@@ -1293,13 +1298,37 @@ export default function ConfiguratorePropTechBlockchain() {
                   <p className="text-xs text-teal-50 mt-2">Non vincolante - Soggetto a conferma</p>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {preventivo.serviziInclusi.length === 0 ? (
-                    <div className="text-center py-8 text-gray-500">
-                      <Sparkles className="w-12 h-12 mx-auto mb-3 text-gray-300" />
-                      <p className="text-sm">Seleziona i servizi per vedere il preventivo</p>
+                  {!isAuthenticated ? (
+                    <div className="text-center py-8">
+                      <div className="mb-6">
+                        <Lock className="w-16 h-16 text-teal-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">
+                          Prezzi Riservati
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Effettua l&apos;accesso per visualizzare il preventivo personalizzato
+                        </p>
+                      </div>
+                      <Button asChild className="w-full bg-teal-600 hover:bg-teal-700" size="lg">
+                        <Link href="/login">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Accedi per Vedere i Prezzi
+                        </Link>
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Puoi compilare il configuratore e salvare i dati.<br />
+                        Dopo l&apos;accesso, vedrai il preventivo dettagliato.
+                      </p>
                     </div>
                   ) : (
                     <>
+                      {preventivo.serviziInclusi.length === 0 ? (
+                        <div className="text-center py-8 text-gray-500">
+                          <Sparkles className="w-12 h-12 mx-auto mb-3 text-gray-300" />
+                          <p className="text-sm">Seleziona i servizi per vedere il preventivo</p>
+                        </div>
+                      ) : (
+                        <>
                       <div className="space-y-3">
                         <p className="text-sm font-semibold text-gray-700">Servizi Base:</p>
                         {preventivo.serviziInclusi.map((servizio, index) => (
@@ -1381,6 +1410,8 @@ export default function ConfiguratorePropTechBlockchain() {
                       <p className="text-xs text-center text-gray-500 italic">
                         Preventivo non vincolante. Verrà confermato dopo consulenza online gratuita.
                       </p>
+                        </>
+                      )}
                     </>
                   )}
                 </CardContent>
