@@ -1,0 +1,12 @@
+Credenziali Accesso
+Email: romano@studio-ingegneria.it
+Password: admin123
+Ruolo: TITOLARE (accesso completo)
+
+senior@studio-romano.it   /   test123
+junior@studio-romano.it   /   test123
+esterno@studio-romano.it   /   test123
+
+cliente.test@romano.it   /   test123
+
+
