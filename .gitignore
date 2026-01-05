@@ -17,3 +17,10 @@ Thumbs.db
 # Temporary
 *.tmp
 *.log
+
+# Secrets (NEVER commit)
+SECRETS_GENERATED.txt
+.vault_pass
+*.pem
+*.key
+!*.pub.key
