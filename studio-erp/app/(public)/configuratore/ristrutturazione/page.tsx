@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -30,8 +29,7 @@ import {
   FileText,
   X,
   Upload,
-  ChevronRight,
-  Lock
+  ChevronRight
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-ristrutturazione-data';
@@ -208,8 +206,6 @@ interface Preventivo {
 }
 
 export default function ConfiguratoreRistrutturazione() {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
   const [currentSection, setCurrentSection] = useState(1);
   const [data, setData] = useState<ConfiguratoreRistrutturazioneData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
@@ -972,29 +968,7 @@ export default function ConfiguratoreRistrutturazione() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6">
-                  {!isAuthenticated ? (
-                    <div className="text-center py-8">
-                      <div className="mb-6">
-                        <Lock className="w-16 h-16 text-orange-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Prezzi Riservati
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          Effettua l&apos;accesso per visualizzare il preventivo personalizzato
-                        </p>
-                      </div>
-                      <Button asChild className="w-full bg-orange-600 hover:bg-orange-700" size="lg">
-                        <Link href="/login">
-                          <Lock className="w-4 h-4 mr-2" />
-                          Accedi per Vedere i Prezzi
-                        </Link>
-                      </Button>
-                      <p className="text-xs text-gray-500 mt-4">
-                        Puoi compilare il configuratore e salvare i dati.<br />
-                        Dopo l&apos;accesso, vedrai il preventivo dettagliato.
-                      </p>
-                    </div>
-                  ) : preventivo && preventivo.totale > 0 ? (
+                  {preventivo && preventivo.totale > 0 ? (
                     <>
                       {/* Totale */}
                       <div className="text-center py-6 border-b">

@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,8 +20,7 @@ import {
   Download,
   Send,
   Trash2,
-  Save,
-  Lock
+  Save
 } from 'lucide-react';
 
 // Costanti per regioni e costi trasferta
@@ -98,9 +96,6 @@ interface ConfiguratoreData {
 const STORAGE_KEY = 'configuratore_antincendio_data';
 
 export default function ConfiguratoreAntincendio() {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
-
   const [data, setData] = useState<ConfiguratoreData>({
     indirizzo: '',
     cap: '',
@@ -977,153 +972,128 @@ function RiepilogoPreventivo({
         <p className="text-orange-100 text-sm">Aggiornato in tempo reale</p>
       </CardHeader>
       <CardContent className="p-6 space-y-4">
-        {!isAuthenticated ? (
-          <div className="text-center py-8">
-            <div className="mb-6">
-              <Lock className="w-16 h-16 text-orange-400 mx-auto mb-4" />
-              <h3 className="text-lg font-bold text-gray-900 mb-2">
-                Prezzi Riservati
-              </h3>
-              <p className="text-sm text-gray-600 mb-6">
-                Effettua l&apos;accesso per visualizzare il preventivo personalizzato
-              </p>
-            </div>
-            <Button asChild className="w-full bg-orange-600 hover:bg-orange-700" size="lg">
-              <Link href="/login">
-                <Lock className="w-4 h-4 mr-2" />
-                Accedi per Vedere i Prezzi
-              </Link>
-            </Button>
-            <p className="text-xs text-gray-500 mt-4">
-              Puoi compilare il configuratore e salvare i dati.<br />
-              Dopo l&apos;accesso, vedrai il preventivo dettagliato.
+
+        {/* Riepilogo attività */}
+        {data.regione && (
+          <div className="pb-4 border-b">
+            <p className="text-xs text-gray-500 mb-1">Località</p>
+            <p className="font-medium">{data.comune || 'Non specificato'}, {data.regione}</p>
+          </div>
+        )}
+
+        {data.affollamentoMax > 0 && (
+          <div className="pb-4 border-b">
+            <p className="text-xs text-gray-500 mb-1">Categoria Rischio</p>
+            <p className="font-medium">
+              {preventivo.categoriaRischio} ({data.affollamentoMax} persone)
             </p>
           </div>
-        ) : (
-          <>
-            {/* Riepilogo attività */}
-            {data.regione && (
-              <div className="pb-4 border-b">
-                <p className="text-xs text-gray-500 mb-1">Località</p>
-                <p className="font-medium">{data.comune || 'Non specificato'}, {data.regione}</p>
-              </div>
-            )}
-
-            {data.affollamentoMax > 0 && (
-              <div className="pb-4 border-b">
-                <p className="text-xs text-gray-500 mb-1">Categoria Rischio</p>
-                <p className="font-medium">
-                  {preventivo.categoriaRischio} ({data.affollamentoMax} persone)
-                </p>
-              </div>
-            )}
-
-            {/* Servizi base */}
-            <div>
-              <h3 className="font-bold text-sm mb-3">Servizi inclusi</h3>
-              <div className="space-y-2">
-                {preventivo.dettaglioBase.map((voce: any, idx: number) => (
-                  <div key={idx} className="flex justify-between items-center text-sm">
-                    <span className="text-gray-700">{voce.descrizione}</span>
-                    <span className="font-medium">€{voce.importo.toLocaleString('it-IT')}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Servizi aggiuntivi */}
-            {preventivo.serviziAggiuntivi.length > 0 && (
-              <div className="pt-4 border-t">
-                <h3 className="font-bold text-sm mb-3">Servizi aggiuntivi</h3>
-                <div className="space-y-2">
-                  {preventivo.serviziAggiuntivi.map((serv: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700">{serv.descrizione}</span>
-                      <span className="font-medium text-orange-600">+€{serv.importo.toLocaleString('it-IT')}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Maggiorazioni */}
-            {preventivo.maggiorazioni.length > 0 && (
-              <div className="pt-4 border-t">
-                <h3 className="font-bold text-sm mb-3">Maggiorazioni</h3>
-                <div className="space-y-2">
-                  {preventivo.maggiorazioni.map((magg: any, idx: number) => (
-                    <div key={idx} className="flex justify-between items-center text-sm">
-                      <span className="text-gray-700">{magg.descrizione}</span>
-                      <span className="font-medium text-orange-600">+€{magg.importo.toLocaleString('it-IT')}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Urgenza */}
-            {preventivo.urgenza > 0 && (
-              <div className="pt-4 border-t">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-700 font-medium">Urgenza/Emergenza</span>
-                  <span className="font-medium text-red-600">+€{preventivo.urgenza.toLocaleString('it-IT')}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Trasferta */}
-            {preventivo.trasferta > 0 && (
-              <div className="pt-4 border-t">
-                <div className="flex justify-between items-center text-sm">
-                  <span className="text-gray-700 font-medium">Trasferta ({data.regione})</span>
-                  <span className="font-medium text-blue-600">+€{preventivo.trasferta.toLocaleString('it-IT')}</span>
-                </div>
-              </div>
-            )}
-
-            {/* Totale */}
-            <div className="pt-4 border-t-2 border-orange-500">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-sm text-gray-600">Totale preventivo</p>
-                  <p className="text-xs text-gray-500">IVA esclusa</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold text-green-600">
-                    €{preventivo.totale.toLocaleString('it-IT')}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Tempi */}
-            <div className="bg-gray-50 rounded-lg p-3">
-              <p className="text-xs text-gray-600">Tempi realizzazione</p>
-              <p className="font-medium text-sm">{preventivo.tempi}</p>
-            </div>
-
-            {/* Actions */}
-            <div className="space-y-2 print:hidden">
-              <Button onClick={onInviaRichiesta} className="w-full bg-green-600 hover:bg-green-700" size="lg">
-                <Send className="w-5 h-5 mr-2" />
-                Richiedi Preventivo
-              </Button>
-              <Button onClick={onDownloadPDF} variant="outline" className="w-full" size="lg">
-                <Download className="w-5 h-5 mr-2" />
-                Scarica PDF
-              </Button>
-            </div>
-
-            <div className="bg-blue-50 rounded-lg p-3">
-              <div className="flex items-start gap-2">
-                <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
-                <p className="text-xs text-gray-700">
-                  Preventivo indicativo non vincolante. Il preventivo definitivo sarà fornito dopo sopralluogo tecnico.
-                </p>
-              </div>
-            </div>
-          </>
         )}
+
+        {/* Servizi base */}
+        <div>
+          <h3 className="font-bold text-sm mb-3">Servizi inclusi</h3>
+          <div className="space-y-2">
+            {preventivo.dettaglioBase.map((voce: any, idx: number) => (
+              <div key={idx} className="flex justify-between items-center text-sm">
+                <span className="text-gray-700">{voce.descrizione}</span>
+                <span className="font-medium">€{voce.importo.toLocaleString('it-IT')}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Servizi aggiuntivi */}
+        {preventivo.serviziAggiuntivi.length > 0 && (
+          <div className="pt-4 border-t">
+            <h3 className="font-bold text-sm mb-3">Servizi aggiuntivi</h3>
+            <div className="space-y-2">
+              {preventivo.serviziAggiuntivi.map((serv: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <span className="text-gray-700">{serv.descrizione}</span>
+                  <span className="font-medium text-orange-600">+€{serv.importo.toLocaleString('it-IT')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Maggiorazioni */}
+        {preventivo.maggiorazioni.length > 0 && (
+          <div className="pt-4 border-t">
+            <h3 className="font-bold text-sm mb-3">Maggiorazioni</h3>
+            <div className="space-y-2">
+              {preventivo.maggiorazioni.map((magg: any, idx: number) => (
+                <div key={idx} className="flex justify-between items-center text-sm">
+                  <span className="text-gray-700">{magg.descrizione}</span>
+                  <span className="font-medium text-orange-600">+€{magg.importo.toLocaleString('it-IT')}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Urgenza */}
+        {preventivo.urgenza > 0 && (
+          <div className="pt-4 border-t">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-700 font-medium">Urgenza/Emergenza</span>
+              <span className="font-medium text-red-600">+€{preventivo.urgenza.toLocaleString('it-IT')}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Trasferta */}
+        {preventivo.trasferta > 0 && (
+          <div className="pt-4 border-t">
+            <div className="flex justify-between items-center text-sm">
+              <span className="text-gray-700 font-medium">Trasferta ({data.regione})</span>
+              <span className="font-medium text-blue-600">+€{preventivo.trasferta.toLocaleString('it-IT')}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Totale */}
+        <div className="pt-4 border-t-2 border-orange-500">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-sm text-gray-600">Totale preventivo</p>
+              <p className="text-xs text-gray-500">IVA esclusa</p>
+            </div>
+            <div className="text-right">
+              <p className="text-3xl font-bold text-green-600">
+                €{preventivo.totale.toLocaleString('it-IT')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Tempi */}
+        <div className="bg-gray-50 rounded-lg p-3">
+          <p className="text-xs text-gray-600">Tempi realizzazione</p>
+          <p className="font-medium text-sm">{preventivo.tempi}</p>
+        </div>
+
+        {/* Actions */}
+        <div className="space-y-2 print:hidden">
+          <Button onClick={onInviaRichiesta} className="w-full bg-green-600 hover:bg-green-700" size="lg">
+            <Send className="w-5 h-5 mr-2" />
+            Richiedi Preventivo
+          </Button>
+          <Button onClick={onDownloadPDF} variant="outline" className="w-full" size="lg">
+            <Download className="w-5 h-5 mr-2" />
+            Scarica PDF
+          </Button>
+        </div>
+
+        <div className="bg-blue-50 rounded-lg p-3">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
+            <p className="text-xs text-gray-700">
+              Preventivo indicativo non vincolante. Il preventivo definitivo sarà fornito dopo sopralluogo tecnico.
+            </p>
+          </div>
+        </div>
       </CardContent>
     </Card>
   );

@@ -1,11 +1,10 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import React from 'react';
-import { auth } from '@/lib/auth';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { ChevronRight, Check, X, Clock, Lock } from 'lucide-react';
+import { ChevronRight, Check, X, Clock } from 'lucide-react';
 import { FAQAccordion } from './components/FAQAccordion';
 
 // Types
@@ -850,11 +849,6 @@ export async function generateMetadata({ params }: PageProps) {
 export default async function BundlePage({ params }: PageProps) {
   const { codice } = await params;
   const bundle = BUNDLES_DATA[codice as BundleCode];
-  const session = await auth();
-  const isAuthenticated = !!session?.user;
-
-  // Il prezzo è visibile solo se l'utente è autenticato OPPURE se è il bundle consulenza
-  const shouldShowPrice = isAuthenticated || bundle?.codice === 'BDL-CONSULENZA';
 
   if (!bundle) {
     notFound();
@@ -944,31 +938,12 @@ export default async function BundlePage({ params }: PageProps) {
               <CardTitle className="text-sm text-gray-600">Prezzo</CardTitle>
             </CardHeader>
             <CardContent>
-              {shouldShowPrice ? (
-                <>
-                  <div className="text-3xl font-bold text-blue-600 mb-2">
-                    €{bundle.prezzoMin.toLocaleString('it-IT')} - €{bundle.prezzoMax.toLocaleString('it-IT')}
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Preventivo personalizzato su esigenze specifiche
-                  </p>
-                </>
-              ) : (
-                <div className="flex flex-col gap-3">
-                  <div className="flex items-center gap-2 text-gray-600">
-                    <Lock className="w-5 h-5" />
-                    <span className="font-semibold">Prezzo riservato</span>
-                  </div>
-                  <p className="text-sm text-gray-600">
-                    Effettua l&apos;accesso per visualizzare i prezzi
-                  </p>
-                  <Button asChild size="sm" className="mt-2">
-                    <Link href="/login">
-                      Accedi ora
-                    </Link>
-                  </Button>
-                </div>
-              )}
+              <div className="text-3xl font-bold text-blue-600 mb-2">
+                €{bundle.prezzoMin.toLocaleString('it-IT')} - €{bundle.prezzoMax.toLocaleString('it-IT')}
+              </div>
+              <p className="text-sm text-gray-600">
+                Preventivo personalizzato su esigenze specifiche
+              </p>
             </CardContent>
           </Card>
 

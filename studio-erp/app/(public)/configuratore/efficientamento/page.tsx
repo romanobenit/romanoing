@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -23,8 +22,7 @@ import {
   TrendingUp,
   Leaf,
   Check,
-  ChevronRight,
-  Lock
+  ChevronRight
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-efficientamento-data';
@@ -152,9 +150,6 @@ interface Preventivo {
 }
 
 export default function ConfiguratoreEfficientamento() {
-  const { data: session } = useSession();
-  const isAuthenticated = !!session?.user;
-
   const [data, setData] = useState<ConfiguratoreEfficientamentoData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -1300,32 +1295,8 @@ export default function ConfiguratoreEfficientamento() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {!isAuthenticated ? (
-                    <div className="text-center py-8">
-                      <div className="mb-6">
-                        <Lock className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                        <h3 className="text-lg font-bold text-gray-900 mb-2">
-                          Prezzi Riservati
-                        </h3>
-                        <p className="text-sm text-gray-600 mb-6">
-                          Effettua l&apos;accesso per visualizzare il preventivo personalizzato
-                        </p>
-                      </div>
-                      <Button asChild className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
-                        <Link href="/login">
-                          <Lock className="w-4 h-4 mr-2" />
-                          Accedi per Vedere i Prezzi
-                        </Link>
-                      </Button>
-                      <p className="text-xs text-gray-500 mt-4">
-                        Puoi compilare il configuratore e salvare i dati.<br />
-                        Dopo l&apos;accesso, vedrai il preventivo dettagliato.
-                      </p>
-                    </div>
-                  ) : (
+                  {preventivo && (
                     <>
-                      {preventivo && (
-                        <>
                       {/* Prestazioni professionali base */}
                       <div className="pb-4 border-b">
                         <div className="text-sm font-medium text-gray-700 mb-3">PRESTAZIONI PROFESSIONALI</div>
@@ -1479,8 +1450,6 @@ export default function ConfiguratoreEfficientamento() {
                           </div>
                         </div>
                       </div>
-                        </>
-                      )}
                     </>
                   )}
                 </CardContent>
