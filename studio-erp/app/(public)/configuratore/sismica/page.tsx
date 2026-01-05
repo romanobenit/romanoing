@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -23,6 +24,7 @@ import {
   Activity,
   Layers,
   Settings,
+  Lock,
 } from 'lucide-react';
 
 import zonizzazioneSismica from '@/data/zonizzazione-sismica-completa.json';
@@ -77,6 +79,9 @@ interface ConfiguratoreSismicaData {
 const STORAGE_KEY = 'configuratore_sismica_data';
 
 export default function ConfiguratoreSismica() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   const [data, setData] = useState<ConfiguratoreSismicaData>({
     indirizzo: '',
     cap: '',
@@ -1159,8 +1164,32 @@ export default function ConfiguratoreSismica() {
                     <p className="text-sm text-gray-600">Stima indicativa non vincolante</p>
                   </CardHeader>
                   <CardContent className="space-y-4 pt-6">
-                    {/* Servizio base */}
-                    <div>
+                    {!isAuthenticated ? (
+                      <div className="text-center py-8">
+                        <div className="mb-6">
+                          <Lock className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                          <h3 className="text-lg font-bold text-gray-900 mb-2">
+                            Prezzi Riservati
+                          </h3>
+                          <p className="text-sm text-gray-600 mb-6">
+                            Effettua l&apos;accesso per visualizzare il preventivo personalizzato
+                          </p>
+                        </div>
+                        <Button asChild className="w-full bg-blue-600 hover:bg-blue-700" size="lg">
+                          <Link href="/login">
+                            <Lock className="w-4 h-4 mr-2" />
+                            Accedi per Vedere i Prezzi
+                          </Link>
+                        </Button>
+                        <p className="text-xs text-gray-500 mt-4">
+                          Puoi compilare il configuratore e salvare i dati.<br />
+                          Dopo l&apos;accesso, vedrai il preventivo dettagliato.
+                        </p>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Servizio base */}
+                        <div>
                       <h3 className="font-bold text-sm mb-3">Servizio principale</h3>
                       <div className="bg-blue-50 p-3 rounded-lg">
                         <div className="flex justify-between items-center">
@@ -1254,6 +1283,8 @@ export default function ConfiguratoreSismica() {
                         Scarica PDF
                       </Button>
                     </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               </div>

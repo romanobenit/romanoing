@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -19,7 +20,8 @@ import {
   ArrowLeft,
   CheckCircle2,
   Euro,
-  ChevronRight
+  ChevronRight,
+  Lock
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-collaudo-data';
@@ -111,6 +113,9 @@ interface Preventivo {
 }
 
 export default function ConfiguratoreCollaudo() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
+
   const [data, setData] = useState<ConfiguratoreCollaudoData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -796,71 +801,97 @@ export default function ConfiguratoreCollaudo() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  {preventivo && (
+                  {!isAuthenticated ? (
+                    <div className="text-center py-8">
+                      <div className="mb-6">
+                        <Lock className="w-16 h-16 text-green-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">
+                          Prezzi Riservati
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Effettua l&apos;accesso per visualizzare il preventivo personalizzato
+                        </p>
+                      </div>
+                      <Button asChild className="w-full bg-green-600 hover:bg-green-700" size="lg">
+                        <Link href="/login">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Accedi per Vedere i Prezzi
+                        </Link>
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Puoi compilare il configuratore e salvare i dati.<br />
+                        Dopo l&apos;accesso, vedrai il preventivo dettagliato.
+                      </p>
+                    </div>
+                  ) : (
                     <>
-                      <div className="pb-4 border-b">
-                        <div className="text-sm text-gray-600 mb-1">Prezzo base</div>
-                        <div className="text-sm text-gray-500">
-                          {data.superficieTotale || 0} mq • {data.tipoStruttura || 'N/A'}
-                        </div>
-                        <div className="text-lg font-semibold text-gray-900">
-                          €{preventivo.prezzoBase.toLocaleString('it-IT')}
-                        </div>
-                      </div>
+                      {preventivo && (
+                        <>
+                          <div className="pb-4 border-b">
+                            <div className="text-sm text-gray-600 mb-1">Prezzo base</div>
+                            <div className="text-sm text-gray-500">
+                              {data.superficieTotale || 0} mq • {data.tipoStruttura || 'N/A'}
+                            </div>
+                            <div className="text-lg font-semibold text-gray-900">
+                              €{preventivo.prezzoBase.toLocaleString('it-IT')}
+                            </div>
+                          </div>
 
-                      <div className="pb-4 border-b">
-                        <div className="text-sm text-gray-600 mb-2">Moltiplicatori</div>
-                        <div className="space-y-1 text-xs text-gray-500">
-                          <div className="flex justify-between">
-                            <span>Tipo struttura</span>
-                            <span className="font-medium">{preventivo.moltiplicatoreStruttura}x</span>
+                          <div className="pb-4 border-b">
+                            <div className="text-sm text-gray-600 mb-2">Moltiplicatori</div>
+                            <div className="space-y-1 text-xs text-gray-500">
+                              <div className="flex justify-between">
+                                <span>Tipo struttura</span>
+                                <span className="font-medium">{preventivo.moltiplicatoreStruttura}x</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Complessità</span>
+                                <span className="font-medium">{preventivo.moltiplicatoreComplessita}x</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span>Urgenza</span>
+                                <span className="font-medium">{preventivo.moltiplicatoreUrgenza}x</span>
+                              </div>
+                            </div>
+                            <div className="text-lg font-semibold text-slate-600 mt-2">
+                              €{preventivo.prezzoServizio.toLocaleString('it-IT')}
+                            </div>
                           </div>
-                          <div className="flex justify-between">
-                            <span>Complessità</span>
-                            <span className="font-medium">{preventivo.moltiplicatoreComplessita}x</span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span>Urgenza</span>
-                            <span className="font-medium">{preventivo.moltiplicatoreUrgenza}x</span>
-                          </div>
-                        </div>
-                        <div className="text-lg font-semibold text-slate-600 mt-2">
-                          €{preventivo.prezzoServizio.toLocaleString('it-IT')}
-                        </div>
-                      </div>
 
-                      {preventivo.costoTrasferta > 0 && (
-                        <div className="pb-4 border-b">
-                          <div className="flex justify-between text-sm">
-                            <span className="text-gray-600">Trasferta ({data.regione})</span>
-                            <span className="font-medium text-gray-900">
-                              +€{preventivo.costoTrasferta.toLocaleString('it-IT')}
-                            </span>
+                          {preventivo.costoTrasferta > 0 && (
+                            <div className="pb-4 border-b">
+                              <div className="flex justify-between text-sm">
+                                <span className="text-gray-600">Trasferta ({data.regione})</span>
+                                <span className="font-medium text-gray-900">
+                                  +€{preventivo.costoTrasferta.toLocaleString('it-IT')}
+                                </span>
+                              </div>
+                            </div>
+                          )}
+
+                          <div className="pt-4 border-t-2 border-green-500">
+                            <div className="flex justify-between items-center">
+                              <span className="text-lg font-bold text-gray-900">Totale</span>
+                              <span className="text-2xl font-bold text-green-600">
+                                €{preventivo.totale.toLocaleString('it-IT')}
+                              </span>
+                            </div>
                           </div>
-                        </div>
+
+                          <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
+                            <div className="flex gap-2">
+                              <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                              <div className="text-sm text-amber-800">
+                                <p className="font-medium mb-1">Preventivo indicativo</p>
+                                <p>
+                                  Il preventivo finale sarà confermato dopo un sopralluogo tecnico e verifica
+                                  della documentazione.
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
                       )}
-
-                      <div className="pt-4 border-t-2 border-green-500">
-                        <div className="flex justify-between items-center">
-                          <span className="text-lg font-bold text-gray-900">Totale</span>
-                          <span className="text-2xl font-bold text-green-600">
-                            €{preventivo.totale.toLocaleString('it-IT')}
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="bg-amber-50 p-4 rounded-lg border border-amber-200">
-                        <div className="flex gap-2">
-                          <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0" />
-                          <div className="text-sm text-amber-800">
-                            <p className="font-medium mb-1">Preventivo indicativo</p>
-                            <p>
-                              Il preventivo finale sarà confermato dopo un sopralluogo tecnico e verifica
-                              della documentazione.
-                            </p>
-                          </div>
-                        </div>
-                      </div>
                     </>
                   )}
                 </CardContent>

@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
+import { useSession } from 'next-auth/react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Label } from '@/components/ui/label';
@@ -32,7 +33,8 @@ import {
   Upload,
   Sparkles,
   Check,
-  ChevronRight
+  ChevronRight,
+  Lock
 } from 'lucide-react';
 
 const STORAGE_KEY = 'configuratore-ampliamento-data';
@@ -216,6 +218,8 @@ interface Preventivo {
 }
 
 export default function ConfiguratoreAmpliamento() {
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
   const [data, setData] = useState<ConfiguratoreAmpiamentoData>(initialData);
   const [preventivo, setPreventivo] = useState<Preventivo | null>(null);
   const [emailSending, setEmailSending] = useState(false);
@@ -1106,7 +1110,29 @@ export default function ConfiguratoreAmpliamento() {
                 </div>
 
                 <CardContent className="pt-6">
-                  {!preventivo ? (
+                  {!isAuthenticated ? (
+                    <div className="text-center py-8">
+                      <div className="mb-6">
+                        <Lock className="w-16 h-16 text-purple-400 mx-auto mb-4" />
+                        <h3 className="text-lg font-bold text-gray-900 mb-2">
+                          Prezzi Riservati
+                        </h3>
+                        <p className="text-sm text-gray-600 mb-6">
+                          Effettua l&apos;accesso per visualizzare il preventivo personalizzato
+                        </p>
+                      </div>
+                      <Button asChild className="w-full bg-purple-600 hover:bg-purple-700" size="lg">
+                        <Link href="/login">
+                          <Lock className="w-4 h-4 mr-2" />
+                          Accedi per Vedere i Prezzi
+                        </Link>
+                      </Button>
+                      <p className="text-xs text-gray-500 mt-4">
+                        Puoi compilare il configuratore e salvare i dati.<br />
+                        Dopo l&apos;accesso, vedrai il preventivo dettagliato.
+                      </p>
+                    </div>
+                  ) : !preventivo ? (
                     <div className="text-center py-12">
                       <div className="w-20 h-20 bg-gradient-to-br from-purple-100 to-violet-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                         <Info className="w-10 h-10 text-purple-600" />

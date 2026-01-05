@@ -2,10 +2,11 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Lock } from "lucide-react";
 
 const SERVIZI = [
   { nome: "Consulenza Tecnica", icon: "💡", href: "/configuratore/consulenza" },
@@ -25,8 +26,15 @@ const WHATSAPP_MESSAGE = "Ciao, vorrei fissare una chiamata preliminare per disc
 
 export default function HomePage() {
   const [showServicesDropdown, setShowServicesDropdown] = useState(false);
+  const { data: session } = useSession();
+  const isAuthenticated = !!session?.user;
 
   const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+
+  // Funzione helper per verificare se il prezzo deve essere visibile
+  const shouldShowPrice = (serviceName: string) => {
+    return isAuthenticated || serviceName === "Consulenza Tecnica";
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-gray-50">
@@ -279,9 +287,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €8.000 - €18.000
-                </div>
+                {shouldShowPrice("Ristrutturazione") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €8.000 - €18.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo geometrico<br />
                   ✓ Progetto arch. + strutt.<br />
@@ -320,9 +335,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €2.000 - €20.000
-                </div>
+                {shouldShowPrice("Due Diligence Tecnica") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €2.000 - €20.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Desktop/Standard/Enhanced DD<br />
                   ✓ Verifica amministrativa/strutturale<br />
@@ -361,9 +383,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €5.000 - €25.000
-                </div>
+                {shouldShowPrice("Vulnerabilità Sismica") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €5.000 - €25.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo strutturale<br />
                   ✓ Indagini materiali<br />
@@ -402,9 +431,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €3.000 - €12.000
-                </div>
+                {shouldShowPrice("Ampliamento") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €3.000 - €12.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Progetto architettonico<br />
                   ✓ Permesso di costruire<br />
@@ -443,9 +479,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €2.500 - €12.000
-                </div>
+                {shouldShowPrice("Collaudo Statico") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €2.500 - €12.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Ispezione opere<br />
                   ✓ Verifica calcoli<br />
@@ -484,9 +527,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €2.000 - €8.000
-                </div>
+                {shouldShowPrice("Antincendio") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €2.000 - €8.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Valutazione rischio<br />
                   ✓ Progetto antincendio<br />
@@ -525,9 +575,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €2.500 - €8.000
-                </div>
+                {shouldShowPrice("Efficientamento Energetico") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €2.500 - €8.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ APE ante/post<br />
                   ✓ Diagnosi energetica<br />
@@ -566,9 +623,16 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €3.000 - €48.000
-                </div>
+                {shouldShowPrice("PropTech/Blockchain R&D") ? (
+                  <div className="text-2xl font-bold text-gray-900">
+                    €3.000 - €48.000
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2 text-sm text-gray-600 bg-blue-50 p-3 rounded-lg">
+                    <Lock className="w-4 h-4" />
+                    <span>Accedi per visualizzare i prezzi</span>
+                  </div>
+                )}
                 <div className="text-xs text-gray-600">
                   ✓ Studio fattibilità tokenizzazione<br />
                   ✓ PoC Smart Contract + Dashboard<br />
