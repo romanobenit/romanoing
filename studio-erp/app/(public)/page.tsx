@@ -104,8 +104,7 @@ export default function HomePage() {
             </Badge>
           </div>
           <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            Technical Advisory{" "}
-            <span className="text-blue-600">Certificato</span> e su Misura
+            "Costruisco fiducia prima ancora delle soluzioni."
           </h2>
           <p className="text-xl text-gray-600 mb-10 leading-relaxed">
             Preventivi online immediati con configuratori intelligenti. Pagamenti milestone-based sicuri.
@@ -280,7 +279,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €8.000 - €18.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo geometrico<br />
@@ -321,7 +320,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €2.000 - €20.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Desktop/Standard/Enhanced DD<br />
@@ -362,7 +361,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €5.000 - €25.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo strutturale<br />
@@ -403,7 +402,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €3.000 - €12.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Progetto architettonico<br />
@@ -444,7 +443,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €2.500 - €12.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Ispezione opere<br />
@@ -485,7 +484,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €2.000 - €8.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Valutazione rischio<br />
@@ -526,7 +525,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €2.500 - €8.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ APE ante/post<br />
@@ -567,7 +566,7 @@ export default function HomePage() {
                   <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
                 </div>
                 <div className="text-2xl font-bold text-gray-900">
-                  €3.000 - €48.000
+                  Su Preventivo
                 </div>
                 <div className="text-xs text-gray-600">
                   ✓ Studio fattibilità tokenizzazione<br />
