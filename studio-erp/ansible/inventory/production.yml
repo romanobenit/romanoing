@@ -7,7 +7,7 @@ all:
     production:
       hosts:
         studio-erp-prod:
-          ansible_host: XXX.XXX.XXX.XXX  # ← SOSTITUIRE con IP Hetzner
+          ansible_host: 116.203.10.59  # IP Hetzner (da DEPLOYMENT_GUIDE.md)
           ansible_port: 22
           ansible_user: root
           ansible_python_interpreter: /usr/bin/python3
