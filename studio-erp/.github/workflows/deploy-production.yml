@@ -1,10 +1,10 @@
 name: Deploy to Production
 
-# Trigger su push a main branch (dopo merge PR)
+# Trigger su push a production branch (dopo merge PR da develop)
 on:
   push:
     branches:
-      - main
+      - production
     paths:
       - 'studio-erp/**'
       - '.github/workflows/deploy-production.yml'

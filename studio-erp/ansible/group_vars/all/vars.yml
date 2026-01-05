@@ -8,7 +8,7 @@ app_user: "studio"
 app_group: "studio"
 app_directory: "/var/www/{{ app_name }}"
 app_repository: "https://github.com/romanobenit/romanoing.git"
-app_repository_branch: "main"
+app_repository_branch: "production"
 
 # Database
 postgresql_database: "studio_erp"
