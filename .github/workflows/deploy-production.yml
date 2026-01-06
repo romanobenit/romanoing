@@ -235,7 +235,7 @@ jobs:
           
           # 2. Run database setup 
           ansible-playbook playbooks/database.yml \
-            --extra-vars "postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 vault_postgresql_password=temp_password_123 postgresql_version=16" \
+            --extra-vars "postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 vault_postgresql_password=temp_password_123 postgresql_version=16 locale=it_IT.UTF-8 letsencrypt_email=benedetto.romano@studioromano.it" \
             -v
           
           # 3. Run application deployment
