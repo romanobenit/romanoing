@@ -49,7 +49,19 @@ jobs:
         working-directory: studio-erp
         run: npm run build
         env:
-          # Build-time env vars (pubbliche)
+          # Build-time env vars necessarie per Next.js build
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test?schema=public"
+          NEXTAUTH_SECRET: "test-secret-min-32-characters-long-for-build"
+          NEXTAUTH_URL: "https://romanoing.com"
+          STRIPE_SECRET_KEY: "sk_test_mock_for_build"
+          STRIPE_WEBHOOK_SECRET: "whsec_mock_for_build"
+          NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY: "pk_test_mock_for_build"
+          SENDGRID_API_KEY: "SG.mock_for_build"
+          EMAIL_FROM: "test@test.com"
+          NEXT_PUBLIC_APP_URL: "https://romanoing.com"
+          NEXT_PUBLIC_APP_NAME: "Studio Ing. Romano"
+          NODE_ENV: "production"
+          # Public env vars
           NEXT_PUBLIC_SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
 
       - name: Upload build artifacts
