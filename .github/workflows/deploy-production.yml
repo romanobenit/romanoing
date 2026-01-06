@@ -238,10 +238,10 @@ jobs:
             --extra-vars "postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 vault_postgresql_password=temp_password_123 postgresql_version=16 locale=en_US.UTF-8 postgresql_listen_addresses=localhost letsencrypt_email=benedetto.romano@studioromano.it" \
             -v
             
-          # 2b. Fix database permissions for Prisma
+          # 2b. Make studio_user superuser for Prisma migrations
           ansible studio-erp-prod -m postgresql_query \
-            --extra-vars "postgresql_database=studio_erp postgresql_user=postgres" \
-            -a "query='GRANT ALL PRIVILEGES ON SCHEMA public TO studio_user; GRANT ALL ON ALL TABLES IN SCHEMA public TO studio_user; GRANT ALL ON ALL SEQUENCES IN SCHEMA public TO studio_user; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON TABLES TO studio_user; ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT ALL ON SEQUENCES TO studio_user;'" \
+            --extra-vars "postgresql_database=studio_erp" \
+            -a "query='ALTER USER studio_user WITH SUPERUSER;'" \
             --become-user postgres \
             -v
           
