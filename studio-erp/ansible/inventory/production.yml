@@ -7,14 +7,14 @@ all:
     production:
       hosts:
         studio-erp-prod:
-          ansible_host: XXX.XXX.XXX.XXX  # ← SOSTITUIRE con IP Hetzner
+          ansible_host: 116.203.109.249  # IP Hetzner (romanoing.com)
           ansible_port: 22
           ansible_user: root
           ansible_python_interpreter: /usr/bin/python3
 
       vars:
         env: production
-        app_domain: erp.studioromano.it
+        app_domain: romanoing.com
 
         # Hetzner
         hetzner_server_type: cx22
