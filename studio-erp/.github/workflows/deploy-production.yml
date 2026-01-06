@@ -139,7 +139,7 @@ jobs:
           ---
           vault_postgresql_password: "${{ secrets.POSTGRESQL_PASSWORD }}"
           vault_nextauth_secret: "${{ secrets.NEXTAUTH_SECRET }}"
-          vault_nextauth_url: "https://erp.studioromano.it"
+          vault_nextauth_url: "https://romanoing.com"
           vault_stripe_publishable_key: "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
           vault_stripe_secret_key: "${{ secrets.STRIPE_SECRET_KEY }}"
           vault_stripe_webhook_secret: "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
@@ -170,7 +170,7 @@ jobs:
       - name: Health check
         run: |
           sleep 10  # Attendi avvio applicazione
-          curl --fail --retry 3 --retry-delay 5 https://erp.studioromano.it/api/health
+          curl --fail --retry 3 --retry-delay 5 https://romanoing.com/api/health
 
       - name: Notify Sentry deployment
         if: success()
@@ -213,39 +213,39 @@ jobs:
       - name: Test public endpoints
         run: |
           # Homepage
-          curl -f -s -o /dev/null -w "%{http_code}" https://erp.studioromano.it | grep "200"
+          curl -f -s -o /dev/null -w "%{http_code}" https://romanoing.com | grep "200"
 
           # Health check
-          curl -f https://erp.studioromano.it/api/health
+          curl -f https://romanoing.com/api/health
 
           # Bundle catalog API (public)
-          curl -f https://erp.studioromano.it/api/bundles
+          curl -f https://romanoing.com/api/bundle
 
       - name: Test SSL/TLS configuration
         run: |
           # Verifica certificato SSL valido
-          openssl s_client -connect erp.studioromano.it:443 -servername erp.studioromano.it < /dev/null 2>/dev/null | \
+          openssl s_client -connect romanoing.com:443 -servername romanoing.com < /dev/null 2>/dev/null | \
             openssl x509 -noout -dates
 
           # Verifica TLS 1.2+
-          curl -v --tlsv1.2 https://erp.studioromano.it 2>&1 | grep "TLSv1.[23]"
+          curl -v --tlsv1.2 https://romanoing.com 2>&1 | grep "TLSv1.[23]"
 
       - name: Test security headers
         run: |
           # HSTS
-          curl -s -I https://erp.studioromano.it | grep -i "strict-transport-security"
+          curl -s -I https://romanoing.com | grep -i "strict-transport-security"
 
           # X-Frame-Options
-          curl -s -I https://erp.studioromano.it | grep -i "x-frame-options"
+          curl -s -I https://romanoing.com | grep -i "x-frame-options"
 
           # X-Content-Type-Options
-          curl -s -I https://erp.studioromano.it | grep -i "x-content-type-options"
+          curl -s -I https://romanoing.com | grep -i "x-content-type-options"
 
       - name: Run Lighthouse CI (performance)
         uses: treosh/lighthouse-ci-action@v10
         with:
           urls: |
-            https://erp.studioromano.it
+            https://romanoing.com
           uploadArtifacts: true
           temporaryPublicStorage: true
 
@@ -297,7 +297,7 @@ jobs:
       - name: Verify rollback
         run: |
           sleep 10
-          curl --fail https://erp.studioromano.it/api/health
+          curl --fail https://romanoing.com/api/health
 
       - name: Notify team of rollback
         if: always()
@@ -348,7 +348,7 @@ jobs:
             Author: ${{ github.actor }}
             Message: ${{ github.event.head_commit.message }}
 
-            Application: https://erp.studioromano.it
+            Application: https://romanoing.com
             Monitoring: http://${{ secrets.PRODUCTION_SERVER_IP }}:3001 (Grafana)
 
             Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
