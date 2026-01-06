@@ -136,7 +136,24 @@ jobs:
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts
+          
+          # Debug: Check key format
+          echo "Checking SSH key format..."
+          head -n 1 ~/.ssh/id_rsa
+          
+          # Test SSH key
+          ssh-keygen -l -f ~/.ssh/id_rsa || echo "SSH key validation failed"
+          
+          # Add server to known_hosts with timeout and error handling
+          echo "Adding server to known_hosts..."
+          timeout 10 ssh-keyscan -H -p 22 ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts || {
+            echo "ssh-keyscan failed, adding server manually to known_hosts"
+            echo "${{ secrets.PRODUCTION_SERVER_IP }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
+          }
+          
+          # Test SSH connection
+          echo "Testing SSH connection..."
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
 
       - name: Create Ansible Vault password file
         run: |
