@@ -144,6 +144,10 @@ jobs:
           # Test SSH key
           ssh-keygen -l -f ~/.ssh/id_ed25519 || echo "SSH key validation failed"
           
+          # Generate public key from private key for comparison
+          echo "Generated public key from private key:"
+          ssh-keygen -y -f ~/.ssh/id_ed25519
+          
           # Add server to known_hosts with timeout and error handling
           echo "Adding server to known_hosts..."
           timeout 10 ssh-keyscan -H -p 22 ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts || {
@@ -151,9 +155,9 @@ jobs:
             echo "${{ secrets.PRODUCTION_SERVER_IP }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
           }
           
-          # Test SSH connection with ed25519 key
-          echo "Testing SSH connection..."
-          ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
+          # Test SSH connection with ed25519 key (verbose mode)
+          echo "Testing SSH connection with verbose output..."
+          ssh -vvv -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
 
       - name: Create Ansible Vault password file
         run: |
