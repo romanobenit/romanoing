@@ -1,10 +1,11 @@
 name: Deploy to Production
 
-# Trigger su push a production branch (dopo merge PR da develop)
+# Trigger su push a production o develop branch
 on:
   push:
     branches:
       - production
+      - develop
   workflow_dispatch:  # Permette trigger manuale da UI GitHub
 
 env:
