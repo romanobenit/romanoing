@@ -230,12 +230,12 @@ jobs:
         run: |
           # First run common setup to create user
           ansible-playbook playbooks/common.yml \
-            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp" \
+            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp timezone=Europe/Rome locale=it_IT.UTF-8 ssh_port=22 ssh_permit_root_login=prohibit-password ssh_password_authentication=false" \
             -v
           
           # Then run application deployment
           ansible-playbook playbooks/application.yml \
-            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp app_repository=https://github.com/romanobenit/romanoing.git app_repository_branch=production postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432" \
+            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp app_repository=https://github.com/romanobenit/romanoing.git app_repository_branch=production postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 nodejs_version=20 app_port=3000" \
             --tags deploy \
             -v
 
