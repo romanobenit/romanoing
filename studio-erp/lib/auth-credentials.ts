@@ -48,6 +48,8 @@ export const credentialsProvider = Credentials({
       id: utente.id.toString(),
       email: utente.email,
       name: `${utente.nome} ${utente.cognome}`,
+      nome: utente.nome,
+      cognome: utente.cognome,
       ruolo: utente.ruoloCodice,
       clienteId: utente.clienteId?.toString(),
     }
