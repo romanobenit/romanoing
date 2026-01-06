@@ -134,15 +134,15 @@ jobs:
       - name: Configure SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           
           # Debug: Check key format
           echo "Checking SSH key format..."
-          head -n 1 ~/.ssh/id_rsa
+          head -n 1 ~/.ssh/id_ed25519
           
           # Test SSH key
-          ssh-keygen -l -f ~/.ssh/id_rsa || echo "SSH key validation failed"
+          ssh-keygen -l -f ~/.ssh/id_ed25519 || echo "SSH key validation failed"
           
           # Add server to known_hosts with timeout and error handling
           echo "Adding server to known_hosts..."
@@ -151,9 +151,9 @@ jobs:
             echo "${{ secrets.PRODUCTION_SERVER_IP }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
           }
           
-          # Test SSH connection
+          # Test SSH connection with ed25519 key
           echo "Testing SSH connection..."
-          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
+          ssh -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
 
       - name: Create Ansible Vault password file
         run: |
@@ -219,7 +219,7 @@ jobs:
         run: |
           rm -f studio-erp/ansible/.vault_pass
           rm -f studio-erp/ansible/group_vars/production/vault.yml
-          rm -f ~/.ssh/id_rsa
+          rm -f ~/.ssh/id_ed25519
 
   # ═══════════════════════════════════════════════════════
   # JOB 4: Post-Deployment Verification
@@ -303,8 +303,8 @@ jobs:
       - name: Configure SSH
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
-          chmod 600 ~/.ssh/id_rsa
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
           ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Rollback to previous commit
