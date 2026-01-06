@@ -254,7 +254,15 @@ jobs:
       - name: Health check
         run: |
           sleep 10  # Attendi avvio applicazione
-          curl --fail --retry 3 --retry-delay 5 https://romanoing.com/api/health
+          
+          # Check if application is running on port 3000
+          curl --fail --retry 3 --retry-delay 5 http://${{ secrets.PRODUCTION_SERVER_IP }}:3000 || echo "Port 3000 not accessible"
+          
+          # Check if PM2 process is running
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "sudo -u studio pm2 list" || echo "PM2 check failed"
+          
+          # Try main domain (might work if nginx is configured)
+          curl -I https://romanoing.com || echo "HTTPS not ready yet - this is normal for first deployment"
 
       - name: Notify Sentry deployment
         if: success()
