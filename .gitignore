@@ -24,3 +24,6 @@ SECRETS_GENERATED.txt
 *.pem
 *.key
 !*.pub.key
+
+# Claude AI files
+.claude/
