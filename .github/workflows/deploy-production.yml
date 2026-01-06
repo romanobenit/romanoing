@@ -10,7 +10,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  ANSIBLE_VERSION: '2.15'
+  ANSIBLE_VERSION: '9.12.0'
 
 jobs:
   # ═══════════════════════════════════════════════════════
