@@ -229,6 +229,7 @@ jobs:
         working-directory: studio-erp/ansible
         run: |
           ansible-playbook playbooks/application.yml \
+            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp app_repository=https://github.com/romanobenit/romanoing.git app_repository_branch=production postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432" \
             --tags deploy \
             -v
 
