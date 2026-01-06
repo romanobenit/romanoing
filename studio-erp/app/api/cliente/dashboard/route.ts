@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { query } from '@/lib/db'
 import { authenticatedApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit'
-import { authOptions } from '@/lib/auth.config'
+import { auth } from '@/lib/auth'
 
 /**
  * GET /api/cliente/dashboard
@@ -15,7 +14,7 @@ export async function GET(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.id || session.user.ruolo !== 'COMMITTENTE') {
       return NextResponse.json(

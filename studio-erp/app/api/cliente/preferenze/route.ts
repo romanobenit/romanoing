@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server'
-import { getServerSession } from 'next-auth'
 import { query } from '@/lib/db'
 import { authenticatedApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit'
-import { auditLog } from '@/lib/audit-log'
-import { authOptions } from '@/lib/auth.config'
+import { createAuditLog } from '@/lib/audit-log'
+import { auth } from '@/lib/auth'
 
 /**
  * GET /api/cliente/preferenze
@@ -16,7 +15,7 @@ export async function GET(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.id || session.user.ruolo !== 'COMMITTENTE') {
       return NextResponse.json(
@@ -96,7 +95,7 @@ export async function PUT(request: Request) {
   if (rateLimitResponse) return rateLimitResponse
 
   try {
-    const session = await getServerSession(authOptions)
+    const session = await auth()
     
     if (!session?.user?.id || session.user.ruolo !== 'COMMITTENTE') {
       return NextResponse.json(
@@ -163,13 +162,13 @@ export async function PUT(request: Request) {
     )
 
     // Audit log
-    await auditLog(
-      userId,
-      'UPDATE',
-      'preferenze_notifiche',
-      userId,
+    await createAuditLog({
+      utenteId: userId,
+      azione: 'UPDATE',
+      entita: 'Cliente',
+      entitaId: userId,
       request,
-      {
+      dettagli: {
         email_attivo,
         notifica_nuovo_documento,
         notifica_messaggio,
@@ -177,7 +176,7 @@ export async function PUT(request: Request) {
         notifica_stato_incarico,
         notifica_richiesta_documento,
       }
-    )
+    })
 
     console.log(`[API] Notification preferences updated for user ${userId}`)
 
