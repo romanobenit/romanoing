@@ -131,33 +131,41 @@ jobs:
           ansible-galaxy collection install community.postgresql
           ansible-galaxy collection install ansible.posix
 
-      - name: Configure SSH key
+      - name: Configure SSH key  
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
           
-          # Debug: Check key format
-          echo "Checking SSH key format..."
-          head -n 1 ~/.ssh/id_ed25519
+          # Install expect for automation
+          sudo apt-get update && sudo apt-get install -y expect
+          
+          # Start ssh-agent
+          eval "$(ssh-agent -s)"
+          
+          # Add key to ssh-agent with passphrase using expect
+          expect -c "
+          spawn ssh-add ~/.ssh/id_ed25519
+          expect \"Enter passphrase\"
+          send \"$SSH_PASSPHRASE\r\"
+          expect eof
+          "
           
           # Test SSH key
           ssh-keygen -l -f ~/.ssh/id_ed25519 || echo "SSH key validation failed"
           
-          # Generate public key from private key for comparison
-          echo "Generated public key from private key:"
-          ssh-keygen -y -f ~/.ssh/id_ed25519
-          
-          # Add server to known_hosts with timeout and error handling
+          # Add server to known_hosts
           echo "Adding server to known_hosts..."
           timeout 10 ssh-keyscan -H -p 22 ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts || {
             echo "ssh-keyscan failed, adding server manually to known_hosts"
             echo "${{ secrets.PRODUCTION_SERVER_IP }} ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABgQC..." >> ~/.ssh/known_hosts
           }
           
-          # Test SSH connection with ed25519 key (verbose mode)
-          echo "Testing SSH connection with verbose output..."
-          ssh -vvv -i ~/.ssh/id_ed25519 -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
+          # Test SSH connection (should work with ssh-agent)
+          echo "Testing SSH connection..."
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH connection successful'" || echo "SSH connection test failed"
 
       - name: Create Ansible Vault password file
         run: |
@@ -305,10 +313,25 @@ jobs:
         run: pip install ansible==${{ env.ANSIBLE_VERSION }}
 
       - name: Configure SSH
+        env:
+          SSH_PASSPHRASE: ${{ secrets.SSH_PASSPHRASE }}
         run: |
           mkdir -p ~/.ssh
           echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_ed25519
           chmod 600 ~/.ssh/id_ed25519
+          
+          # Install expect and setup ssh-agent for rollback
+          sudo apt-get update && sudo apt-get install -y expect
+          eval "$(ssh-agent -s)"
+          
+          # Add key with passphrase
+          expect -c "
+          spawn ssh-add ~/.ssh/id_ed25519
+          expect \"Enter passphrase\"
+          send \"$SSH_PASSPHRASE\r\"
+          expect eof
+          "
+          
           ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts
 
       - name: Rollback to previous commit
