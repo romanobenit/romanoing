@@ -205,6 +205,18 @@ jobs:
         run: |
           sed -i "s/XXX.XXX.XXX.XXX/${{ secrets.PRODUCTION_SERVER_IP }}/g" studio-erp/ansible/inventory/production.yml
 
+      - name: Debug SSH connection before Ansible
+        run: |
+          echo "=== SSH Agent Status ==="
+          ssh-add -l || echo "No keys in ssh-agent"
+          
+          echo "=== Testing direct SSH connection ==="
+          ssh -o ConnectTimeout=10 -o StrictHostKeyChecking=no -v root@${{ secrets.PRODUCTION_SERVER_IP }} "echo 'SSH test successful'" || echo "Direct SSH failed"
+          
+          echo "=== Testing Ansible connection ==="
+          cd studio-erp/ansible
+          ansible studio-erp-prod -m ping -v
+
       - name: Run Ansible deployment (application only)
         working-directory: studio-erp/ansible
         run: |
