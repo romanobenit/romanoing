@@ -24,7 +24,7 @@ export async function GET(request: Request) {
       )
     }
 
-    const clienteId = session.user.cliente_id
+    const clienteId = session.user.clienteId
     if (!clienteId) {
       return NextResponse.json(
         { success: false, error: 'Cliente ID non trovato' },
