@@ -213,7 +213,7 @@ export default function ClienteProfiloPage() {
   const mockProfile: UserProfile = {
     nome: session.user.nome,
     cognome: session.user.cognome,
-    email: session.user.email,
+    email: session.user.email || '',
     telefono: '+39 333 1234567',
     created_at: '2025-01-01',
     cliente: {
