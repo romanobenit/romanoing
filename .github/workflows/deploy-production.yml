@@ -235,7 +235,7 @@ jobs:
           
           # Then run application deployment
           ansible-playbook playbooks/application.yml \
-            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp app_repository=https://github.com/romanobenit/romanoing.git app_repository_branch=production postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 nodejs_version=20 app_port=3000" \
+            --extra-vars "app_user=studio app_name=studio-erp app_group=studio app_directory=/var/www/studio-erp app_repository=https://github.com/romanobenit/romanoing.git app_repository_branch=production postgresql_database=studio_erp postgresql_user=studio_user postgresql_port=5432 nodejs_version=20 app_port=3000 vault_postgresql_password=temp_password_123 vault_nextauth_secret=temp_secret_32_chars_long_for_mvp_only vault_nextauth_url=https://romanoing.com vault_stripe_publishable_key=pk_test_temp vault_stripe_secret_key=sk_test_temp vault_stripe_webhook_secret=whsec_temp vault_sendgrid_api_key=SG.temp" \
             --tags deploy \
             -v
 
