@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { query } from '@/lib/db'
 import { authenticatedApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit'
-import { createAuditLog } from '@/lib/audit-log'
+import { logCliente } from '@/lib/audit-log'
 import { auth } from '@/lib/auth'
 
 /**
@@ -162,13 +162,12 @@ export async function PUT(request: Request) {
     )
 
     // Audit log
-    await createAuditLog({
-      utenteId: userId,
-      azione: 'UPDATE',
-      entita: 'Cliente',
-      entitaId: userId,
+    await logCliente(
+      userId,
+      'UPDATE',
+      userId,
       request,
-      dettagli: {
+      {
         email_attivo,
         notifica_nuovo_documento,
         notifica_messaggio,
@@ -176,7 +175,7 @@ export async function PUT(request: Request) {
         notifica_stato_incarico,
         notifica_richiesta_documento,
       }
-    })
+    )
 
     console.log(`[API] Notification preferences updated for user ${userId}`)
 
