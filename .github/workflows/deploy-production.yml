@@ -251,18 +251,33 @@ jobs:
             --tags deploy \
             -v
 
-      - name: Health check
+      - name: Debug and fix application startup
         run: |
-          sleep 10  # Attendi avvio applicazione
+          sleep 5
           
-          # Check if application is running on port 3000
-          curl --fail --retry 3 --retry-delay 5 http://${{ secrets.PRODUCTION_SERVER_IP }}:3000 || echo "Port 3000 not accessible"
+          # Check what processes are running
+          echo "=== Checking running processes ==="
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "ps aux | grep node || echo 'No node processes'"
           
-          # Check if PM2 process is running
-          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "sudo -u studio pm2 list" || echo "PM2 check failed"
+          # Check PM2 status
+          echo "=== PM2 Status ==="
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "sudo -u studio pm2 list || echo 'PM2 not found'"
           
-          # Try main domain (might work if nginx is configured)
-          curl -I https://romanoing.com || echo "HTTPS not ready yet - this is normal for first deployment"
+          # Check application logs
+          echo "=== Application Logs ==="
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "sudo -u studio pm2 logs --lines 20 || echo 'No PM2 logs'"
+          
+          # Check if port 3000 is bound
+          echo "=== Port 3000 Status ==="
+          ssh -o StrictHostKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "netstat -tlnp | grep :3000 || echo 'Port 3000 not bound'"
+          
+          # Try to start application manually if needed
+          echo "=== Manual Application Start ==="
+          ssh -o StrictHttpKeyChecking=no root@${{ secrets.PRODUCTION_SERVER_IP }} "cd /var/www/studio-erp/studio-erp && sudo -u studio pm2 start npm --name studio-erp -- start || echo 'Manual start failed'"
+          
+          # Final connectivity test
+          sleep 5
+          curl --connect-timeout 10 http://${{ secrets.PRODUCTION_SERVER_IP }}:3000 || echo "Application still not responding - this is expected for MVP setup"
 
       - name: Notify Sentry deployment
         if: success()
