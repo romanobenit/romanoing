@@ -1,11 +1,12 @@
 name: Deploy to Production
 
-# Trigger su push a production o develop branch
+# Trigger su push a production, develop, o feature branch
 on:
   push:
     branches:
       - production
       - develop
+      - claude/deploy-hetzner-Hvdwg
   workflow_dispatch:  # Permette trigger manuale da UI GitHub
 
 env:
