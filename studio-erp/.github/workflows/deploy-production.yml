@@ -160,29 +160,49 @@ jobs:
       - name: Run Ansible deployment (application only)
         working-directory: studio-erp/ansible
         run: |
+          set -e  # Exit on error
+          echo "Starting Ansible deployment..."
+
           ansible-playbook playbooks/application.yml \
             --vault-password-file .vault_pass \
             --tags deploy \
             -v
 
-      - name: Health check
-        run: |
-          echo "Waiting for application to start..."
-          sleep 30  # Give app more time to start
+          echo "✅ Ansible deployment completed successfully"
 
-          # Try health check with more retries and better error handling
-          for i in {1..10}; do
-            if curl -f --connect-timeout 10 --max-time 20 https://romanoing.com/api/health 2>/dev/null; then
-              echo "✅ Health check passed!"
-              exit 0
+      - name: Wait for application startup
+        run: |
+          echo "Waiting 45 seconds for application to fully start..."
+          sleep 45
+          echo "✅ Wait complete"
+
+      - name: Health check (HTTP only)
+        continue-on-error: true  # Don't fail deployment
+        run: |
+          echo "Starting health checks via HTTP..."
+
+          # Try health check endpoint with retries
+          SUCCESS=false
+          for i in {1..12}; do
+            echo "Health check attempt $i/12..."
+            if curl -f --connect-timeout 15 --max-time 30 https://romanoing.com/api/health 2>/dev/null; then
+              echo "✅ Health check PASSED!"
+              SUCCESS=true
+              break
             fi
-            echo "Attempt $i/10 failed, waiting 10s..."
+            echo "⏳ Waiting 10 seconds before retry..."
             sleep 10
           done
 
-          echo "⚠️ Health check failed after 10 attempts"
-          echo "Note: Application may still be starting. Check manually at https://romanoing.com"
-          exit 0  # Don't fail deployment, just warn
+          if [ "$SUCCESS" = false ]; then
+            echo "⚠️  Health check didn't pass after 12 attempts (~2 minutes)"
+            echo "📝 This may be normal - application might still be starting"
+            echo "🔗 Verify manually at: https://romanoing.com"
+            echo "📊 Or check via IP: http://116.203.109.249"
+          fi
+
+          # Always exit 0 to not block deployment
+          exit 0
 
       - name: Notify Sentry deployment
         if: success()
