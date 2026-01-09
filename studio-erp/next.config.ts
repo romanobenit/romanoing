@@ -11,6 +11,11 @@ const nextConfig: NextConfig = {
         port: '3000',
         pathname: '/**',
       },
+      {
+        protocol: 'https',
+        hostname: 'romanoing.com',
+        pathname: '/**',
+      },
     ],
   },
   experimental: {
@@ -19,6 +24,8 @@ const nextConfig: NextConfig = {
       // CSRF Protection automatica per Server Actions (abilitata di default)
       allowedOrigins: [
         'localhost:3000',
+        'romanoing.com',
+        'https://romanoing.com',
         process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000',
       ],
     },
