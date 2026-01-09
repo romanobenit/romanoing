@@ -10,7 +10,7 @@ on:
 
 env:
   NODE_VERSION: '20'
-  ANSIBLE_VERSION: '2.15'
+  ANSIBLE_VERSION: '8.7.0'  # ansible 8.x corresponds to ansible-core 2.15
 
 jobs:
   # ═══════════════════════════════════════════════════════
