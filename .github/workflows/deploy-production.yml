@@ -1,16 +1,17 @@
 name: Deploy to Production
 
-# Trigger su push a production o develop branch
+# Trigger su push a production, develop, o feature branch
 on:
   push:
     branches:
       - production
       - develop
+      - claude/deploy-hetzner-Hvdwg
   workflow_dispatch:  # Permette trigger manuale da UI GitHub
 
 env:
   NODE_VERSION: '20'
-  ANSIBLE_VERSION: '2.15'
+  ANSIBLE_VERSION: '8.7.0'  # ansible 8.x corresponds to ansible-core 2.15
 
 jobs:
   # ═══════════════════════════════════════════════════════
