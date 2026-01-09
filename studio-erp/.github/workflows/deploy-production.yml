@@ -123,9 +123,22 @@ jobs:
       - name: Configure SSH key
         run: |
           mkdir -p ~/.ssh
-          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/id_rsa
+          echo "$SSH_PRIVATE_KEY" > ~/.ssh/id_rsa
           chmod 600 ~/.ssh/id_rsa
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts
+
+          # Validate SSH key format
+          if ! ssh-keygen -l -f ~/.ssh/id_rsa &>/dev/null; then
+            echo "ERROR: Invalid SSH private key format"
+            echo "Please ensure SSH_PRIVATE_KEY secret contains a valid private key"
+            exit 1
+          fi
+
+          # Add server to known_hosts
+          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || {
+            echo "WARNING: Could not add server to known_hosts, continuing anyway..."
+          }
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
 
       - name: Create Ansible Vault password file
         run: |
