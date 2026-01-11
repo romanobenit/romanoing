@@ -258,9 +258,10 @@ jobs:
 
           # Use vault-password-file only if it exists and is not empty
           if [ -f .vault_pass ] && [ -s .vault_pass ]; then
-            echo "✅ Using encrypted vault"
+            echo "✅ Using encrypted vault with --extra-vars"
             ansible-playbook playbooks/site.yml \
               --vault-password-file .vault_pass \
+              --extra-vars @group_vars/production/vault.yml \
               -vvv
           else
             echo "⚠️  Using unencrypted vault (vault password not configured or empty)"
