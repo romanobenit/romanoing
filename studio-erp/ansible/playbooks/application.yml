@@ -104,7 +104,7 @@
       become_user: "{{ app_user }}"
       environment:
         NODE_ENV: production
-        NODE_OPTIONS: "--max-old-space-size=2048"  # Limit memory to 2GB
+        NODE_OPTIONS: "--max-old-space-size=8192"  # 8GB per CPX32 (16GB RAM totale)
       changed_when: true
       tags: [deploy, build]
 

@@ -80,18 +80,18 @@
     # PostgreSQL Configuration (Performance Tuning)
     # ═══════════════════════════════════════════════════════
 
-    - name: Configure PostgreSQL for performance (CX22 - 4GB RAM)
+    - name: Configure PostgreSQL for performance (CPX32 - 16GB RAM)
       ansible.builtin.lineinfile:
         path: "/etc/postgresql/{{ postgresql_version }}/main/postgresql.conf"
         regexp: "{{ item.regexp }}"
         line: "{{ item.line }}"
         state: present
       loop:
-        # Memory
+        # Memory (ottimizzato per CPX32 - 16GB RAM)
         - { regexp: '^#?shared_buffers', line: "shared_buffers = {{ postgresql_shared_buffers }}" }
         - { regexp: '^#?effective_cache_size', line: "effective_cache_size = {{ postgresql_effective_cache_size }}" }
-        - { regexp: '^#?maintenance_work_mem', line: 'maintenance_work_mem = 256MB' }
-        - { regexp: '^#?work_mem', line: 'work_mem = 8MB' }
+        - { regexp: '^#?maintenance_work_mem', line: 'maintenance_work_mem = 512MB' }  # aumentato per CPX32
+        - { regexp: '^#?work_mem', line: 'work_mem = 32MB' }  # aumentato per query complesse
 
         # Connections
         - { regexp: '^#?max_connections', line: "max_connections = {{ postgresql_max_connections }}" }
@@ -111,11 +111,13 @@
         - { regexp: '^#?listen_addresses', line: "listen_addresses = '{{ postgresql_listen_addresses }}'" }
         - { regexp: '^#?ssl', line: 'ssl = on' }
 
-        # Checkpoints (reduce I/O spikes)
+        # Checkpoints & WAL (ottimizzato per CPX32)
         - { regexp: '^#?checkpoint_completion_target', line: 'checkpoint_completion_target = 0.9' }
-        - { regexp: '^#?wal_buffers', line: 'wal_buffers = 16MB' }
+        - { regexp: '^#?wal_buffers', line: 'wal_buffers = 32MB' }  # aumentato per CPX32
+        - { regexp: '^#?max_wal_size', line: 'max_wal_size = 2GB' }  # migliora performance write
+        - { regexp: '^#?min_wal_size', line: 'min_wal_size = 1GB' }
 
-        # Query planner
+        # Query planner (ottimizzato per SSD)
         - { regexp: '^#?random_page_cost', line: 'random_page_cost = 1.1' }  # SSD optimized
         - { regexp: '^#?effective_io_concurrency', line: 'effective_io_concurrency = 200' }  # SSD
       notify: restart postgresql

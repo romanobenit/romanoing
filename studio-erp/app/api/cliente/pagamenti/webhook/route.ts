@@ -6,9 +6,17 @@ import {authenticatedApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/ra
 import {logPagamento} from '@/lib/audit-log'
 import {sendWelcomeEmail, sendPaymentConfirmationEmail} from '@/lib/email'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-})
+/**
+ * Lazy initialization to avoid build-time errors when STRIPE_SECRET_KEY is not available
+ */
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not configured')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  })
+}
 
 const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET!
 
@@ -26,6 +34,7 @@ export async function POST(request: Request) {
     let event: Stripe.Event
 
     try {
+      const stripe = getStripeClient()
       event = stripe.webhooks.constructEvent(body, signature, webhookSecret)
     } catch (err: any) {
       console.error('Webhook signature verification failed:', err.message)
