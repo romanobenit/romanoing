@@ -16,6 +16,14 @@ all:
         env: production
         app_domain: romanoing.com
 
+        # Application
+        app_name: studio-erp
+        app_user: studioerp
+        app_group: studioerp
+        app_working_dir: /opt/studio-erp
+        app_repo: https://github.com/romanobenit/romanoing.git
+        app_branch: production
+
         # Hetzner CPX32 (8 vCPU dedicated AMD EPYC, 16GB RAM, 160GB SSD)
         hetzner_server_type: cpx32
         hetzner_location: nbg1  # Norimberga (Germania, EU)
@@ -23,6 +31,9 @@ all:
 
         # PostgreSQL (ottimizzato per 16GB RAM)
         postgresql_version: "16"
+        postgresql_database: studio_erp_production
+        postgresql_user: studioerp
+        postgresql_listen_addresses: "localhost"
         postgresql_max_connections: 200
         postgresql_shared_buffers: "4GB"  # 25% di 16GB RAM
         postgresql_effective_cache_size: "12GB"  # 75% di 16GB RAM
@@ -50,3 +61,7 @@ all:
         backup_retention_days: 30
         backup_time: "03:00"
         backup_storage_box: "u123456.your-storagebox.de"  # ← Hetzner Storage Box hostname
+
+        # System
+        locale: "it_IT.UTF-8"
+        timezone: "Europe/Rome"
