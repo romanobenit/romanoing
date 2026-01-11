@@ -190,6 +190,59 @@ jobs:
             echo "❌ .vault_pass NOT found"
           fi
 
+      - name: Test vault decryption (CRITICAL)
+        working-directory: studio-erp/ansible
+        run: |
+          echo "=== Testing vault decryption manually ==="
+          echo ""
+
+          # Try to view vault contents
+          if ansible-vault view group_vars/production/vault.yml --vault-password-file .vault_pass > /tmp/decrypted_vault.yml 2>&1; then
+            echo "✅ Vault decryption SUCCESSFUL"
+            echo ""
+
+            echo "=== Checking YAML structure (first 5 lines) ==="
+            head -n 5 /tmp/decrypted_vault.yml | cat -A  # cat -A shows hidden chars (spaces, tabs, newlines)
+            echo ""
+
+            echo "=== Decrypted vault variables (values redacted): ==="
+            grep -E '^[[:space:]]*vault_' /tmp/decrypted_vault.yml | sed 's/:.*/:\ [REDACTED]/' || echo "⚠️  No vault_ variables found!"
+            echo ""
+
+            echo "=== Checking for empty values ==="
+            EMPTY_COUNT=$(grep -E '^[[:space:]]*vault_.*: *""? *$' /tmp/decrypted_vault.yml | wc -l)
+            if [ "$EMPTY_COUNT" -gt 0 ]; then
+              echo "⚠️  WARNING: Found $EMPTY_COUNT empty vault variables:"
+              grep -E '^[[:space:]]*vault_.*: *""? *$' /tmp/decrypted_vault.yml || true
+            else
+              echo "✅ All vault variables have non-empty values"
+            fi
+            echo ""
+
+            echo "=== Checking for leading whitespace issues ==="
+            if grep -q '^[[:space:]]---' /tmp/decrypted_vault.yml; then
+              echo "⚠️  WARNING: YAML document marker (---) has leading whitespace!"
+              head -n 1 /tmp/decrypted_vault.yml | cat -A
+            else
+              echo "✅ YAML document marker is correctly formatted"
+            fi
+
+            rm -f /tmp/decrypted_vault.yml
+          else
+            echo "❌ Vault decryption FAILED!"
+            echo "This proves the password in .vault_pass is WRONG or vault was encrypted with different password"
+            echo ""
+            echo "=== Error output: ==="
+            cat /tmp/decrypted_vault.yml 2>/dev/null || true
+            exit 1
+          fi
+
+          echo ""
+          echo "=== Verifying .vault_pass content (hash for debugging) ==="
+          echo "MD5: $(md5sum .vault_pass | cut -d' ' -f1)"
+          echo "SHA256: $(sha256sum .vault_pass | cut -d' ' -f1)"
+          echo "Size: $(wc -c < .vault_pass) bytes"
+
       - name: Update inventory with server IP
         run: |
           sed -i "s/XXX.XXX.XXX.XXX/${{ secrets.PRODUCTION_SERVER_IP }}/g" studio-erp/ansible/inventory/production.yml
@@ -208,11 +261,11 @@ jobs:
             echo "✅ Using encrypted vault"
             ansible-playbook playbooks/site.yml \
               --vault-password-file .vault_pass \
-              -v
+              -vvv
           else
             echo "⚠️  Using unencrypted vault (vault password not configured or empty)"
             ansible-playbook playbooks/site.yml \
-              -v
+              -vvv
           fi
 
           echo "✅ Ansible deployment completed successfully"
