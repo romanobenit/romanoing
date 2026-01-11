@@ -133,7 +133,7 @@ jobs:
       - name: Create Ansible Vault password file (if configured)
         run: |
           if [ -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" ]; then
-            echo "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > studio-erp/ansible/.vault_pass
+            echo -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > studio-erp/ansible/.vault_pass
             chmod 600 studio-erp/ansible/.vault_pass
           else
             echo "⚠️  ANSIBLE_VAULT_PASSWORD not set - vault will not be encrypted"
