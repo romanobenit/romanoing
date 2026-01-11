@@ -161,15 +161,16 @@ jobs:
         run: |
           sed -i "s/XXX.XXX.XXX.XXX/${{ secrets.PRODUCTION_SERVER_IP }}/g" studio-erp/ansible/inventory/production.yml
 
-      - name: Run Ansible deployment (application only)
+      - name: Run Ansible deployment (full stack)
         working-directory: studio-erp/ansible
         run: |
           set -e  # Exit on error
           echo "Starting Ansible deployment..."
 
-          ansible-playbook playbooks/application.yml \
+          # Per primo deployment usare site.yml (setup completo)
+          # Per aggiornamenti incrementali usare application.yml --tags deploy
+          ansible-playbook playbooks/site.yml \
             --vault-password-file .vault_pass \
-            --tags deploy \
             -v
 
           echo "✅ Ansible deployment completed successfully"
