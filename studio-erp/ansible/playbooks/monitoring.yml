@@ -527,7 +527,7 @@
     - name: reload prometheus
       ansible.builtin.systemd:
         name: prometheus
-        state: reloaded
+        state: restarted  # Prometheus doesn't support reload, use restart instead
 
     - name: restart node-exporter
       ansible.builtin.systemd:
