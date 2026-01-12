@@ -135,23 +135,23 @@ jobs:
           mkdir -p studio-erp/ansible/group_vars/production
           cat > studio-erp/ansible/group_vars/production/vault.yml <<EOF
           ---
-          vault_postgresql_password: "${{ secrets.POSTGRESQL_PASSWORD }}"
-          vault_nextauth_secret: "${{ secrets.NEXTAUTH_SECRET }}"
-          vault_nextauth_url: "https://romanoing.com"
-          vault_stripe_publishable_key: "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
-          vault_stripe_secret_key: "${{ secrets.STRIPE_SECRET_KEY }}"
-          vault_stripe_webhook_secret: "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
-          vault_sendgrid_api_key: "${{ secrets.SENDGRID_API_KEY }}"
-          vault_openai_api_key: "${{ secrets.OPENAI_API_KEY }}"
-          vault_upstash_redis_rest_url: "${{ secrets.UPSTASH_REDIS_REST_URL }}"
-          vault_upstash_redis_rest_token: "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
-          vault_sentry_dsn: "${{ secrets.SENTRY_DSN }}"
-          vault_hetzner_api_token: "${{ secrets.HETZNER_API_TOKEN }}"
-          vault_backup_encryption_passphrase: "${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}"
-          vault_backup_storage_box_user: "${{ secrets.BACKUP_STORAGE_BOX_USER }}"
-          vault_backup_storage_box_password: "${{ secrets.BACKUP_STORAGE_BOX_PASSWORD }}"
-          vault_backup_storage_box_host: "${{ secrets.BACKUP_STORAGE_BOX_HOST }}"
-          vault_grafana_admin_password: "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
+          vault_postgresql_password: ${{ secrets.POSTGRESQL_PASSWORD }}
+          vault_nextauth_secret: ${{ secrets.NEXTAUTH_SECRET }}
+          vault_nextauth_url: https://romanoing.com
+          vault_stripe_publishable_key: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          vault_stripe_secret_key: ${{ secrets.STRIPE_SECRET_KEY }}
+          vault_stripe_webhook_secret: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          vault_sendgrid_api_key: ${{ secrets.SENDGRID_API_KEY }}
+          vault_openai_api_key: ${{ secrets.OPENAI_API_KEY }}
+          vault_upstash_redis_rest_url: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          vault_upstash_redis_rest_token: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          vault_sentry_dsn: ${{ secrets.SENTRY_DSN }}
+          vault_hetzner_api_token: ${{ secrets.HETZNER_API_TOKEN }}
+          vault_backup_encryption_passphrase: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+          vault_backup_storage_box_user: ${{ secrets.BACKUP_STORAGE_BOX_USER }}
+          vault_backup_storage_box_password: ${{ secrets.BACKUP_STORAGE_BOX_PASSWORD }}
+          vault_backup_storage_box_host: ${{ secrets.BACKUP_STORAGE_BOX_HOST }}
+          vault_grafana_admin_password: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
           EOF
 
           # No encryption needed - vault exists only in ephemeral runner
