@@ -4,9 +4,9 @@
 
 # Applicazione
 app_name: "studio-erp"
-app_user: "studio"
-app_group: "studio"
-app_directory: "/var/www/{{ app_name }}"
+app_user: "studioerp"
+app_group: "studioerp"
+app_directory: "/opt/romanoing"
 app_repository: "https://github.com/romanobenit/romanoing.git"
 app_repository_branch: "production"
 

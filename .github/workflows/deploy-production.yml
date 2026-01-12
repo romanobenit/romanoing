@@ -180,7 +180,7 @@ jobs:
 
           # Use --extra-vars to load vault variables (vault is unencrypted in ephemeral runner)
           echo "✅ Loading vault variables with --extra-vars"
-          ansible-playbook playbooks/site.yml \
+          ansible-playbook -i inventory/production.yml playbooks/site.yml \
             --extra-vars @group_vars/production/vault.yml \
             -vvv
 
@@ -348,7 +348,7 @@ jobs:
           echo "Rolling back to commit: $PREVIOUS_COMMIT"
 
           # Use Ansible to rollback (more reliable than direct SSH)
-          ansible-playbook playbooks/application.yml \
+          ansible-playbook -i inventory/production.yml playbooks/application.yml \
             --vault-password-file .vault_pass \
             --tags deploy \
             --extra-vars "app_repository_version=$PREVIOUS_COMMIT" \
