@@ -76,6 +76,38 @@
       become_user: postgres
       tags: postgres-user
 
+    - name: Grant schema public privileges to user
+      community.postgresql.postgresql_privs:
+        database: "{{ postgresql_database }}"
+        privs: CREATE,USAGE
+        type: schema
+        objs: public
+        role: "{{ postgresql_user }}"
+      become_user: postgres
+      tags: postgres-user
+
+    - name: Grant all privileges on all tables in schema public
+      community.postgresql.postgresql_privs:
+        database: "{{ postgresql_database }}"
+        privs: ALL
+        type: table
+        objs: ALL_IN_SCHEMA
+        schema: public
+        role: "{{ postgresql_user }}"
+      become_user: postgres
+      tags: postgres-user
+
+    - name: Grant all privileges on all sequences in schema public
+      community.postgresql.postgresql_privs:
+        database: "{{ postgresql_database }}"
+        privs: ALL
+        type: sequence
+        objs: ALL_IN_SCHEMA
+        schema: public
+        role: "{{ postgresql_user }}"
+      become_user: postgres
+      tags: postgres-user
+
     # ═══════════════════════════════════════════════════════
     # PostgreSQL Configuration (Performance Tuning)
     # ═══════════════════════════════════════════════════════
