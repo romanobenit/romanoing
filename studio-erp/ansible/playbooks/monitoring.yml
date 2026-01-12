@@ -414,6 +414,7 @@
       ansible.builtin.copy:
         dest: /etc/prometheus/alerts.yml
         content: |
+          {% raw %}
           groups:
             - name: studio_erp_alerts
               interval: 30s
@@ -477,6 +478,7 @@
                   annotations:
                     summary: "Too many PostgreSQL connections"
                     description: "Number of connections: {{ $value }} (max: 100)"
+          {% endraw %}
         owner: prometheus
         group: prometheus
         mode: '0644'
