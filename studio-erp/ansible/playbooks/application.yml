@@ -76,16 +76,21 @@
         mode: '0600'
       tags: [deploy, env]
 
-    - name: DEBUG - Verify DATABASE_URL format (password redacted)
+    - name: DEBUG - Verify DATABASE_URL structure
       ansible.builtin.shell:
-        cmd: grep "^DATABASE_URL=" {{ app_working_dir }}/.env | sed 's/:\/\/[^:]*:[^@]*@/:\/\/USER:*****@/g'
-      register: database_url_check
+        cmd: |
+          URL=$(grep "^DATABASE_URL=" {{ app_working_dir }}/.env | cut -d'"' -f2)
+          echo "Length: ${#URL}"
+          echo "Has postgresql:// prefix: $(echo "$URL" | grep -q '^postgresql://' && echo 'YES' || echo 'NO')"
+          echo "Has @localhost: $(echo "$URL" | grep -q '@localhost:' && echo 'YES' || echo 'NO')"
+          echo "Has :5432/: $(echo "$URL" | grep -q ':5432/' && echo 'YES' || echo 'NO')"
+      register: database_url_structure
       changed_when: false
       tags: [deploy, debug]
 
-    - name: Display DATABASE_URL format
+    - name: Display DATABASE_URL structure
       ansible.builtin.debug:
-        msg: "{{ database_url_check.stdout }}"
+        var: database_url_structure.stdout_lines
       tags: [deploy, debug]
 
     - name: Install Node.js dependencies
