@@ -130,18 +130,6 @@ jobs:
           mkdir -p ~/.ssh
           ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Could not add server to known_hosts"
 
-      - name: Create Ansible Vault password file (if configured)
-        run: |
-          if [ -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" ]; then
-            echo -n "${{ secrets.ANSIBLE_VAULT_PASSWORD }}" > studio-erp/ansible/.vault_pass
-            chmod 600 studio-erp/ansible/.vault_pass
-            echo "✅ Vault password file created"
-            ls -la studio-erp/ansible/.vault_pass
-            echo "Password file size: $(wc -c < studio-erp/ansible/.vault_pass) bytes"
-          else
-            echo "⚠️  ANSIBLE_VAULT_PASSWORD not set - vault will not be encrypted"
-          fi
-
       - name: Create vault file with secrets
         run: |
           mkdir -p studio-erp/ansible/group_vars/production
@@ -166,82 +154,16 @@ jobs:
           vault_grafana_admin_password: "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
           EOF
 
-          # Encrypt only if vault password file exists and is not empty
-          if [ -f studio-erp/ansible/.vault_pass ] && [ -s studio-erp/ansible/.vault_pass ]; then
-            ansible-vault encrypt studio-erp/ansible/group_vars/production/vault.yml --vault-password-file studio-erp/ansible/.vault_pass
-            echo "✅ Vault encrypted successfully"
-          else
-            echo "⚠️  Vault created but NOT encrypted (ANSIBLE_VAULT_PASSWORD not configured or empty)"
-          fi
+          # No encryption needed - vault exists only in ephemeral runner
+          echo "✅ Vault file created (unencrypted - exists only in ephemeral CI runner)"
 
-      - name: Verify vault encryption status
+      - name: Verify vault file created
         run: |
           echo "=== Vault File Info ==="
           ls -la studio-erp/ansible/group_vars/production/vault.yml
           echo ""
-          echo "=== First 3 lines of vault (should show \$ANSIBLE_VAULT if encrypted) ==="
+          echo "=== First 3 lines of vault (plaintext YAML) ==="
           head -n 3 studio-erp/ansible/group_vars/production/vault.yml || echo "Cannot read vault"
-          echo ""
-          echo "=== Vault Password File Status ==="
-          if [ -f studio-erp/ansible/.vault_pass ]; then
-            echo "✅ .vault_pass exists"
-            echo "File size: $(wc -c < studio-erp/ansible/.vault_pass) bytes"
-          else
-            echo "❌ .vault_pass NOT found"
-          fi
-
-      - name: Test vault decryption (CRITICAL)
-        working-directory: studio-erp/ansible
-        run: |
-          echo "=== Testing vault decryption manually ==="
-          echo ""
-
-          # Try to view vault contents
-          if ansible-vault view group_vars/production/vault.yml --vault-password-file .vault_pass > /tmp/decrypted_vault.yml 2>&1; then
-            echo "✅ Vault decryption SUCCESSFUL"
-            echo ""
-
-            echo "=== Checking YAML structure (first 5 lines) ==="
-            head -n 5 /tmp/decrypted_vault.yml | cat -A  # cat -A shows hidden chars (spaces, tabs, newlines)
-            echo ""
-
-            echo "=== Decrypted vault variables (values redacted): ==="
-            grep -E '^[[:space:]]*vault_' /tmp/decrypted_vault.yml | sed 's/:.*/:\ [REDACTED]/' || echo "⚠️  No vault_ variables found!"
-            echo ""
-
-            echo "=== Checking for empty values ==="
-            EMPTY_COUNT=$(grep -E '^[[:space:]]*vault_.*: *""? *$' /tmp/decrypted_vault.yml | wc -l)
-            if [ "$EMPTY_COUNT" -gt 0 ]; then
-              echo "⚠️  WARNING: Found $EMPTY_COUNT empty vault variables:"
-              grep -E '^[[:space:]]*vault_.*: *""? *$' /tmp/decrypted_vault.yml || true
-            else
-              echo "✅ All vault variables have non-empty values"
-            fi
-            echo ""
-
-            echo "=== Checking for leading whitespace issues ==="
-            if grep -q '^[[:space:]]---' /tmp/decrypted_vault.yml; then
-              echo "⚠️  WARNING: YAML document marker (---) has leading whitespace!"
-              head -n 1 /tmp/decrypted_vault.yml | cat -A
-            else
-              echo "✅ YAML document marker is correctly formatted"
-            fi
-
-            rm -f /tmp/decrypted_vault.yml
-          else
-            echo "❌ Vault decryption FAILED!"
-            echo "This proves the password in .vault_pass is WRONG or vault was encrypted with different password"
-            echo ""
-            echo "=== Error output: ==="
-            cat /tmp/decrypted_vault.yml 2>/dev/null || true
-            exit 1
-          fi
-
-          echo ""
-          echo "=== Verifying .vault_pass content (hash for debugging) ==="
-          echo "MD5: $(md5sum .vault_pass | cut -d' ' -f1)"
-          echo "SHA256: $(sha256sum .vault_pass | cut -d' ' -f1)"
-          echo "Size: $(wc -c < .vault_pass) bytes"
 
       - name: Update inventory with server IP
         run: |
@@ -256,18 +178,11 @@ jobs:
           # Per primo deployment usare site.yml (setup completo)
           # Per aggiornamenti incrementali usare application.yml --tags deploy
 
-          # Use vault-password-file only if it exists and is not empty
-          if [ -f .vault_pass ] && [ -s .vault_pass ]; then
-            echo "✅ Using encrypted vault with --extra-vars"
-            ansible-playbook playbooks/site.yml \
-              --vault-password-file .vault_pass \
-              --extra-vars @group_vars/production/vault.yml \
-              -vvv
-          else
-            echo "⚠️  Using unencrypted vault (vault password not configured or empty)"
-            ansible-playbook playbooks/site.yml \
-              -vvv
-          fi
+          # Use --extra-vars to load vault variables (vault is unencrypted in ephemeral runner)
+          echo "✅ Loading vault variables with --extra-vars"
+          ansible-playbook playbooks/site.yml \
+            --extra-vars @group_vars/production/vault.yml \
+            -vvv
 
           echo "✅ Ansible deployment completed successfully"
 
