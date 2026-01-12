@@ -382,6 +382,7 @@
               pluginId: prometheus
               value: Prometheus
         status_code: [200, 412]  # 412 = already exists
+      ignore_errors: true  # Dashboard import is optional, don't block deployment
       tags: grafana
 
     - name: Import PostgreSQL dashboard
@@ -402,6 +403,7 @@
               pluginId: prometheus
               value: Prometheus
         status_code: [200, 412]
+      ignore_errors: true  # Dashboard import is optional, don't block deployment
       tags: grafana
 
     # ═══════════════════════════════════════════════════════
