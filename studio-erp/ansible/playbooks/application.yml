@@ -76,6 +76,18 @@
         mode: '0600'
       tags: [deploy, env]
 
+    - name: DEBUG - Verify DATABASE_URL format (password redacted)
+      ansible.builtin.shell:
+        cmd: grep "^DATABASE_URL=" {{ app_working_dir }}/.env | sed 's/:\/\/[^:]*:[^@]*@/:\/\/USER:*****@/g'
+      register: database_url_check
+      changed_when: false
+      tags: [deploy, debug]
+
+    - name: Display DATABASE_URL format
+      ansible.builtin.debug:
+        msg: "{{ database_url_check.stdout }}"
+      tags: [deploy, debug]
+
     - name: Install Node.js dependencies
       community.general.npm:
         path: "{{ app_working_dir }}"
