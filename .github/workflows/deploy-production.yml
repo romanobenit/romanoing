@@ -137,7 +137,7 @@ jobs:
 
       - name: Create encrypted vault file
         run: |
-          cat > studio-erp/ansible/group_vars/production/vault.yml <<EOF
+          cat > studio-erp/ansible/inventory/group_vars/production/vault.yml <<EOF
           ---
           vault_postgresql_password: "${{ secrets.POSTGRESQL_PASSWORD }}"
           vault_nextauth_secret: "${{ secrets.NEXTAUTH_SECRET }}"
@@ -155,7 +155,7 @@ jobs:
           vault_grafana_admin_password: "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
           EOF
 
-          ansible-vault encrypt studio-erp/ansible/group_vars/production/vault.yml --vault-password-file studio-erp/ansible/.vault_pass
+          ansible-vault encrypt studio-erp/ansible/inventory/group_vars/production/vault.yml --vault-password-file studio-erp/ansible/.vault_pass
 
       - name: Update inventory with server IP
         run: |
@@ -227,7 +227,7 @@ jobs:
         if: always()
         run: |
           rm -f studio-erp/ansible/.vault_pass
-          rm -f studio-erp/ansible/group_vars/production/vault.yml
+          rm -f studio-erp/ansible/inventory/group_vars/production/vault.yml
           rm -f ~/.ssh/id_rsa
 
   # ═══════════════════════════════════════════════════════
