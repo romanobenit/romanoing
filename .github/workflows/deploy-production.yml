@@ -167,7 +167,7 @@ jobs:
           set -e  # Exit on error
           echo "Starting Ansible deployment..."
 
-          ansible-playbook playbooks/application.yml \
+          ansible-playbook -i inventory/production.yml playbooks/application.yml \
             --vault-password-file .vault_pass \
             --tags deploy \
             -v
