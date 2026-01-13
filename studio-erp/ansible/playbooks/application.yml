@@ -9,6 +9,31 @@
 
   tasks:
     # ═══════════════════════════════════════════════════════
+    # Debug: Verify variables are loaded
+    # ═══════════════════════════════════════════════════════
+
+    - name: Debug - Show loaded variables
+      ansible.builtin.debug:
+        msg: |
+          app_user: {{ app_user | default('UNDEFINED') }}
+          app_name: {{ app_name | default('UNDEFINED') }}
+          app_directory: {{ app_directory | default('UNDEFINED') }}
+          nodejs_version: {{ nodejs_version | default('UNDEFINED') }}
+          env: {{ env | default('UNDEFINED') }}
+      tags: [always]
+
+    - name: Fail if required variables are undefined
+      ansible.builtin.fail:
+        msg: "Required variable {{ item }} is undefined!"
+      when: vars[item] is not defined
+      loop:
+        - app_user
+        - app_name
+        - app_directory
+        - nodejs_version
+      tags: [always]
+
+    # ═══════════════════════════════════════════════════════
     # Node.js Installation
     # ═══════════════════════════════════════════════════════
 
