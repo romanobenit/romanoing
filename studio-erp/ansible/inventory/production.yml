@@ -12,33 +12,3 @@ all:
           ansible_user: root
           ansible_python_interpreter: /usr/bin/python3
 
-      vars:
-        env: production
-
-        # Hetzner CPX32 (8 vCPU dedicated AMD EPYC, 16GB RAM, 160GB SSD)
-        hetzner_server_type: cpx32
-        hetzner_location: nbg1  # Norimberga (Germania, EU)
-        hetzner_image: ubuntu-24.04
-
-        # PostgreSQL (ottimizzato per 16GB RAM)
-        postgresql_version: "16"
-        postgresql_max_connections: 200
-        postgresql_shared_buffers: "4GB"  # 25% di 16GB RAM
-        postgresql_effective_cache_size: "12GB"  # 75% di 16GB RAM
-
-        # Nginx (ottimizzato per 8 vCPU)
-        nginx_worker_processes: 8  # 1 worker per vCPU
-        nginx_client_max_body_size: "10M"
-
-        # SSL
-        ssl_protocols: "TLSv1.2 TLSv1.3"
-        ssl_ciphers: "ECDHE-ECDSA-AES128-GCM-SHA256:ECDHE-RSA-AES128-GCM-SHA256:ECDHE-ECDSA-AES256-GCM-SHA384:ECDHE-RSA-AES256-GCM-SHA384"
-
-        # Monitoring (più retention grazie a 160GB storage)
-        prometheus_retention: "30d"  # aumentato da 15d grazie a maggiore storage
-        grafana_port: 3001
-
-        # Backup
-        backup_retention_days: 30
-        backup_time: "03:00"
-        backup_storage_box: "u123456.your-storagebox.de"  # ← Hetzner Storage Box hostname
