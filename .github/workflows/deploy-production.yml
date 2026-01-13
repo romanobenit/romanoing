@@ -136,24 +136,38 @@ jobs:
           chmod 600 studio-erp/ansible/.vault_pass
 
       - name: Create encrypted vault file
+        env:
+          POSTGRESQL_PASSWORD: ${{ secrets.POSTGRESQL_PASSWORD }}
+          NEXTAUTH_SECRET: ${{ secrets.NEXTAUTH_SECRET }}
+          STRIPE_PUBLISHABLE_KEY: ${{ secrets.STRIPE_PUBLISHABLE_KEY }}
+          STRIPE_SECRET_KEY: ${{ secrets.STRIPE_SECRET_KEY }}
+          STRIPE_WEBHOOK_SECRET: ${{ secrets.STRIPE_WEBHOOK_SECRET }}
+          SENDGRID_API_KEY: ${{ secrets.SENDGRID_API_KEY }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          UPSTASH_REDIS_REST_URL: ${{ secrets.UPSTASH_REDIS_REST_URL }}
+          UPSTASH_REDIS_REST_TOKEN: ${{ secrets.UPSTASH_REDIS_REST_TOKEN }}
+          SENTRY_DSN: ${{ secrets.SENTRY_DSN }}
+          HETZNER_API_TOKEN: ${{ secrets.HETZNER_API_TOKEN }}
+          BACKUP_ENCRYPTION_PASSPHRASE: ${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}
+          GRAFANA_ADMIN_PASSWORD: ${{ secrets.GRAFANA_ADMIN_PASSWORD }}
         run: |
           cat > studio-erp/ansible/inventory/group_vars/production/vault.yml <<EOF
-          ---
-          vault_postgresql_password: "${{ secrets.POSTGRESQL_PASSWORD }}"
-          vault_nextauth_secret: "${{ secrets.NEXTAUTH_SECRET }}"
-          vault_nextauth_url: "https://romanoing.com"
-          vault_stripe_publishable_key: "${{ secrets.STRIPE_PUBLISHABLE_KEY }}"
-          vault_stripe_secret_key: "${{ secrets.STRIPE_SECRET_KEY }}"
-          vault_stripe_webhook_secret: "${{ secrets.STRIPE_WEBHOOK_SECRET }}"
-          vault_sendgrid_api_key: "${{ secrets.SENDGRID_API_KEY }}"
-          vault_openai_api_key: "${{ secrets.OPENAI_API_KEY }}"
-          vault_upstash_redis_rest_url: "${{ secrets.UPSTASH_REDIS_REST_URL }}"
-          vault_upstash_redis_rest_token: "${{ secrets.UPSTASH_REDIS_REST_TOKEN }}"
-          vault_sentry_dsn: "${{ secrets.SENTRY_DSN }}"
-          vault_hetzner_api_token: "${{ secrets.HETZNER_API_TOKEN }}"
-          vault_backup_encryption_passphrase: "${{ secrets.BACKUP_ENCRYPTION_PASSPHRASE }}"
-          vault_grafana_admin_password: "${{ secrets.GRAFANA_ADMIN_PASSWORD }}"
-          EOF
+---
+vault_postgresql_password: "${POSTGRESQL_PASSWORD}"
+vault_nextauth_secret: "${NEXTAUTH_SECRET}"
+vault_nextauth_url: "https://romanoing.com"
+vault_stripe_publishable_key: "${STRIPE_PUBLISHABLE_KEY}"
+vault_stripe_secret_key: "${STRIPE_SECRET_KEY}"
+vault_stripe_webhook_secret: "${STRIPE_WEBHOOK_SECRET}"
+vault_sendgrid_api_key: "${SENDGRID_API_KEY}"
+vault_openai_api_key: "${OPENAI_API_KEY}"
+vault_upstash_redis_rest_url: "${UPSTASH_REDIS_REST_URL}"
+vault_upstash_redis_rest_token: "${UPSTASH_REDIS_REST_TOKEN}"
+vault_sentry_dsn: "${SENTRY_DSN}"
+vault_hetzner_api_token: "${HETZNER_API_TOKEN}"
+vault_backup_encryption_passphrase: "${BACKUP_ENCRYPTION_PASSPHRASE}"
+vault_grafana_admin_password: "${GRAFANA_ADMIN_PASSWORD}"
+EOF
 
           ansible-vault encrypt studio-erp/ansible/inventory/group_vars/production/vault.yml --vault-password-file studio-erp/ansible/.vault_pass
 
