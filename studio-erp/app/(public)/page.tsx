@@ -278,9 +278,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo geometrico<br />
                   ✓ Progetto arch. + strutt.<br />
@@ -290,7 +287,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/ristrutturazione">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -319,9 +316,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Desktop/Standard/Enhanced DD<br />
                   ✓ Verifica amministrativa/strutturale<br />
@@ -331,7 +325,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/due-diligence">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -360,9 +354,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Rilievo strutturale<br />
                   ✓ Indagini materiali<br />
@@ -372,7 +363,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/sismica">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -401,9 +392,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Progetto architettonico<br />
                   ✓ Permesso di costruire<br />
@@ -413,7 +401,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/ampliamento">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -442,9 +430,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Ispezione opere<br />
                   ✓ Verifica calcoli<br />
@@ -454,7 +439,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/collaudo">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -483,9 +468,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Valutazione rischio<br />
                   ✓ Progetto antincendio<br />
@@ -495,7 +477,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/antincendio">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -524,9 +506,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ APE ante/post<br />
                   ✓ Diagnosi energetica<br />
@@ -536,7 +515,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/efficientamento">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
@@ -565,9 +544,6 @@ export default function HomePage() {
                 <div>
                   <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
                 </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
                 <div className="text-xs text-gray-600">
                   ✓ Studio fattibilità tokenizzazione<br />
                   ✓ PoC Smart Contract + Dashboard<br />
@@ -577,7 +553,7 @@ export default function HomePage() {
                 <div className="space-y-2">
                   <Button asChild className="w-full" size="sm">
                     <Link href="/configuratore/proptech-blockchain">
-                      ⚙️ Configura Servizio →
+                      📋 Preventivo →
                     </Link>
                   </Button>
                   <Button asChild className="w-full" size="sm" variant="outline">
