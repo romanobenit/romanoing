@@ -10,7 +10,7 @@ app_directory: "/var/www/{{ app_name }}"
 app_repository: "https://github.com/romanobenit/romanoing.git"
 app_repository_branch: "production"
 app_port: 3000
-app_workers: 4  # For CPX32 with 8 vCPU
+app_workers: 8  # For CPX32 with 8 vCPU (1 per core)
 app_domain: "romanoing.com"
 
 # Database

@@ -14,7 +14,6 @@ all:
 
       vars:
         env: production
-        app_domain: romanoing.com
 
         # Hetzner CPX32 (8 vCPU dedicated AMD EPYC, 16GB RAM, 160GB SSD)
         hetzner_server_type: cpx32
@@ -26,13 +25,6 @@ all:
         postgresql_max_connections: 200
         postgresql_shared_buffers: "4GB"  # 25% di 16GB RAM
         postgresql_effective_cache_size: "12GB"  # 75% di 16GB RAM
-
-        # Node.js
-        nodejs_version: "20"
-
-        # Applicazione (ottimizzata per 8 vCPU)
-        app_port: 3000
-        app_workers: 8  # pm2 instances (1 per vCPU, sfrutta tutti i core dedicati)
 
         # Nginx (ottimizzato per 8 vCPU)
         nginx_worker_processes: 8  # 1 worker per vCPU
