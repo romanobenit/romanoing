@@ -455,17 +455,126 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── Contatti ── */}
+      <section className="py-20 px-4 border-t border-slate-800" id="contatti">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <Badge className="bg-slate-800 text-slate-300 border border-slate-700 mb-4">Contatti</Badge>
+            <h2 className="text-3xl font-bold mb-3">Scrivici o chiamaci</h2>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Per una prima consulenza preliminare gratuita contattaci direttamente.
+              Nessun impegno, nessun preventivo automatico: parlerai con l&apos;Ingegnere.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-2 gap-8 max-w-3xl mx-auto">
+            {/* WhatsApp */}
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col gap-4">
+              <div className="w-10 h-10 bg-green-500/10 border border-green-500/30 rounded-xl flex items-center justify-center text-xl">💬</div>
+              <div>
+                <p className="font-semibold text-white mb-1">WhatsApp</p>
+                <p className="text-sm text-slate-400 mb-4">Risposta entro poche ore in orario lavorativo (lun–ven 9:00–18:00).</p>
+                <a
+                  href={`https://wa.me/393476336545?text=${encodeURIComponent("Ciao, vorrei una consulenza tecnica.")}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Button className="w-full bg-green-600 hover:bg-green-500 text-white rounded-xl text-sm">
+                    💬 Apri chat WhatsApp
+                  </Button>
+                </a>
+              </div>
+              <p className="text-xs text-slate-600">+39 347 633 6545 · Ing. Domenico Romano</p>
+            </div>
+
+            {/* Dati studio */}
+            <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 flex flex-col gap-3">
+              <div className="w-10 h-10 bg-blue-500/10 border border-blue-500/30 rounded-xl flex items-center justify-center text-xl">🏛️</div>
+              <p className="font-semibold text-white">Studio Tecnico Romano</p>
+              <div className="space-y-1.5 text-sm text-slate-400">
+                <p>Ing. Domenico Romano</p>
+                <p>P.IVA / C.F.: <span className="text-slate-300">— (inserire)</span></p>
+                <p>Albo Ingegneri: <span className="text-slate-300">— (inserire n. iscrizione)</span></p>
+                <p>Sede: <span className="text-slate-300">— (inserire indirizzo)</span></p>
+                <p>PEC: <span className="text-slate-300">— (inserire)</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* Informativa privacy sintetica */}
+          <div className="mt-12 bg-slate-900/60 border border-slate-800 rounded-2xl p-6 max-w-3xl mx-auto">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-4">
+              Informativa sintetica sul trattamento dei dati personali — Art. 13 GDPR (Reg. UE 2016/679)
+            </p>
+            <div className="space-y-3 text-xs text-slate-500 leading-relaxed">
+              <p>
+                <span className="text-slate-300 font-medium">Titolare del trattamento:</span>{" "}
+                Ing. Domenico Romano, Studio Tecnico Romano — contatto: vedere sezione sopra.
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Finalità e base giuridica:</span>{" "}
+                I dati forniti tramite questa chat o tramite WhatsApp sono trattati esclusivamente per
+                l&apos;erogazione del servizio di consulenza tecnica richiesto (art. 6, par. 1, lett. b GDPR —
+                esecuzione di un contratto o misure precontrattuali) e, previo consenso, per comunicazioni
+                informative sullo studio (art. 6, par. 1, lett. a GDPR).
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Dati trattati:</span>{" "}
+                Dati identificativi, recapiti, informazioni tecniche sull&apos;immobile o sul progetto fornite
+                spontaneamente dall&apos;utente nel corso della conversazione.
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Conservazione:</span>{" "}
+                I dati sono conservati per il tempo strettamente necessario all&apos;erogazione del servizio e
+                comunque non oltre 10 anni dall&apos;ultimo contatto, salvo obblighi di legge.
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Comunicazione a terzi:</span>{" "}
+                I dati non sono ceduti a terzi. Possono essere comunicati a collaboratori dello studio
+                (nominati responsabili del trattamento ex art. 28 GDPR) esclusivamente per le finalità
+                sopra indicate. L&apos;infrastruttura cloud utilizza Hetzner Cloud GmbH (UE).
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Diritti dell&apos;interessato:</span>{" "}
+                L&apos;utente ha diritto di accesso, rettifica, cancellazione, limitazione, portabilità e
+                opposizione al trattamento (artt. 15–22 GDPR), nonché di proporre reclamo al Garante per
+                la protezione dei dati personali (www.garanteprivacy.it). Le richieste possono essere
+                inviate al titolare tramite i recapiti indicati.
+              </p>
+              <p>
+                <span className="text-slate-300 font-medium">Uso dell&apos;AI:</span>{" "}
+                Questo sito utilizza un assistente AI per la raccolta preliminare dei dati tecnici. Ogni
+                interazione è registrata (log POP-AI-01 — ISO 42001) e supervisionata dall&apos;Ingegnere.
+                Nessuna decisione automatizzata con effetti giuridici è adottata senza intervento umano.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-3 mt-5 pt-4 border-t border-slate-800">
+              <Link href="/legal/privacy" className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2">
+                Privacy Policy completa
+              </Link>
+              <span className="text-slate-700">·</span>
+              <Link href="/legal/terms" className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2">
+                Termini e condizioni
+              </Link>
+              <span className="text-slate-700">·</span>
+              <Link href="/legal/garanzia-consulenza" className="text-xs text-blue-400 hover:text-blue-300 transition-colors underline underline-offset-2">
+                Garanzia consulenza
+              </Link>
+              <span className="text-slate-700">·</span>
+              <a href="https://www.garanteprivacy.it" target="_blank" rel="noopener noreferrer" className="text-xs text-slate-500 hover:text-slate-400 transition-colors">
+                Garante Privacy ↗
+              </a>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── Footer ── */}
-      <footer className="border-t border-slate-800 py-8 px-4">
+      <footer className="border-t border-slate-800 py-6 px-4">
         <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">SR</div>
             <span>© 2025 Studio Ing. Romano — Technical Advisory</span>
-          </div>
-          <div className="flex items-center gap-4">
-            <Link href="/legal/privacy" className="hover:text-slate-400 transition-colors">Privacy</Link>
-            <Link href="/legal/terms" className="hover:text-slate-400 transition-colors">Termini</Link>
-            <Link href="/legal/garanzia-consulenza" className="hover:text-slate-400 transition-colors">Garanzia</Link>
           </div>
           <div className="flex items-center gap-2">
             <Badge className="bg-slate-900 border border-slate-700 text-slate-500 text-xs">ISO 9001</Badge>
