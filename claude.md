@@ -1080,13 +1080,10 @@ Classifica il caso in uno dei quattro percorsi; **non limita il tipo di domanda 
 | Cliente esplicita che vuole documento con valore legale/professionale | → `INGEGNERE` candidato |
 | Urgenza estrema e no firma necessaria | → `IMMEDIATA` prioritario (sempre istantaneo) |
 
-> Il Classificatore non esclude domande tecniche fuori catalogo.
+> Il Classificatore non esclude domande tecniche non standard.
 > Qualsiasi domanda risolvibile da remoto passa ad Agente 5, che costruisce il servizio ad hoc.
 
-**Output**: `{ percorso_primario: "PLATFORM"|"IMMEDIATA"|"INGEGNERE"|"COMPLESSO", motivo, template_candidati: string[] }`
-
-> `template_candidati`: codici del catalogo come RIFERIMENTO di prezzo. Può essere array vuoto
-> se il caso è completamente nuovo — Agente 5 costruirà il servizio da zero.
+**Output**: `{ percorso_primario: "PLATFORM"|"IMMEDIATA"|"INGEGNERE"|"COMPLESSO", motivo }`
 
 ---
 
@@ -1095,35 +1092,46 @@ Classifica il caso in uno dei quattro percorsi; **non limita il tipo di domanda 
 **Ruolo**: motore di pricing e composizione del servizio per **tutti i percorsi**.
 Riceve BRIEF + QUADRO NORMATIVO + percorso primario da Agente 3.
 
-**Capacità chiave**: non è vincolato al catalogo predefinito.
-Per qualsiasi domanda tecnica risolvibile da remoto, **compone un servizio su misura**:
+**Capacità chiave**: per qualsiasi domanda tecnica risolvibile da remoto, **compone un servizio su misura**:
 - Titolo e descrizione del deliverable specifico per quel caso
 - Normative applicabili al caso concreto
-- Prezzo calcolato dinamicamente
+- Prezzo calcolato dinamicamente — nessun catalogo fisso
 
 #### Composizione del servizio (tutti i percorsi immediati)
 
-**Step 1 — Template o composizione libera**:
-- Se esiste un `template_candidati` → usa il prezzo base del template come ancora
-- Se array vuoto (caso nuovo) → usa le **fasce di riferimento** per tipo erogazione:
+**Step 1 — Prezzo base per complessità del caso**
 
-| Tipo | Fascia base | Logica |
-|------|------------|--------|
-| PLATFORM | €59–149 | Documento AI senza giudizio professionale |
-| IMMEDIATA | €120–400 | Analisi tecnica AI approfondita, formato relazione, senza firma |
-| INGEGNERE | €200–700 | Atto professionale con firma digitale qualificata |
+Per ogni tipo di erogazione esiste una fascia. Agente 5 stima la complessità del caso
+e sceglie un punto di partenza nella fascia:
 
-**Step 2 — Adeguamenti di prezzo**:
+| Tipo | Fascia | Floor assoluto |
+|------|--------|---------------|
+| PLATFORM | €50–149 | €50 |
+| IMMEDIATA | €150–400 | €150 |
+| INGEGNERE | €300–700 | €300 |
 
-| Fattore | Effetto |
-|---------|---------|
-| Urgenza < 24h | +30% |
-| Urgenza < 48h | +25% |
-| Documenti da analizzare > 50 pagine | +20% |
-| Più normative intersecanti | +15% |
-| Zona sismica 1 o vincolo paesaggistico/storico | +10% |
-| Committente azienda o ente pubblico | +10% |
-| Prima consulenza (first-time) | −10% |
+Posizionamento nella fascia in base alla complessità valutata:
+
+| Complessità caso | Posizione nella fascia |
+|-----------------|----------------------|
+| Bassa — 1 normativa, caso standard, nessun documento da leggere | 20–35% della fascia |
+| Media — 2 normative o casistica variabile o documenti da leggere | 50–65% della fascia |
+| Alta — 3+ normative intersecanti o ambiguità interpretativa rilevante | 75–90% della fascia |
+
+**Step 2 — Moltiplicatori compositi (si applicano in cascata, nell'ordine)**:
+
+| Fattore | Moltiplicatore |
+|---------|---------------|
+| Urgenza < 24h | ×1.30 |
+| Urgenza < 48h | ×1.25 |
+| Documenti da analizzare > 50 pagine | ×1.20 |
+| Più normative intersecanti | ×1.15 |
+| Zona sismica 1 o vincolo paesaggistico/storico | ×1.10 |
+| Committente azienda o ente pubblico | ×1.10 |
+| Prima consulenza (first-time) | ×0.90 |
+
+Il prezzo risultante non può scendere sotto il floor assoluto del tipo.
+Tutti i prezzi sono **IVA esclusa** (verrà aggiunta in fattura).
 
 **Step 3 — Presentazione delle opzioni al cliente**:
 
@@ -1156,10 +1164,10 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
       "tipo_erogazione": "PLATFORM",
       "titolo_servizio": "Guida normativa: tettoia in legno a Palermo",
       "descrizione_deliverable": "Documento informativo AI con analisi DPR 380/2001 e normativa comunale applicabile al tuo caso, inclusa tabella casistica e procedura consigliata.",
-      "template_riferimento": "CONS-GUIDA-TITOLO",
-      "prezzo_base_centesimi": 7900,
+      "complessita_stimata": "bassa",
+      "prezzo_base_centesimi": 7000,
       "adeguamenti": [],
-      "prezzo_finale_centesimi": 7900,
+      "prezzo_finale_centesimi": 7000,
       "sla_ore": null,
       "avviso": "Contenuto orientativo generato da AI. Non sostituisce parere professionale."
     },
@@ -1167,10 +1175,10 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
       "tipo_erogazione": "IMMEDIATA",
       "titolo_servizio": "Analisi tecnica approfondita: tettoia in legno a Palermo",
       "descrizione_deliverable": "Analisi tecnica AI approfondita del tuo caso specifico rispetto a DPR 380/2001 e PRG di Palermo: valutazione normativa, se serve titolo, quale, criticità e raccomandazioni operative. Strutturata in formato relazione tecnica.",
-      "template_riferimento": null,
-      "prezzo_base_centesimi": 16000,
+      "complessita_stimata": "media",
+      "prezzo_base_centesimi": 22500,
       "adeguamenti": [],
-      "prezzo_finale_centesimi": 16000,
+      "prezzo_finale_centesimi": 22500,
       "sla_ore": null,
       "avviso": "Analisi tecnica generata da AI. Non costituisce parere professionale firmato. Non utilizzabile in procedimenti formali."
     },
@@ -1178,10 +1186,10 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
       "tipo_erogazione": "INGEGNERE",
       "titolo_servizio": "Parere tecnico firmato: tettoia in legno a Palermo",
       "descrizione_deliverable": "Relazione tecnica firmata digitalmente dall'Ing. Romano (eIDAS) con analisi normativa completa, riferimenti al PRG, conclusioni e raccomandazioni operative. Utilizzabile per pratiche edilizie.",
-      "template_riferimento": "CONS-PAR-TECNICO",
-      "prezzo_base_centesimi": 22000,
+      "complessita_stimata": "media",
+      "prezzo_base_centesimi": 42000,
       "adeguamenti": [],
-      "prezzo_finale_centesimi": 22000,
+      "prezzo_finale_centesimi": 42000,
       "sla_ore": 48,
       "avviso": null
     }
@@ -1253,75 +1261,6 @@ Titolare carica → visibile_cliente = true → email conferma
 
 ---
 
-## 💡 Catalogo Template — Ancoraggi di Prezzo
-
-> **Il catalogo non è un elenco chiuso.**
-> Agente 5 può costruire qualsiasi servizio su misura per il caso specifico del committente.
-> Questi template servono come **riferimenti di prezzo base** e **prompt di partenza** per l'AI.
-> Per ogni template esiste automaticamente la versione A (Platform), B (Immediata) e C (Ingegnere).
-
----
-
-### Tipo A — Template Platform (AI automatica, contenuto orientativo)
-
-> Documento generato dall'AI subito dopo il pagamento. Nessuna firma.
-> **Avviso legale obbligatorio**: *"Documento orientativo generato da AI. Non sostituisce parere professionale."*
-
-| Codice | Nome template | Prezzo base | Fascia applicabile |
-|--------|--------------|-------------|-------------------|
-| `TMPL-GUIDA-TITOLO` | Guida titoli abilitativi (CILA/SCIA/PDC) | €79 | Edilizia, urbanistica |
-| `TMPL-SCREEN-BONUS` | Screening ammissibilità bonus edilizi | €99 | Superbonus, Ecobonus, Sismabonus |
-| `TMPL-CHECKLIST-ACQ` | Checklist pre-acquisto immobile | €129 | Due diligence immobiliare |
-| `TMPL-GUIDA-AGIB` | Guida procedura agibilità/conformità | €89 | Agibilità, DPR 380/2001 |
-| `TMPL-GUIDA-VVF` | Guida adempimenti antincendio | €99 | Prevenzione incendi |
-| `TMPL-GUIDA-SISMICA` | Guida rischio sismico per zona | €109 | NTC 2018, sismica |
-
----
-
-### Tipo B — Template Immediata (analisi tecnica AI approfondita, senza firma)
-
-> Analisi tecnica approfondita generata da AI subito dopo il pagamento.
-> Strutturata in formato relazione tecnica (oggetto, normativa, analisi, criticità, raccomandazioni).
-> **Avviso**: *"Analisi tecnica generata da AI. Non costituisce parere professionale firmato. Non utilizzabile in procedimenti formali."*
-
-| Codice | Nome template | Prezzo base | SLA |
-|--------|--------------|-------------|-----|
-| `TMPL-IMM-PARERE-GEN` | Analisi tecnica approfondita su caso descritto | €150 | Immediato |
-| `TMPL-IMM-TITOLO` | Analisi titolo abilitativo per intervento specifico | €160 | Immediato |
-| `TMPL-IMM-BONUS` | Analisi ammissibilità tecnica bonus edilizi | €180 | Immediato |
-| `TMPL-IMM-AGIB` | Analisi normativa agibilità caso specifico | €170 | Immediato |
-| `TMPL-IMM-VVF` | Analisi antincendio preventivo | €200 | Immediato |
-| `TMPL-IMM-SISMICA` | Analisi vulnerabilità sismica orientativa | €220 | Immediato |
-| `TMPL-IMM-COMPUTO` | Analisi congruità computo metrico | €240 | Immediato |
-| `TMPL-IMM-CONFURB` | Analisi conformità urbanistica documentale | €250 | Immediato |
-| `TMPL-IMM-CONTESTAZ` | Analisi risposta tecnica a contestazione | €280 | Immediato |
-| `TMPL-IMM-LIBERO` | Analisi tecnica su quesito libero | €140 | Immediato |
-
----
-
-### Tipo C — Template Ingegnere (firmato digitalmente dall'Ing. Romano)
-
-> Atto professionale con firma digitale qualificata (eIDAS/D.Lgs 82/2005 CAD).
-> Piena responsabilità deontologica. SLA decorre dalla ricezione di tutti i documenti.
-
-| Codice | Nome template | Prezzo base | SLA |
-|--------|--------------|-------------|-----|
-| `TMPL-ING-PAR-TECNICO` | Parere tecnico firmato | €220 | 48h |
-| `TMPL-ING-AGIB` | Parere agibilità firmato | €240 | 48h |
-| `TMPL-ING-VVF` | Parere prevenzione incendi firmato | €290 | 48h |
-| `TMPL-ING-BONUS` | Verifica tecnica bonus edilizi firmata | €320 | 48h |
-| `TMPL-ING-CONFURB` | Verifica conformità urbanistica firmata | €380 | 72h |
-| `TMPL-ING-APE` | Revisione APE esistente firmata | €280 | 48h |
-| `TMPL-ING-COMPUTO` | Revisione computo metrico firmata | €420 | 72h |
-| `TMPL-ING-CONTESTAZ` | Risposta tecnica a contestazione firmata | €490 | 72h |
-| `TMPL-ING-SISMICA-L1` | Valutazione vulnerabilità sismica L1 firmata | €520 | 72h |
-| `TMPL-ING-PERIZIA` | Perizia tecnica asseverata | €620 | 72h |
-
-> **Nota**: prezzi IVA esclusa. Per casi fuori template, Agente 5 usa le fasce di riferimento
-> (A: €59–149 / B: €120–400 / C: €200–700) e compone titolo e descrizione ad hoc.
-
----
-
 ### Schema DB — Nuove Entità Agentiche
 
 ```sql
@@ -1339,25 +1278,6 @@ CREATE TABLE sessioni_quiz (
     stato VARCHAR(30) DEFAULT 'in_corso',  -- in_corso | completato_vendita | completato_lead | abbandonato
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
-);
-
--- Catalogo consulenze immediate
-CREATE TABLE consulenze_catalogo (
-    id SERIAL PRIMARY KEY,
-    codice VARCHAR(50) UNIQUE NOT NULL,   -- es. CONS-PAR-TECNICO
-    nome VARCHAR(255) NOT NULL,
-    descrizione TEXT,
-    deliverable TEXT,                     -- cosa riceve il cliente
-    erogazione_tipo VARCHAR(20) NOT NULL  -- PLATFORM | IMMEDIATA | INGEGNERE
-        CHECK (erogazione_tipo IN ('PLATFORM', 'IMMEDIATA', 'INGEGNERE')),
-    avviso_legale TEXT,                   -- mostrato al cliente per tipo PLATFORM
-    prezzo_iva_esclusa INTEGER NOT NULL,  -- in centesimi
-    sla_ore INTEGER,                      -- NULL = immediato (PLATFORM e IMMEDIATA); ore per INGEGNERE
-    attivo BOOLEAN DEFAULT true,
-    normative_rilevanti TEXT[],           -- es. {'NTC 2018', 'DPR 380/2001'}
-    tag TEXT[],                           -- es. {'sismica', 'edilizia', 'urgente'}
-    prompt_ai TEXT,                       -- prompt usato per generare il doc (PLATFORM e IMMEDIATA; approfondito per IMMEDIATA)
-    created_at TIMESTAMP DEFAULT NOW()
 );
 
 -- Lead preventivi (output Agente 5)
@@ -1382,7 +1302,6 @@ CREATE TABLE offerte_calcolate (
     id SERIAL PRIMARY KEY,
     sessione_id INTEGER REFERENCES sessioni_quiz(id),
     tipo_erogazione VARCHAR(20) NOT NULL CHECK (tipo_erogazione IN ('PLATFORM', 'IMMEDIATA', 'INGEGNERE', 'PREVENTIVO')),
-    catalog_id INTEGER REFERENCES consulenze_catalogo(id),   -- NULL se PREVENTIVO
     prezzo_base_centesimi INTEGER,
     adeguamenti JSONB,         -- array [{motivo, percentuale}]
     prezzo_finale_centesimi INTEGER,
@@ -1397,7 +1316,6 @@ CREATE TABLE offerte_calcolate (
 -- Incarichi tipo CONSULENZA (collegati alle vendite immediate)
 ALTER TABLE incarichi ADD COLUMN tipo VARCHAR(20) DEFAULT 'progetto'
     CHECK (tipo IN ('progetto', 'consulenza_platform', 'consulenza_immediata', 'consulenza_ingegnere', 'preventivo'));
-ALTER TABLE incarichi ADD COLUMN consulenza_id INTEGER REFERENCES consulenze_catalogo(id);
 ALTER TABLE incarichi ADD COLUMN offerta_id INTEGER REFERENCES offerte_calcolate(id);
 ALTER TABLE incarichi ADD COLUMN sla_scadenza TIMESTAMP;
 ALTER TABLE incarichi ADD COLUMN sessione_quiz_id INTEGER REFERENCES sessioni_quiz(id);
