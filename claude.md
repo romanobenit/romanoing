@@ -1060,14 +1060,38 @@ VISITATORE ARRIVA SU www.romanoing.com
 
 **Ruolo**: presentare le consulenze acquistabili subito, incassare con Stripe.
 
-**Flusso**:
-1. Mostra 1-3 consulenze pertinenti (dal catalogo sotto)
-2. Mostra prezzo fisso, tempi di consegna, cosa include
+Le consulenze si dividono in **due tipi di erogazione**:
+
+#### Tipo A — Generata dalla Piattaforma (`erogazione: PLATFORM`)
+Il documento è prodotto automaticamente dall'AI dopo il pagamento, senza intervento del Titolare.
+Nessuna firma professionale → **contenuto informativo/orientativo**, non costituisce parere professionale.
+
+```
+Cliente paga → Webhook Stripe → AI genera documento → Cliente scarica subito
+                                      ↓
+                              Log AI (POP-AI-01)
+                              Notifica Titolare (solo monitoraggio)
+```
+
+#### Tipo B — Firmata Digitalmente dal Titolare (`erogazione: INGEGNERE`)
+Il documento è prodotto e **firmato digitalmente dall'Ing. Romano**.
+Costituisce atto professionale con responsabilità deontologica e legale.
+
+```
+Cliente paga → Webhook Stripe → Crea incarico CONSULENZA → Notifica Titolare (SLA attivo)
+                                                                    ↓
+                                                  Titolare redige + firma digitalmente
+                                                                    ↓
+                                                  Carica documento nell'area cliente
+                                                                    ↓
+                                                  Committente scarica + email conferma
+```
+
+**Flusso comune**:
+1. Mostra 1-3 consulenze pertinenti (dal catalogo), con badge **"Immediata"** o **"Firmata dall'Ingegnere"**
+2. Mostra prezzo fisso, SLA, cosa include
 3. Committente paga online (Stripe Checkout)
-4. Webhook Stripe → crea incarico tipo `CONSULENZA` + utente COMMITTENTE
-5. Notifica al Titolare: nuovo incarico da evadere entro SLA
-6. Titolare eroga la consulenza e carica il documento nell'area cliente
-7. Committente scarica il deliverable
+4. Webhook → branch sul `erogazione_tipo`
 
 ---
 
@@ -1087,24 +1111,46 @@ VISITATORE ARRIVA SU www.romanoing.com
 
 ## 💡 Catalogo Consulenze Immediate (Vendibili Subito Online)
 
-> Servizi a prezzo fisso, erogabili da remoto in 24-72h, senza sopralluogo.
+> Servizi a prezzo fisso, senza sopralluogo, suddivisi per tipo di erogazione.
+
+---
+
+### Tipo A — Generate dalla Piattaforma
+
+> Documento prodotto automaticamente dall'AI subito dopo il pagamento.
+> **Contenuto informativo/orientativo** — non costituisce parere professionale firmato.
+> Cliente scarica entro minuti dal pagamento.
 
 | # | Codice | Nome | Deliverable | Prezzo | SLA |
 |---|--------|------|------------|--------|-----|
-| 1 | `CONS-PAR-TECNICO` | **Parere Tecnico Preliminare** | Documento scritto con analisi fattibilità, normativa applicabile, rischi e raccomandazioni. | €180 | 48h |
-| 2 | `CONS-VERIF-BONUS` | **Verifica Ammissibilità Bonus Edilizi** | Parere scritto su Superbonus 110%, Ecobonus, Sismabonus, Bonus Ristrutturazione: se spetta, come attivarlo, massimali. | €220 | 48h |
-| 3 | `CONS-CHECKLIST-ACQ` | **Checklist Pre-Acquisto Immobile** | Report strutturato su rischi urbanistici, catastali, strutturali e impiantistici dell'immobile da acquistare (su documenti forniti). | €280 | 72h |
-| 4 | `CONS-FASC-EDILIZIO` | **Verifica Conformità Urbanistica Documentale** | Analisi documenti esistenti (planimetrie, concessioni, SCIA) per identificare difformità edilizie. | €320 | 72h |
-| 5 | `CONS-AGIB-PARERE` | **Parere Normativo Agibilità** | Analisi requisiti D.P.R. 380/2001 artt. 24-25, indicazione documenti necessari, criticità da risolvere. | €200 | 48h |
-| 6 | `CONS-SISMICA-LIVELLO1` | **Valutazione Vulnerabilità Sismica Livello 1** | Screening documentale secondo Linee Guida MIT 2011 — solo su dati forniti (non è la verifica strutturale completa). | €450 | 72h |
-| 7 | `CONS-ANTINCENDIO-PREV` | **Parere Prevenzione Incendi Preventivo** | Verifica se l'attività è soggetta a controllo VVF, categoria di rischio, procedura (SCIA/valutazione progetto), documenti necessari. | €250 | 48h |
-| 8 | `CONS-COMPUTO-REVIEW` | **Revisione Computo Metrico** | Controllo voci e prezzi di un computo metrico estimativo già redatto: verifica congruità con prezzario DEI/regionale. | €380 | 72h |
-| 9 | `CONS-CONTESTAZIONE` | **Risposta Tecnica a Contestazione** | Relazione tecnica in risposta a una contestazione/perizia di parte o a un'ingiunzione del Comune/ente. | €450 | 72h |
-| 10 | `CONS-TITOLO-EDILIZIO` | **Individuazione Titolo Abilitativo** | Parere scritto su quale titolo serve (edilizia libera / CILA / SCIA / PDC) per un intervento specifico, con rischi di abuso. | €160 | 24h |
-| 11 | `CONS-APE-REVIEW` | **Revisione APE Esistente** | Analisi critica di un APE già redatto da terzi: verifica dati inseriti, classe energetica corretta, anomalie. | €200 | 48h |
-| 12 | `CONS-PERIZIA-SEMPLICE` | **Perizia Tecnica Asseverata Semplice** | Relazione tecnica asseverata per controversie condominiali, assicurazioni, piccoli danni — su dati documentali e fotografici forniti. | €550 | 72h |
+| A1 | `CONS-GUIDA-TITOLO` | **Guida Titoli Abilitativi** | Report automatico che spiega quale permesso serve (edilizia libera / CILA / SCIA / PDC) per il tipo di intervento descritto, con tabella comparativa e riferimenti normativi. | €79 | Immediato |
+| A2 | `CONS-SCREEN-BONUS` | **Screening Ammissibilità Bonus Edilizi** | Questionario elaborato dall'AI: verifica se l'intervento descritto può accedere a Superbonus, Ecobonus, Sismabonus, Bonus Ristrutturazione. Risultato con %, massimali, condizioni. | €99 | Immediato |
+| A3 | `CONS-CHECKLIST-ACQ` | **Checklist Pre-Acquisto Immobile** | Checklist strutturata generata dall'AI su misura per l'immobile descritto: punti da verificare su urbanistica, catasto, struttura, impianti, conformità. Con spiegazione di ogni voce. | €129 | Immediato |
 
-> **Nota**: prezzi IVA esclusa. SLA decorre dalla ricezione di tutti i documenti necessari.
+> **Avviso legale mostrato al cliente**: *"Questo documento è generato automaticamente a scopo orientativo. Non sostituisce un parere professionale firmato da un ingegnere abilitato."*
+
+---
+
+### Tipo B — Firmate Digitalmente dall'Ing. Romano
+
+> Documento redatto e **firmato digitalmente** dall'Ing. Romano con piena responsabilità professionale.
+> Costituisce atto tecnico con valore legale/deontologico.
+> SLA decorre dalla ricezione di tutti i documenti necessari.
+
+| # | Codice | Nome | Deliverable | Prezzo | SLA |
+|---|--------|------|------------|--------|-----|
+| B1 | `CONS-PAR-TECNICO` | **Parere Tecnico Preliminare** | Relazione firmata con analisi fattibilità, normativa applicabile, rischi e raccomandazioni operative. | €220 | 48h |
+| B2 | `CONS-AGIB-PARERE` | **Parere Normativo Agibilità** | Relazione firmata: analisi requisiti DPR 380/2001 artt. 24-25, documenti necessari, criticità da risolvere per ottenere l'agibilità. | €240 | 48h |
+| B3 | `CONS-ANTINCENDIO-PREV` | **Parere Prevenzione Incendi** | Relazione firmata: attività soggetta a VVF sì/no, categoria di rischio, procedura applicabile (SCIA/valutazione progetto), documenti necessari. | €290 | 48h |
+| B4 | `CONS-VERIF-BONUS` | **Verifica Tecnica Ammissibilità Bonus** | Parere firmato con analisi puntuale dei requisiti tecnici e documentali per accedere al bonus richiesto. Diverso dallo screening A2: ha valore professionale. | €320 | 48h |
+| B5 | `CONS-FASC-EDILIZIO` | **Verifica Conformità Urbanistica** | Relazione firmata su documenti forniti (planimetrie, titoli, visure): identifica difformità edilizie e indica come regolarizzarle. | €380 | 72h |
+| B6 | `CONS-APE-REVIEW` | **Revisione APE Esistente** | Relazione firmata di analisi critica di un APE redatto da terzi: verifica dati, classe energetica, anomalie, eventuale necessità di rifacimento. | €280 | 48h |
+| B7 | `CONS-COMPUTO-REVIEW` | **Revisione Computo Metrico** | Relazione firmata di verifica voci e prezzi di un computo già redatto: congruità con prezzario DEI/regionale, voci mancanti o errate. | €420 | 72h |
+| B8 | `CONS-CONTESTAZIONE` | **Risposta Tecnica a Contestazione** | Relazione tecnica firmata in risposta a contestazione/perizia di parte, ingiunzione comunale o richiesta di chiarimenti da enti. | €490 | 72h |
+| B9 | `CONS-SISMICA-LIVELLO1` | **Valutazione Vulnerabilità Sismica Liv. 1** | Relazione firmata di screening sismico documentale secondo Linee Guida MIT 2011. Non sostituisce la verifica strutturale completa, ma ha valore orientativo professionale. | €520 | 72h |
+| B10 | `CONS-PERIZIA-SEMPLICE` | **Perizia Tecnica Asseverata** | Perizia firmata e asseverata per controversie condominiali, pratiche assicurative, piccoli contenziosi — su base documentale e fotografica. | €620 | 72h |
+
+> **Nota**: prezzi IVA esclusa. Firma digitale qualificata ai sensi del Regolamento eIDAS (D.Lgs 82/2005 CAD).
 
 ---
 
@@ -1130,15 +1176,19 @@ CREATE TABLE sessioni_quiz (
 -- Catalogo consulenze immediate
 CREATE TABLE consulenze_catalogo (
     id SERIAL PRIMARY KEY,
-    codice VARCHAR(50) UNIQUE NOT NULL,  -- es. CONS-PAR-TECNICO
+    codice VARCHAR(50) UNIQUE NOT NULL,   -- es. CONS-PAR-TECNICO
     nome VARCHAR(255) NOT NULL,
     descrizione TEXT,
-    deliverable TEXT,                    -- cosa riceve il cliente
-    prezzo_iva_esclusa INTEGER NOT NULL, -- in centesimi
-    sla_ore INTEGER NOT NULL,            -- SLA in ore
+    deliverable TEXT,                     -- cosa riceve il cliente
+    erogazione_tipo VARCHAR(20) NOT NULL  -- PLATFORM | INGEGNERE
+        CHECK (erogazione_tipo IN ('PLATFORM', 'INGEGNERE')),
+    avviso_legale TEXT,                   -- mostrato al cliente per tipo PLATFORM
+    prezzo_iva_esclusa INTEGER NOT NULL,  -- in centesimi
+    sla_ore INTEGER,                      -- NULL = immediato (PLATFORM); ore per INGEGNERE
     attivo BOOLEAN DEFAULT true,
-    normative_rilevanti TEXT[],          -- es. {'NTC 2018', 'DPR 380/2001'}
-    tag TEXT[],                          -- es. {'sismica', 'edilizia', 'urgente'}
+    normative_rilevanti TEXT[],           -- es. {'NTC 2018', 'DPR 380/2001'}
+    tag TEXT[],                           -- es. {'sismica', 'edilizia', 'urgente'}
+    prompt_ai TEXT,                       -- prompt usato per generare il doc (solo PLATFORM)
     created_at TIMESTAMP DEFAULT NOW()
 );
 
