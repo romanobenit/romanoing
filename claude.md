@@ -935,18 +935,31 @@ VISITATORE ARRIVA SU www.romanoing.com
             ▼
 ┌───────────────────────────────────┐
 │  AGENTE 3 — ROUTER / CLASSIFIER   │  Decision matrix
-│  "Questa richiesta si risolve     │  Soglia: complessità + sopralluogo
-│   subito o serve un preventivo?"  │  + variabilità prezzo
+│  "Che tipo di risposta            │  PLATFORM | INGEGNERE | COMPLESSO
+│   serve al tuo caso?"             │
 └───────────────────────────────────┘
-         │            │
-         ▼            ▼
-┌────────────┐  ┌───────────────────┐
-│  AGENTE 4  │  │    AGENTE 5       │
-│  VENDITORE │  │  PREVENTIVATORE   │
-│  IMMEDIATO │  │                   │
-│  Stripe →  │  │  → Titolare       │
-│  Pay now   │  │  (revisione manu) │
-└────────────┘  └───────────────────┘
+            │
+            │  ← sempre, per tutti e tre i percorsi
+            ▼
+┌───────────────────────────────────────────────────────────────────┐
+│  AGENTE 5 — PRICER / PREVENTIVATORE                               │
+│  "Ecco quanto costa risolvere il tuo problema specifico."         │
+│                                                                   │
+│  • Legge il BRIEF + QUADRO NORMATIVO                              │
+│  • Seleziona il catalog item base                                 │
+│  • Calcola il prezzo finale (base + adeguamenti per complessità,  │
+│    urgenza, volume documenti, normativa specifica)                │
+│  • Per casi COMPLESSI: genera lead + raccoglie dati extra         │
+└───────────────────────────────────────────────────────────────────┘
+         │                  │                   │
+         ▼                  ▼                   ▼
+┌──────────────┐   ┌──────────────┐   ┌──────────────────────┐
+│  AGENTE 4A   │   │  AGENTE 4B   │   │  LEAD PREVENTIVO     │
+│  VENDITORE   │   │  VENDITORE   │   │  → Titolare          │
+│  PLATFORM    │   │  INGEGNERE   │   │  (revisione manuale) │
+│  AI genera   │   │  Ing. firma  │   └──────────────────────┘
+│  doc subito  │   │  entro SLA   │
+└──────────────┘   └──────────────┘
 ```
 
 ---
@@ -1037,75 +1050,123 @@ VISITATORE ARRIVA SU www.romanoing.com
 
 ### Agente 3 — Router / Classifier
 
-**Ruolo**: decidere se la risposta è IMMEDIATA o richiede PREVENTIVO.
+**Ruolo**: classificare il tipo di servizio necessario. **Non definisce il prezzo** — lo fa Agente 5.
 
 **Decision matrix**:
 
-| Condizione | Peso |
-|-----------|------|
-| Richiede sopralluogo | → PREVENTIVO (blocco) |
-| Prezzo altamente variabile (> 3x) | → PREVENTIVO (blocco) |
-| Richiede calcoli strutturali completi | → PREVENTIVO (blocco) |
-| Complessità = ALTA | → PREVENTIVO |
-| Documenti base insufficienti | → PREVENTIVO |
-| Deliverable è una consulenza/parere/verifica documentale | → IMMEDIATO |
-| Complessità = BASSA o MEDIA + no sopralluogo | → IMMEDIATO |
-| Urgenza = urgente | → IMMEDIATO prioritario |
+| Condizione | Classificazione |
+|-----------|----------------|
+| Richiede sopralluogo fisico | → `COMPLESSO` (blocco duro) |
+| Richiede calcoli strutturali completi o modello FEM | → `COMPLESSO` (blocco duro) |
+| Complessità = ALTA o normativa eccezionale | → `COMPLESSO` |
+| Documenti insufficienti per qualsiasi analisi | → `COMPLESSO` |
+| Deliverable è informativo/orientativo, no firma | → `PLATFORM` |
+| Deliverable richiede responsabilità professionale o firma | → `INGEGNERE` |
+| Urgenza = urgente + no sopralluogo | → `INGEGNERE` o `PLATFORM` prioritario |
 
-**Output**: `{ routing: "IMMEDIATO" | "PREVENTIVO", motivo, servizio_suggerito_id? }`
+**Output**: `{ tipo: "PLATFORM" | "INGEGNERE" | "COMPLESSO", motivo, catalog_candidati: string[] }`
 
----
-
-### Agente 4 — Venditore Immediato
-
-**Ruolo**: presentare le consulenze acquistabili subito, incassare con Stripe.
-
-Le consulenze si dividono in **due tipi di erogazione**:
-
-#### Tipo A — Generata dalla Piattaforma (`erogazione: PLATFORM`)
-Il documento è prodotto automaticamente dall'AI dopo il pagamento, senza intervento del Titolare.
-Nessuna firma professionale → **contenuto informativo/orientativo**, non costituisce parere professionale.
-
-```
-Cliente paga → Webhook Stripe → AI genera documento → Cliente scarica subito
-                                      ↓
-                              Log AI (POP-AI-01)
-                              Notifica Titolare (solo monitoraggio)
-```
-
-#### Tipo B — Firmata Digitalmente dal Titolare (`erogazione: INGEGNERE`)
-Il documento è prodotto e **firmato digitalmente dall'Ing. Romano**.
-Costituisce atto professionale con responsabilità deontologica e legale.
-
-```
-Cliente paga → Webhook Stripe → Crea incarico CONSULENZA → Notifica Titolare (SLA attivo)
-                                                                    ↓
-                                                  Titolare redige + firma digitalmente
-                                                                    ↓
-                                                  Carica documento nell'area cliente
-                                                                    ↓
-                                                  Committente scarica + email conferma
-```
-
-**Flusso comune**:
-1. Mostra 1-3 consulenze pertinenti (dal catalogo), con badge **"Immediata"** o **"Firmata dall'Ingegnere"**
-2. Mostra prezzo fisso, SLA, cosa include
-3. Committente paga online (Stripe Checkout)
-4. Webhook → branch sul `erogazione_tipo`
+> Nota: `catalog_candidati` è la lista di codici consulenza potenzialmente applicabili — Agente 5 li valuterà e sceglierà.
 
 ---
 
-### Agente 5 — Preventivatore
+### Agente 5 — Pricer / Preventivatore
 
-**Ruolo**: raccogliere dati sufficienti per produrre un preventivo personalizzato.
+**Ruolo**: motore di pricing per **tutti e tre i percorsi** (PLATFORM, INGEGNERE, COMPLESSO).
+Riceve il BRIEF + QUADRO NORMATIVO + classificazione di Agente 3 e definisce il prezzo finale.
 
-**Flusso**:
-1. Informa il cliente: *"Il tuo caso richiede una valutazione personalizzata"*
-2. Raccoglie dati aggiuntivi: indirizzo preciso, recapito telefonico, disponibilità sopralluogo
-3. Chiede upload documenti utili (planimetrie, relazioni, foto)
-4. Crea `lead_preventivo` nel DB con tutto il BRIEF + documenti
-5. Notifica al Titolare (email + dashboard): nuovo lead da seguire
-6. Il Titolare produce il preventivo e lo invia al cliente via piattaforma
+#### Branch PLATFORM e INGEGNERE — Calcolo Prezzo Immediato
+
+1. Seleziona il catalog item più appropriato tra i `catalog_candidati`
+2. Applica gli **adeguamenti di prezzo**:
+
+| Fattore | Effetto sul prezzo base |
+|---------|------------------------|
+| Urgenza (< 48h) | +25% |
+| Documenti da analizzare > 50 pagine | +20% |
+| Più normative intersecanti (es. sismica + antincendio) | +15% |
+| Zona sismica 1 o vincolo paesaggistico | +10% |
+| Committente azienda/ente (vs privato) | +10% |
+| Caso standard, nessuna complessità aggiuntiva | 0% |
+
+3. Applica eventuale **sconto first-time** (prima consulenza: -10%, configurabile)
+4. Produce l'**offerta finale** da mostrare al cliente
+
+**Output per PLATFORM/INGEGNERE**:
+```json
+{
+  "tipo_erogazione": "INGEGNERE",
+  "catalog_id": "CONS-PAR-TECNICO",
+  "prezzo_base_centesimi": 22000,
+  "adeguamenti": [
+    { "motivo": "urgenza < 48h", "percentuale": 25 },
+    { "motivo": "zona sismica 1", "percentuale": 10 }
+  ],
+  "prezzo_finale_centesimi": 29700,
+  "sla_ore": 48,
+  "motivazione_cliente": "Il tuo caso richiede un'analisi urgente in zona ad alta sismicità."
+}
+```
+
+#### Branch COMPLESSO — Generazione Lead Preventivo
+
+1. Comunica al cliente: *"Il tuo caso richiede una valutazione personalizzata"*
+2. Raccoglie dati aggiuntivi: indirizzo preciso, telefono, disponibilità sopralluogo
+3. Chiede upload documenti (planimetrie, relazioni, foto)
+4. Stima una **forchetta orientativa di prezzo** basata su bundle analoghi del catalogo
+5. Crea `lead_preventivi` nel DB con BRIEF + QUADRO NORMATIVO + documenti + forchetta
+6. Notifica al Titolare (email + dashboard): nuovo lead da seguire
+7. Il Titolare produce il preventivo personalizzato e lo invia via piattaforma
+
+**Output per COMPLESSO**:
+```json
+{
+  "tipo_erogazione": "PREVENTIVO",
+  "forchetta_min_centesimi": 150000,
+  "forchetta_max_centesimi": 350000,
+  "bundle_analogo": "BDL-VULN-SISMICA",
+  "motivazione_cliente": "Questo tipo di incarico richiede un sopralluogo e calcoli strutturali approfonditi.",
+  "lead_id": 42
+}
+```
+
+---
+
+### Agente 4A — Venditore Platform
+
+**Ruolo**: presentare l'offerta calcolata da Agente 5 per consulenze `PLATFORM`, incassare con Stripe.
+
+```
+Agente 5 → offerta finale
+     ↓
+Agente 4A mostra: nome, cosa include, prezzo, "Documento pronto in pochi minuti"
+     ↓
+Cliente paga (Stripe Checkout)
+     ↓
+Webhook Stripe → AI genera documento con il BRIEF come contesto (log POP-AI-01)
+     ↓
+Cliente scarica nell'area committente — Titolare riceve notifica di monitoraggio
+```
+
+---
+
+### Agente 4B — Venditore Ingegnere
+
+**Ruolo**: presentare l'offerta calcolata da Agente 5 per consulenze `INGEGNERE`, incassare con Stripe.
+
+```
+Agente 5 → offerta finale
+     ↓
+Agente 4B mostra: nome, cosa include, prezzo, SLA, badge "Firmato dall'Ing. Romano"
+     ↓
+Cliente paga (Stripe Checkout)
+     ↓
+Webhook Stripe → crea incarico tipo CONSULENZA + utente COMMITTENTE + SLA attivo
+     ↓
+Titolare: notifica urgente → redige + firma digitale (eIDAS/CAD)
+     ↓
+Titolare carica documento → visibile_cliente = true → email conferma al cliente
+```
 
 ---
 
@@ -1209,10 +1270,28 @@ CREATE TABLE lead_preventivi (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Offerte calcolate da Agente 5 (una per sessione, prima del pagamento)
+CREATE TABLE offerte_calcolate (
+    id SERIAL PRIMARY KEY,
+    sessione_id INTEGER REFERENCES sessioni_quiz(id),
+    tipo_erogazione VARCHAR(20) NOT NULL CHECK (tipo_erogazione IN ('PLATFORM', 'INGEGNERE', 'PREVENTIVO')),
+    catalog_id INTEGER REFERENCES consulenze_catalogo(id),   -- NULL se PREVENTIVO
+    prezzo_base_centesimi INTEGER,
+    adeguamenti JSONB,         -- array [{motivo, percentuale}]
+    prezzo_finale_centesimi INTEGER,
+    sconto_centesimi INTEGER DEFAULT 0,
+    forchetta_min_centesimi INTEGER,   -- solo per PREVENTIVO
+    forchetta_max_centesimi INTEGER,   -- solo per PREVENTIVO
+    motivazione_cliente TEXT,
+    accettata BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Incarichi tipo CONSULENZA (collegati alle vendite immediate)
 ALTER TABLE incarichi ADD COLUMN tipo VARCHAR(20) DEFAULT 'progetto'
     CHECK (tipo IN ('progetto', 'consulenza', 'preventivo'));
 ALTER TABLE incarichi ADD COLUMN consulenza_id INTEGER REFERENCES consulenze_catalogo(id);
+ALTER TABLE incarichi ADD COLUMN offerta_id INTEGER REFERENCES offerte_calcolate(id);
 ALTER TABLE incarichi ADD COLUMN sla_scadenza TIMESTAMP;
 ALTER TABLE incarichi ADD COLUMN sessione_quiz_id INTEGER REFERENCES sessioni_quiz(id);
 ```
@@ -1235,7 +1314,8 @@ app/
     ├── sportello/
     │   ├── sessione/route.ts     ← Crea/aggiorna sessione agentica
     │   ├── analisi/route.ts      ← Agente 2: analisi normativa (POST brief → quadro)
-    │   ├── routing/route.ts      ← Agente 3: classifier (POST brief+normativa → routing)
+    │   ├── routing/route.ts      ← Agente 3: classifier (POST brief+normativa → tipo)
+    │   ├── pricing/route.ts      ← Agente 5: calcola prezzo (POST brief+tipo → offerta)
     │   ├── consulenze/route.ts   ← GET lista consulenze pertinenti per brief
     │   └── lead/route.ts         ← POST salva lead preventivo
     └── ...
