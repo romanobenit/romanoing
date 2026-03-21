@@ -334,6 +334,92 @@ function AIChatWidget({ onProfileUpdate, onMsgCountUpdate }: AIChatWidgetProps) 
   );
 }
 
+// ─── Mappa immobile ───────────────────────────────────────────────────────────
+function MapPanel({ ubicazione }: { ubicazione?: string }) {
+  const [embedUrl, setEmbedUrl] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [label, setLabel] = useState<string>("");
+
+  useEffect(() => {
+    if (!ubicazione) { setEmbedUrl(null); setLabel(""); return; }
+    setLoading(true);
+    setLabel(ubicazione);
+    const query = encodeURIComponent(`${ubicazione}, Italia`);
+    fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1`, {
+      headers: { "Accept-Language": "it" },
+    })
+      .then(r => r.json())
+      .then((data: { lat: string; lon: string }[]) => {
+        if (data && data.length > 0) {
+          const lat = parseFloat(data[0].lat);
+          const lon = parseFloat(data[0].lon);
+          const delta = 0.03;
+          const bbox = `${lon - delta},${lat - delta},${lon + delta},${lat + delta}`;
+          setEmbedUrl(
+            `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat},${lon}`
+          );
+        } else {
+          setEmbedUrl(null);
+        }
+      })
+      .catch(() => setEmbedUrl(null))
+      .finally(() => setLoading(false));
+  }, [ubicazione]);
+
+  return (
+    <div className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
+        <div className="flex items-center gap-2">
+          <MapPin className="w-4 h-4 text-blue-400" />
+          <span className="text-sm font-semibold text-white">Localizzazione immobile</span>
+        </div>
+        {label && (
+          <span className="text-xs text-slate-400 truncate max-w-[120px]">{label}</span>
+        )}
+      </div>
+
+      <div className="relative" style={{ height: 220 }}>
+        {!ubicazione && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-slate-600">
+            <MapPin className="w-8 h-8 opacity-30" />
+            <p className="text-xs">L&apos;ubicazione apparirà qui</p>
+            <p className="text-xs opacity-60">Menziona una città in chat</p>
+          </div>
+        )}
+        {ubicazione && loading && (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-500">
+            <div className="flex gap-1">
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+              <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+            </div>
+          </div>
+        )}
+        {embedUrl && !loading && (
+          <iframe
+            src={embedUrl}
+            className="w-full h-full border-0"
+            title="Localizzazione immobile"
+            loading="lazy"
+            referrerPolicy="no-referrer"
+          />
+        )}
+        {ubicazione && !loading && !embedUrl && (
+          <div className="absolute inset-0 flex items-center justify-center text-slate-500 text-xs">
+            Posizione non trovata per &quot;{ubicazione}&quot;
+          </div>
+        )}
+      </div>
+
+      <div className="px-4 py-2 border-t border-slate-800">
+        <p className="text-xs text-slate-600 text-center">
+          Mappa © <a href="https://www.openstreetmap.org" target="_blank" rel="noopener noreferrer" className="hover:text-slate-400">OpenStreetMap</a> contributors
+        </p>
+      </div>
+    </div>
+  );
+}
+
 // ─── Pagina principale ────────────────────────────────────────────────────────
 export default function HomePage() {
   const [profile, setProfile] = useState<TechProfile>({});
@@ -404,9 +490,10 @@ export default function HomePage() {
             <AIChatWidget onProfileUpdate={handleProfileUpdate} onMsgCountUpdate={handleMsgCountUpdate} />
           </div>
 
-          {/* Scheda tecnica */}
-          <div className="lg:col-span-1">
+          {/* Scheda tecnica + mappa */}
+          <div className="lg:col-span-1 flex flex-col gap-4">
             <SchedaTecnica profile={profile} msgCount={msgCount} />
+            <MapPanel ubicazione={profile.ubicazione} />
           </div>
 
         </div>
