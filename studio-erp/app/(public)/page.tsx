@@ -216,13 +216,6 @@ export default function HomePage() {
 
           {/* Testo hero */}
           <div>
-            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
-              Consulenza tecnica avanzata.{" "}
-              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">
-                Ogni processo, ogni decisione.
-              </span>
-            </h1>
-
             <p className="text-slate-400 text-lg mb-6 leading-relaxed">
               Lo studio opera in linea con le best practices ISO 9001 · ISO 27001 · ISO 42001.
               Il tuo progetto è gestito con rigore, trasparenza e sicurezza delle informazioni.
