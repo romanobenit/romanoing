@@ -1127,6 +1127,7 @@ Floor assoluto **€300**. Il prezzo si calcola moltiplicando il prezzo IMMEDIAT
 | Bassa — 1 normativa, caso standard | floor | €300 |
 | Media — 2 normative o casistica variabile o docs da leggere | €150 × 3 | €450 |
 | Alta — 3+ normative intersecanti o ambiguità interpretativa rilevante | €150 × 4 | €600 |
+| Molto Alta — casi complessi con più discipline, documenti estesi, giudizi tecnici articolati | base fissa | €1.300 |
 | Estrema — perizie asseverate, contenziosi, casi multidisciplinari complessi | €150 × 13 | €1.950 |
 
 **Step 2 — Moltiplicatori compositi (si applicano in cascata sul prezzo base, nell'ordine)**:
