@@ -950,7 +950,7 @@ VISITATORE ARRIVA SU www.romanoing.com
 │  • Calcola il prezzo finale (template base + adeguamenti)                     │
 │  • Per ogni caso risolvibile, presenta SEMPRE fino a 3 opzioni:               │
 │      opzione 1: PLATFORM (AI automatica, istantanea)                          │
-│      opzione 2: IMMEDIATA (ing. scrive senza firma, rapida, economica)        │
+│      opzione 2: IMMEDIATA (AI approfondita, istantanea, senza firma)          │
 │      opzione 3: INGEGNERE (ing. redige + firma digitale, formale)             │
 │  • Per casi COMPLESSI: genera lead preventivo                                 │
 └───────────────────────────────────────────────────────────────────────────────┘
@@ -960,8 +960,8 @@ VISITATORE ARRIVA SU www.romanoing.com
 │ AGENTE   │  │  AGENTE 4B  │  │  AGENTE 4C   │  │  LEAD PREVENTIVO     │
 │  4A      │  │  VENDITORE  │  │  VENDITORE   │  │  → Titolare          │
 │ PLATFORM │  │  IMMEDIATA  │  │  INGEGNERE   │  │  (revisione manuale) │
-│ AI doc   │  │  no firma   │  │  firma dig.  │  └──────────────────────┘
-│ istant.  │  │  rapida     │  │  SLA 24-72h  │
+│ AI doc   │  │  AI analisi │  │  firma dig.  │  └──────────────────────┘
+│ istant.  │  │  istant.    │  │  SLA 24-72h  │
 └──────────┘  └─────────────┘  └──────────────┘
 ```
 
@@ -1078,7 +1078,7 @@ Classifica il caso in uno dei quattro percorsi; **non limita il tipo di domanda 
 | Domanda puramente informativa, guide, screening | → `PLATFORM` candidato |
 | Risposta tecnica richiede giudizio professionale ma non firma formale | → `IMMEDIATA` candidato |
 | Cliente esplicita che vuole documento con valore legale/professionale | → `INGEGNERE` candidato |
-| Urgenza estrema (< 24h) e no firma necessaria | → `IMMEDIATA` prioritario |
+| Urgenza estrema e no firma necessaria | → `IMMEDIATA` prioritario (sempre istantaneo) |
 
 > Il Classificatore non esclude domande tecniche fuori catalogo.
 > Qualsiasi domanda risolvibile da remoto passa ad Agente 5, che costruisce il servizio ad hoc.
@@ -1110,7 +1110,7 @@ Per qualsiasi domanda tecnica risolvibile da remoto, **compone un servizio su mi
 | Tipo | Fascia base | Logica |
 |------|------------|--------|
 | PLATFORM | €59–149 | Documento AI senza giudizio professionale |
-| IMMEDIATA | €120–400 | Parere tecnico scritto dall'ingegnere, senza firma formale |
+| IMMEDIATA | €120–400 | Analisi tecnica AI approfondita, formato relazione, senza firma |
 | INGEGNERE | €200–700 | Atto professionale con firma digitale qualificata |
 
 **Step 2 — Adeguamenti di prezzo**:
@@ -1132,14 +1132,14 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
 ```
 ┌─────────────────────┐  ┌─────────────────────────┐  ┌──────────────────────────┐
 │  OPZIONE 1          │  │  OPZIONE 2               │  │  OPZIONE 3               │
-│  Documento          │  │  Parere tecnico          │  │  Parere tecnico          │
-│  Informativo AI     │  │  dell'Ingegnere          │  │  Firmato Digitalmente    │
+│  Documento          │  │  Analisi tecnica AI      │  │  Parere tecnico          │
+│  Informativo AI     │  │  approfondita            │  │  Firmato Digitalmente    │
 │                     │  │  (senza firma formale)   │  │  dall'Ing. Romano        │
-│  Pronto in minuti   │  │  Pronto in 24h           │  │  Pronto in 48h           │
+│  Pronto in minuti   │  │  Pronto in minuti        │  │  Pronto in 48h           │
 │                     │  │                          │  │                          │
 │  €XX                │  │  €YY                     │  │  €ZZ                     │
 │                     │  │                          │  │                          │
-│  ⚠️ Orientativo,    │  │  ℹ️ Parere professionale │  │  ✅ Atto professionale   │
+│  ⚠️ Orientativo,    │  │  ℹ️ Analisi AI su misura │  │  ✅ Atto professionale   │
 │  non professionale  │  │  non per uso formale     │  │  con valore legale       │
 └─────────────────────┘  └─────────────────────────┘  └──────────────────────────┘
 ```
@@ -1165,14 +1165,14 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
     },
     {
       "tipo_erogazione": "IMMEDIATA",
-      "titolo_servizio": "Parere tecnico: tettoia in legno a Palermo",
-      "descrizione_deliverable": "Parere scritto dall'Ing. Romano che analizza il tuo caso specifico rispetto a DPR 380/2001 e PRG di Palermo: se serve titolo, quale, rischi di abuso e come procedere.",
+      "titolo_servizio": "Analisi tecnica approfondita: tettoia in legno a Palermo",
+      "descrizione_deliverable": "Analisi tecnica AI approfondita del tuo caso specifico rispetto a DPR 380/2001 e PRG di Palermo: valutazione normativa, se serve titolo, quale, criticità e raccomandazioni operative. Strutturata in formato relazione tecnica.",
       "template_riferimento": null,
       "prezzo_base_centesimi": 16000,
       "adeguamenti": [],
       "prezzo_finale_centesimi": 16000,
-      "sla_ore": 24,
-      "avviso": "Parere professionale non asseverato, non utilizzabile in procedimenti formali."
+      "sla_ore": null,
+      "avviso": "Analisi tecnica generata da AI. Non costituisce parere professionale firmato. Non utilizzabile in procedimenti formali."
     },
     {
       "tipo_erogazione": "INGEGNERE",
@@ -1217,21 +1217,20 @@ Cliente scarica — Titolare riceve notifica monitoraggio
 
 ---
 
-### Agente 4B — Venditore Immediata (senza firma)
+### Agente 4B — Venditore Immediata (AI approfondita, senza firma)
 
 ```
 Agente 5 → opzione IMMEDIATA scelta dal cliente
      ↓
-Mostra titolo, deliverable esatto, prezzo, SLA 24h
-Badge: ℹ️ "Parere professionale — non asseverato"
+Mostra titolo, deliverable esatto, prezzo, "Analisi pronta in pochi minuti"
+Badge: ℹ️ "Analisi tecnica AI approfondita — non parere professionale firmato"
      ↓
 Cliente paga (Stripe Checkout)
      ↓
-Webhook → crea incarico CONSULENZA tipo IMMEDIATA + utente COMMITTENTE + SLA 24h
+Webhook → AI genera documento usando BRIEF + QUADRO NORMATIVO + prompt approfondito
+Log POP-AI-01 obbligatorio
      ↓
-Titolare: notifica → legge BRIEF → scrive parere tecnico (senza firma digitale formale)
-     ↓
-Titolare carica documento → visibile_cliente = true → email al cliente
+Cliente scarica — Titolare riceve notifica monitoraggio
 ```
 
 ---
@@ -1279,23 +1278,24 @@ Titolare carica → visibile_cliente = true → email conferma
 
 ---
 
-### Tipo B — Template Immediata (parere ingegnere, senza firma formale)
+### Tipo B — Template Immediata (analisi tecnica AI approfondita, senza firma)
 
-> Parere tecnico scritto dall'Ing. Romano, consegnato entro 24h.
-> **Avviso**: *"Parere professionale non asseverato. Non utilizzabile in procedimenti formali."*
+> Analisi tecnica approfondita generata da AI subito dopo il pagamento.
+> Strutturata in formato relazione tecnica (oggetto, normativa, analisi, criticità, raccomandazioni).
+> **Avviso**: *"Analisi tecnica generata da AI. Non costituisce parere professionale firmato. Non utilizzabile in procedimenti formali."*
 
 | Codice | Nome template | Prezzo base | SLA |
 |--------|--------------|-------------|-----|
-| `TMPL-IMM-PARERE-GEN` | Parere tecnico generico su caso descritto | €150 | 24h |
-| `TMPL-IMM-TITOLO` | Parere titolo abilitativo per intervento specifico | €160 | 24h |
-| `TMPL-IMM-BONUS` | Parere ammissibilità tecnica bonus edilizi | €180 | 24h |
-| `TMPL-IMM-AGIB` | Parere normativo agibilità caso specifico | €170 | 24h |
-| `TMPL-IMM-VVF` | Parere antincendio preventivo | €200 | 24h |
-| `TMPL-IMM-SISMICA` | Parere vulnerabilità sismica orientativo | €220 | 24h |
-| `TMPL-IMM-COMPUTO` | Parere congruità computo metrico | €240 | 24h |
-| `TMPL-IMM-CONFURB` | Parere conformità urbanistica documentale | €250 | 24h |
-| `TMPL-IMM-CONTESTAZ` | Parere risposta tecnica a contestazione | €280 | 24h |
-| `TMPL-IMM-LIBERO` | Parere tecnico su quesito libero | €140 | 24h |
+| `TMPL-IMM-PARERE-GEN` | Analisi tecnica approfondita su caso descritto | €150 | Immediato |
+| `TMPL-IMM-TITOLO` | Analisi titolo abilitativo per intervento specifico | €160 | Immediato |
+| `TMPL-IMM-BONUS` | Analisi ammissibilità tecnica bonus edilizi | €180 | Immediato |
+| `TMPL-IMM-AGIB` | Analisi normativa agibilità caso specifico | €170 | Immediato |
+| `TMPL-IMM-VVF` | Analisi antincendio preventivo | €200 | Immediato |
+| `TMPL-IMM-SISMICA` | Analisi vulnerabilità sismica orientativa | €220 | Immediato |
+| `TMPL-IMM-COMPUTO` | Analisi congruità computo metrico | €240 | Immediato |
+| `TMPL-IMM-CONFURB` | Analisi conformità urbanistica documentale | €250 | Immediato |
+| `TMPL-IMM-CONTESTAZ` | Analisi risposta tecnica a contestazione | €280 | Immediato |
+| `TMPL-IMM-LIBERO` | Analisi tecnica su quesito libero | €140 | Immediato |
 
 ---
 
@@ -1352,11 +1352,11 @@ CREATE TABLE consulenze_catalogo (
         CHECK (erogazione_tipo IN ('PLATFORM', 'IMMEDIATA', 'INGEGNERE')),
     avviso_legale TEXT,                   -- mostrato al cliente per tipo PLATFORM
     prezzo_iva_esclusa INTEGER NOT NULL,  -- in centesimi
-    sla_ore INTEGER,                      -- NULL = immediato (PLATFORM); ore per INGEGNERE
+    sla_ore INTEGER,                      -- NULL = immediato (PLATFORM e IMMEDIATA); ore per INGEGNERE
     attivo BOOLEAN DEFAULT true,
     normative_rilevanti TEXT[],           -- es. {'NTC 2018', 'DPR 380/2001'}
     tag TEXT[],                           -- es. {'sismica', 'edilizia', 'urgente'}
-    prompt_ai TEXT,                       -- prompt usato per generare il doc (solo PLATFORM)
+    prompt_ai TEXT,                       -- prompt usato per generare il doc (PLATFORM e IMMEDIATA; approfondito per IMMEDIATA)
     created_at TIMESTAMP DEFAULT NOW()
 );
 
