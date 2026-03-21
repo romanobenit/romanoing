@@ -1118,16 +1118,15 @@ Posizionamento nella fascia in base alla complessità valutata:
 | Media — 2 normative o casistica variabile o documenti da leggere | 50–65% della fascia |
 | Alta — 3+ normative intersecanti o ambiguità interpretativa rilevante | 75–90% della fascia |
 
-**INGEGNERE — moltiplicatore fisso sul prezzo base (nessun tetto)**:
+**INGEGNERE — moltiplicatore applicato su IMMEDIATA (B), nessun tetto**:
 
-Il prezzo base è **€300** (floor assoluto). Nessun tetto massimo.
-Agente 5 applica un moltiplicatore di complessità fisso:
+Floor assoluto **€300**. Il prezzo si calcola moltiplicando il prezzo IMMEDIATA (€150) per la complessità:
 
-| Complessità caso | Moltiplicatore | Prezzo base risultante |
-|-----------------|---------------|----------------------|
-| Bassa — 1 normativa, caso standard | ×1 | €300 |
-| Media — 2 normative o docs da leggere | ×3 | €900 |
-| Alta — 3+ normative intersecanti o ambiguità rilevante | ×4 | €1.200 |
+| Complessità caso | Formula | Prezzo risultante |
+|-----------------|---------|------------------|
+| Bassa — 1 normativa, caso standard | floor | €300 |
+| Media — 2 normative o docs da leggere | €150 × 3 | €450 |
+| Alta — 3+ normative intersecanti o ambiguità rilevante | €150 × 4 | €600 |
 
 **Step 2 — Moltiplicatori compositi (si applicano in cascata sul prezzo base, nell'ordine)**:
 
@@ -1199,9 +1198,9 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
       "descrizione_deliverable": "Relazione tecnica firmata digitalmente dall'Ing. Romano (eIDAS) con analisi normativa completa, riferimenti al PRG, conclusioni e raccomandazioni operative. Utilizzabile per pratiche edilizie.",
       "complessita_stimata": "media",
       "moltiplicatore_complessita": 3,
-      "prezzo_base_centesimi": 90000,
+      "prezzo_base_centesimi": 45000,
       "adeguamenti": [],
-      "prezzo_finale_centesimi": 90000,
+      "prezzo_finale_centesimi": 45000,
       "sla_ore": 48,
       "avviso": null
     }
