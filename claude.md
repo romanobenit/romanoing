@@ -901,6 +901,321 @@ const milestone = await prisma.milestone.findFirst({
 
 ---
 
+## 🤖 Sistema Agentico — Sportello Virtuale Committente
+
+> Obiettivo: accogliere il visitatore su www.romanoing.com, aiutarlo a capire **cosa vuole**, verificare **cosa dice la normativa**, e decidere se la risposta può essere venduta **subito online** oppure richiede un **preventivo personalizzato**.
+
+---
+
+### Visione d'insieme
+
+```
+VISITATORE ARRIVA SU www.romanoing.com
+            │
+            ▼
+┌───────────────────────────────────┐
+│  AGENTE 0 — RECEPTIONIST          │  Orchestratore centrale
+│  "Benvenuto allo Studio Ing.      │  Raccoglie identità base
+│   Romano. Sono qui per aiutarti." │  Smista agli agenti specializzati
+└───────────────────────────────────┘
+            │
+            ▼
+┌───────────────────────────────────┐
+│  AGENTE 1 — PROBLEM DISCOVERY     │  Intervista guidata (Socratic)
+│  "Raccontami la tua situazione."  │  Produce BRIEF strutturato (JSON)
+└───────────────────────────────────┘
+            │
+            ▼
+┌───────────────────────────────────┐
+│  AGENTE 2 — NORMATIVISTA          │  Analisi normativa automatica
+│  "Ecco cosa dice la legge         │  NTC 2018, DPR 380/01, D.Lgs 81/08
+│   nel tuo caso specifico."        │  Produce QUADRO NORMATIVO + LIVELLO
+└───────────────────────────────────┘
+            │
+            ▼
+┌───────────────────────────────────┐
+│  AGENTE 3 — ROUTER / CLASSIFIER   │  Decision matrix
+│  "Questa richiesta si risolve     │  Soglia: complessità + sopralluogo
+│   subito o serve un preventivo?"  │  + variabilità prezzo
+└───────────────────────────────────┘
+         │            │
+         ▼            ▼
+┌────────────┐  ┌───────────────────┐
+│  AGENTE 4  │  │    AGENTE 5       │
+│  VENDITORE │  │  PREVENTIVATORE   │
+│  IMMEDIATO │  │                   │
+│  Stripe →  │  │  → Titolare       │
+│  Pay now   │  │  (revisione manu) │
+└────────────┘  └───────────────────┘
+```
+
+---
+
+### Agente 0 — Receptionist (Orchestratore)
+
+**Ruolo**: primo contatto, routing, persistenza sessione.
+
+**Input**: URL di atterraggio, eventuali UTM param.
+
+**Azioni**:
+1. Saluta e presenta lo studio in 2 righe
+2. Raccoglie: nome, email, tipo soggetto (`PRIVATO` | `AZIENDA` | `CONDOMINIO` | `ENTE_PUBBLICO`)
+3. Pone la domanda aperta iniziale: *"Descrivi brevemente il tuo problema o obiettivo"*
+4. Inizia sessione nel DB (`sessioni_quiz`) e chiama Agente 1
+
+**Output**: `{ soggetto_tipo, email, nome, problema_iniziale }`
+
+---
+
+### Agente 1 — Problem Discovery
+
+**Ruolo**: sviscerare il problema tecnico con domande guidate.
+
+**Tecnica**: albero decisionale a domande condizionali (max 7 scambi).
+
+**Domande strutturate per topic**:
+
+| Topic | Domanda tipo |
+|-------|-------------|
+| Tipo immobile | Residenziale / Commerciale / Industriale / Infrastruttura? |
+| Localizzazione | Comune e provincia (per zona sismica, PRG) |
+| Stato attuale | Esistente / Da costruire / In costruzione |
+| Azione desiderata | Ristrutturare / Verificare / Certificare / Periziare / Consiglio tecnico |
+| Urgenza | Nessuna / Entro 30gg / Urgente (< 7gg) |
+| Documenti disponibili | Planimetrie, relazioni, visure catastali, foto |
+| Budget orientativo | Opzionale, non bloccante |
+
+**Output JSON (BRIEF)**:
+```json
+{
+  "soggetto": "PRIVATO",
+  "immobile_tipo": "residenziale",
+  "comune": "Palermo",
+  "zona_sismica": "2",
+  "azione": "verifica_sismica",
+  "urgenza": "normale",
+  "documenti_disponibili": ["planimetrie", "relazione_geologica"],
+  "note_libere": "Voglio sapere se il mio edificio è sicuro dopo il terremoto"
+}
+```
+
+---
+
+### Agente 2 — Normativista
+
+**Ruolo**: analisi normativa automatica basata sul BRIEF.
+
+**Knowledge base interna** (statica, aggiornata manualmente):
+
+| Ambito | Normativa |
+|--------|-----------|
+| Strutture/Sismica | NTC 2018, Circ. Min. 7/2019 |
+| Edilizia | DPR 380/2001, L.R. Sicilia 16/2016 |
+| Prevenzione Incendi | D.Lgs 139/2006, D.M. 3/8/2015, Codice PI |
+| Sicurezza Cantiere | D.Lgs 81/2008 Titolo IV |
+| Energia | D.Lgs 192/2005, DM 26/06/2015 |
+| Accessibilità | DM 236/1989, DPR 503/1996 |
+| Agibilità | DPR 380/2001 art. 24-25 |
+| Catasto | R.D. 1572/1931, Circ. 2/2016 Agenzia Entrate |
+
+**Output — QUADRO NORMATIVO**:
+```json
+{
+  "normative_applicabili": ["NTC 2018", "Circ. 7/2019"],
+  "titolo_abilitativo": "non_necessario",
+  "ente_competente": "Genio Civile",
+  "deposito_obbligatorio": true,
+  "risultato_atteso": "Relazione di valutazione vulnerabilità sismica (Livello 1)",
+  "complessita": "MEDIA",
+  "richiede_sopralluogo": false,
+  "richiede_calcoli_strutturali": false,
+  "livello_urgenza_normativa": "nessuna_scadenza"
+}
+```
+
+---
+
+### Agente 3 — Router / Classifier
+
+**Ruolo**: decidere se la risposta è IMMEDIATA o richiede PREVENTIVO.
+
+**Decision matrix**:
+
+| Condizione | Peso |
+|-----------|------|
+| Richiede sopralluogo | → PREVENTIVO (blocco) |
+| Prezzo altamente variabile (> 3x) | → PREVENTIVO (blocco) |
+| Richiede calcoli strutturali completi | → PREVENTIVO (blocco) |
+| Complessità = ALTA | → PREVENTIVO |
+| Documenti base insufficienti | → PREVENTIVO |
+| Deliverable è una consulenza/parere/verifica documentale | → IMMEDIATO |
+| Complessità = BASSA o MEDIA + no sopralluogo | → IMMEDIATO |
+| Urgenza = urgente | → IMMEDIATO prioritario |
+
+**Output**: `{ routing: "IMMEDIATO" | "PREVENTIVO", motivo, servizio_suggerito_id? }`
+
+---
+
+### Agente 4 — Venditore Immediato
+
+**Ruolo**: presentare le consulenze acquistabili subito, incassare con Stripe.
+
+**Flusso**:
+1. Mostra 1-3 consulenze pertinenti (dal catalogo sotto)
+2. Mostra prezzo fisso, tempi di consegna, cosa include
+3. Committente paga online (Stripe Checkout)
+4. Webhook Stripe → crea incarico tipo `CONSULENZA` + utente COMMITTENTE
+5. Notifica al Titolare: nuovo incarico da evadere entro SLA
+6. Titolare eroga la consulenza e carica il documento nell'area cliente
+7. Committente scarica il deliverable
+
+---
+
+### Agente 5 — Preventivatore
+
+**Ruolo**: raccogliere dati sufficienti per produrre un preventivo personalizzato.
+
+**Flusso**:
+1. Informa il cliente: *"Il tuo caso richiede una valutazione personalizzata"*
+2. Raccoglie dati aggiuntivi: indirizzo preciso, recapito telefonico, disponibilità sopralluogo
+3. Chiede upload documenti utili (planimetrie, relazioni, foto)
+4. Crea `lead_preventivo` nel DB con tutto il BRIEF + documenti
+5. Notifica al Titolare (email + dashboard): nuovo lead da seguire
+6. Il Titolare produce il preventivo e lo invia al cliente via piattaforma
+
+---
+
+## 💡 Catalogo Consulenze Immediate (Vendibili Subito Online)
+
+> Servizi a prezzo fisso, erogabili da remoto in 24-72h, senza sopralluogo.
+
+| # | Codice | Nome | Deliverable | Prezzo | SLA |
+|---|--------|------|------------|--------|-----|
+| 1 | `CONS-PAR-TECNICO` | **Parere Tecnico Preliminare** | Documento scritto con analisi fattibilità, normativa applicabile, rischi e raccomandazioni. | €180 | 48h |
+| 2 | `CONS-VERIF-BONUS` | **Verifica Ammissibilità Bonus Edilizi** | Parere scritto su Superbonus 110%, Ecobonus, Sismabonus, Bonus Ristrutturazione: se spetta, come attivarlo, massimali. | €220 | 48h |
+| 3 | `CONS-CHECKLIST-ACQ` | **Checklist Pre-Acquisto Immobile** | Report strutturato su rischi urbanistici, catastali, strutturali e impiantistici dell'immobile da acquistare (su documenti forniti). | €280 | 72h |
+| 4 | `CONS-FASC-EDILIZIO` | **Verifica Conformità Urbanistica Documentale** | Analisi documenti esistenti (planimetrie, concessioni, SCIA) per identificare difformità edilizie. | €320 | 72h |
+| 5 | `CONS-AGIB-PARERE` | **Parere Normativo Agibilità** | Analisi requisiti D.P.R. 380/2001 artt. 24-25, indicazione documenti necessari, criticità da risolvere. | €200 | 48h |
+| 6 | `CONS-SISMICA-LIVELLO1` | **Valutazione Vulnerabilità Sismica Livello 1** | Screening documentale secondo Linee Guida MIT 2011 — solo su dati forniti (non è la verifica strutturale completa). | €450 | 72h |
+| 7 | `CONS-ANTINCENDIO-PREV` | **Parere Prevenzione Incendi Preventivo** | Verifica se l'attività è soggetta a controllo VVF, categoria di rischio, procedura (SCIA/valutazione progetto), documenti necessari. | €250 | 48h |
+| 8 | `CONS-COMPUTO-REVIEW` | **Revisione Computo Metrico** | Controllo voci e prezzi di un computo metrico estimativo già redatto: verifica congruità con prezzario DEI/regionale. | €380 | 72h |
+| 9 | `CONS-CONTESTAZIONE` | **Risposta Tecnica a Contestazione** | Relazione tecnica in risposta a una contestazione/perizia di parte o a un'ingiunzione del Comune/ente. | €450 | 72h |
+| 10 | `CONS-TITOLO-EDILIZIO` | **Individuazione Titolo Abilitativo** | Parere scritto su quale titolo serve (edilizia libera / CILA / SCIA / PDC) per un intervento specifico, con rischi di abuso. | €160 | 24h |
+| 11 | `CONS-APE-REVIEW` | **Revisione APE Esistente** | Analisi critica di un APE già redatto da terzi: verifica dati inseriti, classe energetica corretta, anomalie. | €200 | 48h |
+| 12 | `CONS-PERIZIA-SEMPLICE` | **Perizia Tecnica Asseverata Semplice** | Relazione tecnica asseverata per controversie condominiali, assicurazioni, piccoli danni — su dati documentali e fotografici forniti. | €550 | 72h |
+
+> **Nota**: prezzi IVA esclusa. SLA decorre dalla ricezione di tutti i documenti necessari.
+
+---
+
+### Schema DB — Nuove Entità Agentiche
+
+```sql
+-- Sessioni del sistema agentico (una per visita)
+CREATE TABLE sessioni_quiz (
+    id SERIAL PRIMARY KEY,
+    session_token VARCHAR(64) UNIQUE NOT NULL,
+    soggetto_tipo VARCHAR(20),    -- PRIVATO | AZIENDA | CONDOMINIO | ENTE_PUBBLICO
+    nome VARCHAR(255),
+    email VARCHAR(255),
+    brief JSONB,                  -- output Agente 1
+    quadro_normativo JSONB,       -- output Agente 2
+    routing VARCHAR(20),          -- IMMEDIATO | PREVENTIVO
+    routing_motivo TEXT,
+    stato VARCHAR(30) DEFAULT 'in_corso',  -- in_corso | completato_vendita | completato_lead | abbandonato
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Catalogo consulenze immediate
+CREATE TABLE consulenze_catalogo (
+    id SERIAL PRIMARY KEY,
+    codice VARCHAR(50) UNIQUE NOT NULL,  -- es. CONS-PAR-TECNICO
+    nome VARCHAR(255) NOT NULL,
+    descrizione TEXT,
+    deliverable TEXT,                    -- cosa riceve il cliente
+    prezzo_iva_esclusa INTEGER NOT NULL, -- in centesimi
+    sla_ore INTEGER NOT NULL,            -- SLA in ore
+    attivo BOOLEAN DEFAULT true,
+    normative_rilevanti TEXT[],          -- es. {'NTC 2018', 'DPR 380/2001'}
+    tag TEXT[],                          -- es. {'sismica', 'edilizia', 'urgente'}
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Lead preventivi (output Agente 5)
+CREATE TABLE lead_preventivi (
+    id SERIAL PRIMARY KEY,
+    sessione_id INTEGER REFERENCES sessioni_quiz(id),
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    telefono VARCHAR(50),
+    brief JSONB,
+    quadro_normativo JSONB,
+    note_aggiuntive TEXT,
+    documenti_allegati JSONB,           -- array path documenti caricati
+    stato VARCHAR(30) DEFAULT 'nuovo',  -- nuovo | in_lavorazione | preventivo_inviato | convertito | perso
+    assegnato_a INTEGER REFERENCES utenti(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Incarichi tipo CONSULENZA (collegati alle vendite immediate)
+ALTER TABLE incarichi ADD COLUMN tipo VARCHAR(20) DEFAULT 'progetto'
+    CHECK (tipo IN ('progetto', 'consulenza', 'preventivo'));
+ALTER TABLE incarichi ADD COLUMN consulenza_id INTEGER REFERENCES consulenze_catalogo(id);
+ALTER TABLE incarichi ADD COLUMN sla_scadenza TIMESTAMP;
+ALTER TABLE incarichi ADD COLUMN sessione_quiz_id INTEGER REFERENCES sessioni_quiz(id);
+```
+
+---
+
+### Route Applicazione — Sportello Virtuale
+
+```
+app/
+├── (public)/
+│   ├── sportello/
+│   │   ├── page.tsx              ← Entry point: "Parla con noi"
+│   │   ├── [step]/page.tsx       ← Steps: profilo → problema → normativa → routing
+│   │   ├── acquista/[codice]/    ← Pagina prodotto consulenza + Stripe checkout
+│   │   └── preventivo/           ← Form lead + upload documenti
+│   └── ...
+│
+└── api/
+    ├── sportello/
+    │   ├── sessione/route.ts     ← Crea/aggiorna sessione agentica
+    │   ├── analisi/route.ts      ← Agente 2: analisi normativa (POST brief → quadro)
+    │   ├── routing/route.ts      ← Agente 3: classifier (POST brief+normativa → routing)
+    │   ├── consulenze/route.ts   ← GET lista consulenze pertinenti per brief
+    │   └── lead/route.ts         ← POST salva lead preventivo
+    └── ...
+```
+
+---
+
+### Integrazione con il Sistema Esistente
+
+| Evento | Azione |
+|--------|--------|
+| Consulenza acquistata (Stripe webhook) | Crea `incarico` tipo=`consulenza` + `utente COMMITTENTE` + email attivazione |
+| Lead preventivo inviato | Crea `lead_preventivi` + notifica Titolare |
+| Titolare carica deliverable consulenza | `documenti.visibile_cliente = true` + email cliente |
+| Titolare converte lead in incarico | `lead_preventivi.stato = 'convertito'` + crea incarico normale |
+| SLA scadenza vicina (< 6h) | Alert automatico al Titolare |
+
+---
+
+### Principi di Progettazione
+
+1. **Nessun login richiesto** per usare lo Sportello — il cliente inizia senza frizioni.
+2. **AI tracciata** — ogni risposta degli agenti loggata in `log_ai` (POP-AI-01).
+3. **Agenti sono prompt-chain** su Claude API — non microservizi separati. Ogni step è una chiamata con contesto accumulato.
+4. **Fallback umano sempre disponibile** — il cliente può in qualsiasi momento scegliere "preferisco parlare con il tecnico" → lead manuale.
+5. **Prezzi fissi aggiornabili** da Titolare senza deploy (tabella `consulenze_catalogo`).
+6. **SLA monitorato** — alert automatici se una consulenza è in ritardo.
+
+---
+
 ## 📋 Checklist Decisioni Tecniche Implementate
 
 - [x] **Database**: ENUM per stato_accesso_portale (disabilitato/attivo/sospeso/in_attivazione)
