@@ -4,37 +4,14 @@ import Link from "next/link";
 import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown, Send, Bot, User, ArrowRight, CheckCircle2, Shield, Award, Cpu } from "lucide-react";
+import { Send, Bot, User, CheckCircle2, Shield, Award, Cpu } from "lucide-react";
 
-// ─── Costanti ────────────────────────────────────────────────────────────────
-const SERVIZI = [
-  { nome: "Consulenza Tecnica",        icon: "💡", href: "/configuratore/consulenza" },
-  { nome: "Ristrutturazione",           icon: "🏗️", href: "/configuratore/ristrutturazione" },
-  { nome: "Due Diligence Tecnica",      icon: "🏢", href: "/configuratore/due-diligence" },
-  { nome: "Vulnerabilità Sismica",      icon: "🏛️", href: "/configuratore/sismica" },
-  { nome: "Ampliamento",                icon: "📐", href: "/configuratore/ampliamento" },
-  { nome: "Collaudo Statico",           icon: "✅", href: "/configuratore/collaudo" },
-  { nome: "Antincendio",                icon: "🔥", href: "/configuratore/antincendio" },
-  { nome: "Efficientamento Energetico", icon: "⚡", href: "/configuratore/efficientamento" },
-  { nome: "PropTech / Blockchain R&D",  icon: "🔗", href: "/configuratore/proptech-blockchain" },
-];
-
-const TICKER_ITEMS = [
-  "🏛️ Analisi sismica in corso — Napoli",
-  "🏗️ Progetto ristrutturazione — Milano",
-  "🔥 Certificazione antincendio — Roma",
-  "⚡ Audit energetico — Torino",
-  "🏢 Due diligence tecnica — Bologna",
-  "📐 Pratica ampliamento — Firenze",
-  "💡 Consulenza strutturale — Palermo",
-];
-
+// ─── ISO Standards ────────────────────────────────────────────────────────────
 const ISO_STANDARDS = [
   {
     code: "ISO 9001",
     title: "Qualità dei Processi",
     color: "from-blue-600 to-blue-800",
-    accent: "blue",
     icon: <Award className="w-8 h-8" />,
     practices: [
       "Approccio per processi documentati e misurabili",
@@ -49,7 +26,6 @@ const ISO_STANDARDS = [
     code: "ISO 27001",
     title: "Sicurezza delle Informazioni",
     color: "from-slate-700 to-slate-900",
-    accent: "slate",
     icon: <Shield className="w-8 h-8" />,
     practices: [
       "Classificazione e inventario degli asset informativi",
@@ -64,7 +40,6 @@ const ISO_STANDARDS = [
     code: "ISO 42001",
     title: "Governance dell'Intelligenza Artificiale",
     color: "from-violet-600 to-violet-900",
-    accent: "violet",
     icon: <Cpu className="w-8 h-8" />,
     practices: [
       "Trasparenza sull'utilizzo di sistemi AI (log POP-AI-01)",
@@ -97,7 +72,7 @@ function getAIResponse(msg: string): string {
   const m = msg.toLowerCase();
   if (m.includes("sismic") || m.includes("terremoto") || m.includes("struttur"))
     return AI_RESPONSES.sismica;
-  if (m.includes("ristrutt") || m.includes("ristruttur") || m.includes("bonus") || m.includes("110"))
+  if (m.includes("ristrutt") || m.includes("bonus") || m.includes("110"))
     return AI_RESPONSES.ristrutturazione;
   if (m.includes("energ") || m.includes("efficien") || m.includes("ecobonus"))
     return AI_RESPONSES.energia;
@@ -106,38 +81,6 @@ function getAIResponse(msg: string): string {
   if (m.includes("contatt") || m.includes("appuntament") || m.includes("chiamat") || m.includes("telefon"))
     return AI_RESPONSES.contatto;
   return "Ho capito. Per darti la risposta più precisa, preferisci che passi direttamente la tua richiesta all'Ing. Romano, o vuoi approfondire qui con me prima?";
-}
-
-// ─── Componente Ticker ────────────────────────────────────────────────────────
-function LiveTicker() {
-  const [idx, setIdx] = useState(0);
-  const [fade, setFade] = useState(true);
-
-  useEffect(() => {
-    const iv = setInterval(() => {
-      setFade(false);
-      setTimeout(() => {
-        setIdx((i) => (i + 1) % TICKER_ITEMS.length);
-        setFade(true);
-      }, 400);
-    }, 3000);
-    return () => clearInterval(iv);
-  }, []);
-
-  return (
-    <div className="flex items-center gap-3 text-sm text-slate-400">
-      <span className="flex items-center gap-1.5">
-        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block" />
-        <span className="text-green-400 font-semibold uppercase tracking-widest text-xs">Live</span>
-      </span>
-      <span
-        className="transition-opacity duration-300"
-        style={{ opacity: fade ? 1 : 0 }}
-      >
-        {TICKER_ITEMS[idx]}
-      </span>
-    </div>
-  );
 }
 
 // ─── Componente Chat AI ───────────────────────────────────────────────────────
@@ -243,30 +186,6 @@ function AIChatWidget() {
 
 // ─── Pagina principale ────────────────────────────────────────────────────────
 export default function HomePage() {
-  const [showNav, setShowNav] = useState(false);
-  const [counter, setCounter] = useState({ progetti: 0, anni: 0, comuni: 0 });
-
-  // Animazione contatori
-  useEffect(() => {
-    const targets = { progetti: 200, anni: 15, comuni: 47 };
-    const duration = 1800;
-    const steps = 60;
-    const interval = duration / steps;
-    let step = 0;
-    const iv = setInterval(() => {
-      step++;
-      const progress = step / steps;
-      const ease = 1 - Math.pow(1 - progress, 3);
-      setCounter({
-        progetti: Math.round(targets.progetti * ease),
-        anni:     Math.round(targets.anni * ease),
-        comuni:   Math.round(targets.comuni * ease),
-      });
-      if (step >= steps) clearInterval(iv);
-    }, interval);
-    return () => clearInterval(iv);
-  }, []);
-
   return (
     <div className="min-h-screen bg-slate-950 text-white">
 
@@ -283,42 +202,11 @@ export default function HomePage() {
             </div>
           </Link>
 
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                className="text-slate-300 hover:text-white gap-1.5"
-                onClick={() => setShowNav(!showNav)}
-              >
-                Servizi
-                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNav ? "rotate-180" : ""}`} />
-              </Button>
-              {showNav && (
-                <>
-                  <div className="fixed inset-0 z-10" onClick={() => setShowNav(false)} />
-                  <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-2 z-20">
-                    {SERVIZI.map((s, i) => (
-                      <Link
-                        key={i}
-                        href={s.href}
-                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 transition-colors text-sm"
-                        onClick={() => setShowNav(false)}
-                      >
-                        <span className="text-xl">{s.icon}</span>
-                        <span className="text-slate-200">{s.nome}</span>
-                      </Link>
-                    ))}
-                  </div>
-                </>
-              )}
-            </div>
-            <Link href="/login">
-              <Button size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white text-xs">
-                Accedi
-              </Button>
-            </Link>
-          </div>
+          <Link href="/login">
+            <Button size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white text-xs">
+              Accedi
+            </Button>
+          </Link>
         </div>
       </header>
 
@@ -328,57 +216,27 @@ export default function HomePage() {
 
           {/* Testo hero */}
           <div>
-            {/* Hook originale */}
-            <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">
-              <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">
-                ⚡ Il tuo immobile ti sta nascondendo qualcosa
-              </span>
-            </div>
-
             <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
-              Il 74% degli edifici italiani{" "}
+              Consulenza tecnica avanzata.{" "}
               <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">
-                non supererebbe
-              </span>{" "}
-              un controllo tecnico oggi.
+                Ogni processo, ogni decisione.
+              </span>
             </h1>
 
             <p className="text-slate-400 text-lg mb-6 leading-relaxed">
-              Prima ancora di costruire fiducia, costruisco sicurezza. Consulenza tecnica avanzata
-              certificata ISO 9001 · 27001 · 42001. Parla con l&apos;AI dello studio per scoprire
-              i rischi nascosti del tuo immobile — l&apos;Ingegnere prepara tutto il resto.
+              Lo studio opera in linea con le best practices ISO 9001 · ISO 27001 · ISO 42001.
+              Il tuo progetto è gestito con rigore, trasparenza e sicurezza delle informazioni.
             </p>
 
-            <LiveTicker />
-
-            <div className="flex flex-wrap gap-3 mt-8">
-              <a href="#chat">
-                <Button className="bg-violet-600 hover:bg-violet-500 text-white gap-2 px-6 py-5 text-sm font-semibold rounded-xl">
-                  <Bot className="w-4 h-4" />
-                  Parla con l&apos;AI dello Studio
-                </Button>
-              </a>
-              <Link href="/configuratore/consulenza">
-                <Button variant="outline" className="border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white gap-2 px-6 py-5 text-sm rounded-xl">
-                  Configura Servizio
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </div>
-
-            {/* Mini stats */}
-            <div className="flex gap-8 mt-10">
-              {[
-                { val: counter.progetti, suffix: "+", label: "Progetti completati" },
-                { val: counter.anni,     suffix: "+", label: "Anni di esperienza" },
-                { val: counter.comuni,   suffix: "",  label: "Comuni coperti" },
-              ].map((s, i) => (
-                <div key={i}>
-                  <p className="text-2xl font-bold text-white tabular-nums">{s.val}{s.suffix}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
-                </div>
-              ))}
-            </div>
+            <a
+              href={`https://wa.me/393476336545?text=${encodeURIComponent("Ciao, vorrei una consulenza tecnica.")}`}
+              target="_blank"
+              rel="noopener noreferrer"
+            >
+              <Button variant="outline" className="border-slate-700 text-slate-300 hover:border-green-500 hover:text-green-400 gap-2 text-sm rounded-xl">
+                💬 Contattaci su WhatsApp
+              </Button>
+            </a>
           </div>
 
           {/* Chat AI */}
@@ -411,7 +269,7 @@ export default function HomePage() {
         <div className="container mx-auto max-w-6xl">
           <div className="text-center mb-12">
             <Badge className="bg-blue-900/40 text-blue-300 border border-blue-800 mb-4">
-              Certificazioni & Best Practices
+              Best Practices Internazionali
             </Badge>
             <h2 className="text-3xl font-bold mb-3">
               Standard internazionali,{" "}
@@ -453,63 +311,6 @@ export default function HomePage() {
                 </div>
               </div>
             ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── Servizi ── */}
-      <section className="py-20 px-4 border-t border-slate-800">
-        <div className="container mx-auto max-w-6xl">
-          <div className="text-center mb-12">
-            <Badge className="bg-slate-800 text-slate-300 border border-slate-700 mb-4">
-              9 Aree di Specializzazione
-            </Badge>
-            <h2 className="text-3xl font-bold mb-3">Configura il tuo servizio</h2>
-            <p className="text-slate-400 max-w-lg mx-auto">
-              Ogni configuratore genera un preventivo trasparente in meno di 3 minuti.
-              Prezzi milestone-based: paghi al completamento di fasi verificabili.
-            </p>
-          </div>
-
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {SERVIZI.map((s, i) => (
-              <Link key={i} href={s.href}>
-                <div className="group bg-slate-900 border border-slate-700 rounded-xl p-5 hover:border-blue-500 hover:bg-slate-800 transition-all cursor-pointer">
-                  <div className="flex items-center justify-between mb-3">
-                    <span className="text-2xl">{s.icon}</span>
-                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
-                  </div>
-                  <p className="font-semibold text-slate-100 text-sm">{s.nome}</p>
-                  <p className="text-xs text-slate-500 mt-1">Configura e ottieni preventivo →</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── CTA finale ── */}
-      <section className="py-20 px-4 border-t border-slate-800">
-        <div className="container mx-auto max-w-2xl text-center">
-          <h2 className="text-3xl font-bold mb-4">
-            Inizia dalla conversazione.
-          </h2>
-          <p className="text-slate-400 mb-8">
-            L&apos;AI raccoglie i dati, l&apos;Ingegnere analizza, tu decidi.
-            Zero burocrazia nella fase preliminare.
-          </p>
-          <div className="flex flex-wrap gap-4 justify-center">
-            <a href="#chat">
-              <Button className="bg-violet-600 hover:bg-violet-500 text-white gap-2 px-8 py-5 text-sm font-semibold rounded-xl">
-                <Bot className="w-4 h-4" />
-                Parla con l&apos;AI ora
-              </Button>
-            </a>
-            <a href={`https://wa.me/393476336545?text=${encodeURIComponent("Ciao, vorrei una consulenza tecnica.")}`} target="_blank" rel="noopener noreferrer">
-              <Button variant="outline" className="border-slate-700 text-slate-300 hover:border-green-500 hover:text-green-400 gap-2 px-8 py-5 text-sm rounded-xl">
-                💬 WhatsApp diretto
-              </Button>
-            </a>
           </div>
         </div>
       </section>
