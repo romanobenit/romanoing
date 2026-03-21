@@ -1101,14 +1101,14 @@ Riceve BRIEF + QUADRO NORMATIVO + percorso primario da Agente 3.
 
 **Step 1 — Prezzo base per complessità del caso**
 
-Per ogni tipo di erogazione esiste una fascia. Agente 5 stima la complessità del caso
-e sceglie un punto di partenza nella fascia:
+La logica di pricing differisce per tipo di erogazione:
+
+**PLATFORM e IMMEDIATA — fascia con posizionamento**:
 
 | Tipo | Fascia | Floor assoluto |
 |------|--------|---------------|
 | PLATFORM | €50–149 | €50 |
 | IMMEDIATA | €150–400 | €150 |
-| INGEGNERE | €300–700 | €300 |
 
 Posizionamento nella fascia in base alla complessità valutata:
 
@@ -1118,7 +1118,18 @@ Posizionamento nella fascia in base alla complessità valutata:
 | Media — 2 normative o casistica variabile o documenti da leggere | 50–65% della fascia |
 | Alta — 3+ normative intersecanti o ambiguità interpretativa rilevante | 75–90% della fascia |
 
-**Step 2 — Moltiplicatori compositi (si applicano in cascata, nell'ordine)**:
+**INGEGNERE — moltiplicatore fisso sul prezzo base (nessun tetto)**:
+
+Il prezzo base è **€300** (floor assoluto). Nessun tetto massimo.
+Agente 5 applica un moltiplicatore di complessità fisso:
+
+| Complessità caso | Moltiplicatore | Prezzo base risultante |
+|-----------------|---------------|----------------------|
+| Bassa — 1 normativa, caso standard | ×1 | €300 |
+| Media — 2 normative o docs da leggere | ×3 | €900 |
+| Alta — 3+ normative intersecanti o ambiguità rilevante | ×4 | €1.200 |
+
+**Step 2 — Moltiplicatori compositi (si applicano in cascata sul prezzo base, nell'ordine)**:
 
 | Fattore | Moltiplicatore |
 |---------|---------------|
@@ -1187,9 +1198,10 @@ Per ogni caso risolvibile, Agente 5 presenta **fino a 3 opzioni in parallelo** c
       "titolo_servizio": "Parere tecnico firmato: tettoia in legno a Palermo",
       "descrizione_deliverable": "Relazione tecnica firmata digitalmente dall'Ing. Romano (eIDAS) con analisi normativa completa, riferimenti al PRG, conclusioni e raccomandazioni operative. Utilizzabile per pratiche edilizie.",
       "complessita_stimata": "media",
-      "prezzo_base_centesimi": 42000,
+      "moltiplicatore_complessita": 3,
+      "prezzo_base_centesimi": 90000,
       "adeguamenti": [],
-      "prezzo_finale_centesimi": 42000,
+      "prezzo_finale_centesimi": 90000,
       "sla_ore": 48,
       "avviso": null
     }
