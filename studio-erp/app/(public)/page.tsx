@@ -1,790 +1,539 @@
 'use client';
 
 import Link from "next/link";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Send, Bot, User, ArrowRight, CheckCircle2, Shield, Award, Cpu } from "lucide-react";
 
+// ─── Costanti ────────────────────────────────────────────────────────────────
 const SERVIZI = [
-  { nome: "Consulenza Tecnica", icon: "💡", href: "/configuratore/consulenza" },
-  { nome: "Ristrutturazione", icon: "🏗️", href: "/configuratore/ristrutturazione" },
-  { nome: "Due Diligence Tecnica", icon: "🏢", href: "/configuratore/due-diligence" },
-  { nome: "Vulnerabilità Sismica", icon: "🏛️", href: "/configuratore/sismica" },
-  { nome: "Ampliamento", icon: "🏗️", href: "/configuratore/ampliamento" },
-  { nome: "Collaudo Statico", icon: "✅", href: "/configuratore/collaudo" },
-  { nome: "Antincendio", icon: "🔥", href: "/configuratore/antincendio" },
+  { nome: "Consulenza Tecnica",        icon: "💡", href: "/configuratore/consulenza" },
+  { nome: "Ristrutturazione",           icon: "🏗️", href: "/configuratore/ristrutturazione" },
+  { nome: "Due Diligence Tecnica",      icon: "🏢", href: "/configuratore/due-diligence" },
+  { nome: "Vulnerabilità Sismica",      icon: "🏛️", href: "/configuratore/sismica" },
+  { nome: "Ampliamento",                icon: "📐", href: "/configuratore/ampliamento" },
+  { nome: "Collaudo Statico",           icon: "✅", href: "/configuratore/collaudo" },
+  { nome: "Antincendio",                icon: "🔥", href: "/configuratore/antincendio" },
   { nome: "Efficientamento Energetico", icon: "⚡", href: "/configuratore/efficientamento" },
-  { nome: "PropTech/Blockchain R&D", icon: "✨", href: "/configuratore/proptech-blockchain" }
+  { nome: "PropTech / Blockchain R&D",  icon: "🔗", href: "/configuratore/proptech-blockchain" },
 ];
 
-// Numero WhatsApp
-const WHATSAPP_NUMBER = "393476336545"; // Formato: 39 + numero senza spazi
-const WHATSAPP_MESSAGE = "Ciao, vorrei fissare una chiamata preliminare per discutere di un servizio.";
+const TICKER_ITEMS = [
+  "🏛️ Analisi sismica in corso — Napoli",
+  "🏗️ Progetto ristrutturazione — Milano",
+  "🔥 Certificazione antincendio — Roma",
+  "⚡ Audit energetico — Torino",
+  "🏢 Due diligence tecnica — Bologna",
+  "📐 Pratica ampliamento — Firenze",
+  "💡 Consulenza strutturale — Palermo",
+];
 
-export default function HomePage() {
-  const [showServicesDropdown, setShowServicesDropdown] = useState(false);
+const ISO_STANDARDS = [
+  {
+    code: "ISO 9001",
+    title: "Qualità dei Processi",
+    color: "from-blue-600 to-blue-800",
+    accent: "blue",
+    icon: <Award className="w-8 h-8" />,
+    practices: [
+      "Approccio per processi documentati e misurabili",
+      "Revisione periodica della soddisfazione del cliente",
+      "Gestione non conformità con azioni correttive",
+      "Obiettivi di qualità tracciati con KPI definiti",
+      "Audit interni e riesame della direzione",
+      "Miglioramento continuo basato su evidenze",
+    ],
+  },
+  {
+    code: "ISO 27001",
+    title: "Sicurezza delle Informazioni",
+    color: "from-slate-700 to-slate-900",
+    accent: "slate",
+    icon: <Shield className="w-8 h-8" />,
+    practices: [
+      "Classificazione e inventario degli asset informativi",
+      "Controllo degli accessi basato su ruoli (RBAC)",
+      "Crittografia AES-256 a riposo e in transito",
+      "Gestione degli incidenti di sicurezza con escalation",
+      "Backup 3-2-1 su infrastruttura Hetzner Cloud",
+      "Valutazione del rischio e trattamento documentato",
+    ],
+  },
+  {
+    code: "ISO 42001",
+    title: "Governance dell'Intelligenza Artificiale",
+    color: "from-violet-600 to-violet-900",
+    accent: "violet",
+    icon: <Cpu className="w-8 h-8" />,
+    practices: [
+      "Trasparenza sull'utilizzo di sistemi AI (log POP-AI-01)",
+      "Supervisione umana su ogni output dell'AI",
+      "Valutazione dei rischi specifici per sistemi AI",
+      "Non discriminazione e equità algoritmica verificata",
+      "Documentazione delle decisioni assistite da AI",
+      "Revisione continua dell'impatto e delle prestazioni AI",
+    ],
+  },
+];
 
-  const whatsappUrl = `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(WHATSAPP_MESSAGE)}`;
+// ─── Risposte AI predefinite ──────────────────────────────────────────────────
+const AI_RESPONSES: Record<string, string> = {
+  default:
+    "Benvenuto nello Studio Tecnico Romano. Sono l'assistente AI che prepara la tua consulenza con l'Ingegnere. Dimmi: su quale immobile o progetto posso aiutarti oggi?",
+  sismica:
+    "Per una valutazione della vulnerabilità sismica ho bisogno di: anno di costruzione, comune, tipologia strutturale (muratura/cemento armato/acciaio) e superficie. Vuoi che l'Ing. Romano ti contatti per fissare un sopralluogo?",
+  ristrutturazione:
+    "Per un preventivo di ristrutturazione: mi indica la superficie (mq), il tipo di intervento (ordinaria/straordinaria/integrale) e se prevede accesso a bonus fiscali? Posso calcolare un range di complessità immediato.",
+  energia:
+    "Per l'efficientamento energetico valuto: classe energetica attuale (se nota), tipo di impianto termico, anno costruzione e presenza di isolamento. Con questi dati posso indicare gli incentivi applicabili.",
+  costo:
+    "Il nostro sistema di tariffazione è trasparente e milestone-based: paghi solo al completamento di fasi verificabili. Vuoi che ti invii una stima personalizzata via email, o preferisci parlare direttamente con l'Ingegnere?",
+  contatto:
+    "Posso organizzare una chiamata preliminare gratuita di 15 minuti con l'Ing. Romano. Quando sei disponibile? Oppure scrivi direttamente su WhatsApp: +39 347 633 6545",
+};
+
+function getAIResponse(msg: string): string {
+  const m = msg.toLowerCase();
+  if (m.includes("sismic") || m.includes("terremoto") || m.includes("struttur"))
+    return AI_RESPONSES.sismica;
+  if (m.includes("ristrutt") || m.includes("ristruttur") || m.includes("bonus") || m.includes("110"))
+    return AI_RESPONSES.ristrutturazione;
+  if (m.includes("energ") || m.includes("efficien") || m.includes("ecobonus"))
+    return AI_RESPONSES.energia;
+  if (m.includes("cost") || m.includes("prezzo") || m.includes("quanto") || m.includes("tariff"))
+    return AI_RESPONSES.costo;
+  if (m.includes("contatt") || m.includes("appuntament") || m.includes("chiamat") || m.includes("telefon"))
+    return AI_RESPONSES.contatto;
+  return "Ho capito. Per darti la risposta più precisa, preferisci che passi direttamente la tua richiesta all'Ing. Romano, o vuoi approfondire qui con me prima?";
+}
+
+// ─── Componente Ticker ────────────────────────────────────────────────────────
+function LiveTicker() {
+  const [idx, setIdx] = useState(0);
+  const [fade, setFade] = useState(true);
+
+  useEffect(() => {
+    const iv = setInterval(() => {
+      setFade(false);
+      setTimeout(() => {
+        setIdx((i) => (i + 1) % TICKER_ITEMS.length);
+        setFade(true);
+      }, 400);
+    }, 3000);
+    return () => clearInterval(iv);
+  }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-blue-50 via-white to-gray-50">
-      {/* Header */}
-      <header className="border-b bg-white/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-4 py-4">
-          <nav className="flex items-center justify-between">
-            <Link href="/" className="flex items-center space-x-2 hover:opacity-80 transition">
-              <div className="w-10 h-10 bg-blue-600 rounded-lg flex items-center justify-center text-white font-bold">
-                SR
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">
-                  Technical Advisory Ing. Domenico Romano
-                </h1>
-                <p className="text-xs text-gray-600">Consulenza tecnica avanzata</p>
-              </div>
-            </Link>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <Button
-                  variant="ghost"
-                  onClick={() => setShowServicesDropdown(!showServicesDropdown)}
-                  className="flex items-center gap-2"
-                >
-                  Esplora Servizi
-                  <ChevronDown className={`w-4 h-4 transition-transform ${showServicesDropdown ? 'rotate-180' : ''}`} />
-                </Button>
+    <div className="flex items-center gap-3 text-sm text-slate-400">
+      <span className="flex items-center gap-1.5">
+        <span className="w-2 h-2 bg-green-400 rounded-full animate-pulse inline-block" />
+        <span className="text-green-400 font-semibold uppercase tracking-widest text-xs">Live</span>
+      </span>
+      <span
+        className="transition-opacity duration-300"
+        style={{ opacity: fade ? 1 : 0 }}
+      >
+        {TICKER_ITEMS[idx]}
+      </span>
+    </div>
+  );
+}
 
-                {showServicesDropdown && (
-                  <>
-                    <div
-                      className="fixed inset-0 z-10"
-                      onClick={() => setShowServicesDropdown(false)}
-                    />
-                    <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-xl border border-gray-200 py-2 z-20">
-                      {SERVIZI.map((servizio, idx) => (
-                        <Link
-                          key={idx}
-                          href={servizio.href}
-                          className="flex items-center gap-3 px-4 py-3 hover:bg-blue-50 transition-colors"
-                          onClick={() => setShowServicesDropdown(false)}
-                        >
-                          <span className="text-2xl">{servizio.icon}</span>
-                          <span className="text-sm font-medium text-gray-900">{servizio.nome}</span>
-                        </Link>
-                      ))}
-                    </div>
-                  </>
-                )}
-              </div>
-              <Link
-                href="/login"
-                className="text-gray-700 hover:text-gray-900 font-medium"
-              >
-                Accedi
-              </Link>
+// ─── Componente Chat AI ───────────────────────────────────────────────────────
+interface ChatMessage { role: "ai" | "user"; text: string; }
+
+function AIChatWidget() {
+  const [messages, setMessages] = useState<ChatMessage[]>([
+    { role: "ai", text: AI_RESPONSES.default },
+  ]);
+  const [input, setInput] = useState("");
+  const [thinking, setThinking] = useState(false);
+  const bottomRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, thinking]);
+
+  function sendMessage() {
+    const trimmed = input.trim();
+    if (!trimmed) return;
+    setMessages((prev) => [...prev, { role: "user", text: trimmed }]);
+    setInput("");
+    setThinking(true);
+    setTimeout(() => {
+      setThinking(false);
+      setMessages((prev) => [
+        ...prev,
+        { role: "ai", text: getAIResponse(trimmed) },
+      ]);
+    }, 1200);
+  }
+
+  return (
+    <div className="flex flex-col h-full">
+      {/* Messaggi */}
+      <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" style={{ maxHeight: 320 }}>
+        {messages.map((m, i) => (
+          <div
+            key={i}
+            className={`flex items-start gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}
+          >
+            <div
+              className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs ${
+                m.role === "ai" ? "bg-violet-600" : "bg-blue-600"
+              }`}
+            >
+              {m.role === "ai" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
             </div>
-          </nav>
+            <div
+              className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
+                m.role === "ai"
+                  ? "bg-slate-800 text-slate-100 rounded-tl-sm"
+                  : "bg-blue-600 text-white rounded-tr-sm"
+              }`}
+            >
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {thinking && (
+          <div className="flex items-start gap-2.5">
+            <div className="w-7 h-7 rounded-full bg-violet-600 flex items-center justify-center">
+              <Bot className="w-4 h-4 text-white" />
+            </div>
+            <div className="bg-slate-800 rounded-2xl rounded-tl-sm px-4 py-3">
+              <div className="flex gap-1">
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "150ms" }} />
+                <span className="w-2 h-2 bg-violet-400 rounded-full animate-bounce" style={{ animationDelay: "300ms" }} />
+              </div>
+            </div>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input */}
+      <div className="p-4 border-t border-slate-700">
+        <div className="flex gap-2">
+          <input
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && sendMessage()}
+            placeholder="Descrivi il tuo immobile o progetto..."
+            className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || thinking}
+            className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 transition-colors"
+          >
+            <Send className="w-4 h-4" />
+          </button>
+        </div>
+        <p className="text-xs text-slate-600 mt-2 text-center">
+          L&apos;AI prepara la consulenza · L&apos;Ingegnere la firma
+        </p>
+      </div>
+    </div>
+  );
+}
+
+// ─── Pagina principale ────────────────────────────────────────────────────────
+export default function HomePage() {
+  const [showNav, setShowNav] = useState(false);
+  const [counter, setCounter] = useState({ progetti: 0, anni: 0, comuni: 0 });
+
+  // Animazione contatori
+  useEffect(() => {
+    const targets = { progetti: 200, anni: 15, comuni: 47 };
+    const duration = 1800;
+    const steps = 60;
+    const interval = duration / steps;
+    let step = 0;
+    const iv = setInterval(() => {
+      step++;
+      const progress = step / steps;
+      const ease = 1 - Math.pow(1 - progress, 3);
+      setCounter({
+        progetti: Math.round(targets.progetti * ease),
+        anni:     Math.round(targets.anni * ease),
+        comuni:   Math.round(targets.comuni * ease),
+      });
+      if (step >= steps) clearInterval(iv);
+    }, interval);
+    return () => clearInterval(iv);
+  }, []);
+
+  return (
+    <div className="min-h-screen bg-slate-950 text-white">
+
+      {/* ── Header ── */}
+      <header className="fixed top-0 w-full z-50 border-b border-slate-800 bg-slate-950/90 backdrop-blur-md">
+        <div className="container mx-auto px-4 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-sm">
+              SR
+            </div>
+            <div className="hidden sm:block">
+              <p className="font-semibold text-white leading-tight text-sm">Ing. Domenico Romano</p>
+              <p className="text-xs text-slate-500">Technical Advisory Studio</p>
+            </div>
+          </Link>
+
+          <div className="flex items-center gap-2">
+            <div className="relative">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-slate-300 hover:text-white gap-1.5"
+                onClick={() => setShowNav(!showNav)}
+              >
+                Servizi
+                <ChevronDown className={`w-3.5 h-3.5 transition-transform ${showNav ? "rotate-180" : ""}`} />
+              </Button>
+              {showNav && (
+                <>
+                  <div className="fixed inset-0 z-10" onClick={() => setShowNav(false)} />
+                  <div className="absolute right-0 mt-2 w-72 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl py-2 z-20">
+                    {SERVIZI.map((s, i) => (
+                      <Link
+                        key={i}
+                        href={s.href}
+                        className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-800 transition-colors text-sm"
+                        onClick={() => setShowNav(false)}
+                      >
+                        <span className="text-xl">{s.icon}</span>
+                        <span className="text-slate-200">{s.nome}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
+            <Link href="/login">
+              <Button size="sm" variant="outline" className="border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white text-xs">
+                Accedi
+              </Button>
+            </Link>
+          </div>
         </div>
       </header>
 
-      {/* Hero Section */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="max-w-4xl mx-auto text-center">
-          <div className="flex flex-wrap gap-2 justify-center mb-4">
-            <Badge className="bg-green-100 text-green-900 hover:bg-green-200">
-              ✓ GDPR Compliant
-            </Badge>
-            <Badge className="bg-blue-100 text-blue-900 hover:bg-blue-200">
-              ✓ Crittografia SSL/TLS
-            </Badge>
-            <Badge className="bg-purple-100 text-purple-900 hover:bg-purple-200">
-              E-Commerce Demand-Driven
-            </Badge>
-          </div>
-          <h2 className="text-5xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-            "Costruisco fiducia prima ancora delle soluzioni."
-          </h2>
-          <p className="text-xl text-gray-600 mb-10 leading-relaxed">
-            Preventivi online immediati con configuratori intelligenti. Pagamenti milestone-based sicuri.
-            <br />
-            <span className="font-semibold">Privacy GDPR | Backup Automatici | Best Practices Sicurezza</span>
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center mb-6">
-            <Button asChild size="lg" className="text-lg px-8 py-6">
-              <Link href="#servizi">
-                🎯 Configura il Tuo Servizio in 3 Minuti
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="text-lg px-8 py-6">
-              <Link href="#servizi">
-                Esplora Catalogo (9 Servizi)
-              </Link>
-            </Button>
-          </div>
-          <a
-            href={whatsappUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="inline-flex items-center gap-2 text-sm text-green-600 hover:text-green-700 font-medium"
-          >
-            <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-            </svg>
-            Fissa una chiamata preliminare su WhatsApp
-          </a>
-        </div>
-      </section>
+      {/* ── Hero ── */}
+      <section className="pt-32 pb-16 px-4 container mx-auto">
+        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-12 items-center">
 
-      {/* Stats Section */}
-      <section className="bg-blue-600 text-white py-16">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-4 gap-8 text-center">
-            <div>
-              <div className="text-4xl font-bold mb-2">15+</div>
-              <div className="text-blue-100">Anni di Esperienza</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">200+</div>
-              <div className="text-blue-100">Progetti Completati</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">24h</div>
-              <div className="text-blue-100">Preventivo Personalizzato</div>
-            </div>
-            <div>
-              <div className="text-4xl font-bold mb-2">100%</div>
-              <div className="text-blue-100">GDPR Compliant</div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Trust Section - Compliance */}
-      <section className="container mx-auto px-4 py-16">
-        <div className="max-w-4xl mx-auto">
-          <div className="bg-gradient-to-r from-green-50 to-blue-50 rounded-2xl p-8 border border-green-200">
-            <div className="text-center mb-6">
-              <Badge className="bg-green-600 text-white mb-4">Piattaforma Sicura</Badge>
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                Sicurezza e Privacy dei Tuoi Dati
-              </h3>
-            </div>
-            <div className="grid md:grid-cols-3 gap-6 text-sm">
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">🏆</div>
-                <div className="font-bold mb-1">Best Practices</div>
-                <div className="text-gray-600">Processi qualità certificabili</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">🔒</div>
-                <div className="font-bold mb-1">Crittografia SSL/TLS</div>
-                <div className="text-gray-600">Comunicazioni protette end-to-end</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">💳</div>
-                <div className="font-bold mb-1">PCI-DSS Compliant</div>
-                <div className="text-gray-600">Pagamenti sicuri via Stripe</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">🇪🇺</div>
-                <div className="font-bold mb-1">GDPR Compliant</div>
-                <div className="text-gray-600">Privacy dati garantita</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">🔐</div>
-                <div className="font-bold mb-1">Encryption AES-256</div>
-                <div className="text-gray-600">Dati criptati at rest & in transit</div>
-              </div>
-              <div className="bg-white rounded-lg p-4 border">
-                <div className="text-3xl mb-2">📦</div>
-                <div className="font-bold mb-1">Backup Automatici</div>
-                <div className="text-gray-600">Strategia 3-2-1 su Hetzner Cloud</div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Services Section - 9 Bundle */}
-      <section id="servizi" className="container mx-auto px-4 py-20">
-        <div className="text-center mb-16">
-          <Badge className="mb-4">Catalogo Servizi Professionali</Badge>
-          <h2 className="text-4xl font-bold text-gray-900 mb-4">
-            9 Soluzioni per Ogni Esigenza
-          </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Servizi completi con preventivo personalizzato online. <br/>
-            <span className="font-semibold">Modello Demand-Driven:</span> configuriamo il servizio sulle tue esigenze specifiche.
-          </p>
-        </div>
-
-        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-          {/* Bundle 1: Consulenza */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                💡
-              </div>
-              <CardTitle className="text-lg">Consulenza Tecnica</CardTitle>
-              <CardDescription className="text-sm">
-                Inquadramento preliminare (60-90 min)
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  €180 - €600
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Analisi criticità<br />
-                  ✓ Fattibilità tecnica<br />
-                  ✓ Stima costi intervento<br />
-                  ✓ Roadmap operativa
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/consulenza">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-CONSULENZA">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 2: Ristrutturazione */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🏗️
-              </div>
-              <CardTitle className="text-lg">Ristrutturazione</CardTitle>
-              <CardDescription className="text-sm">
-                Progetto completo + Bonus Edilizi
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Rilievo geometrico<br />
-                  ✓ Progetto arch. + strutt.<br />
-                  ✓ Pratiche edilizie<br />
-                  ✓ Asseverazioni bonus
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/ristrutturazione">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-RISTR-BONUS">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 3: Due Diligence Tecnica */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-slate-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🏢
-              </div>
-              <CardTitle className="text-lg">Due Diligence Tecnica</CardTitle>
-              <CardDescription className="text-sm">
-                Verifica immobiliare pre-acquisizione
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">M&A/Fondi/Finanziamenti</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Desktop/Standard/Enhanced DD<br />
-                  ✓ Verifica amministrativa/strutturale<br />
-                  ✓ Red Flag Report<br />
-                  ✓ Stima costi interventi
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/due-diligence">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-DUE-DILIGENCE">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 4: Vulnerabilità Sismica */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-orange-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🏛️
-              </div>
-              <CardTitle className="text-lg">Vulnerabilità Sismica</CardTitle>
-              <CardDescription className="text-sm">
-                Valutazione e miglioramento sismico
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Rilievo strutturale<br />
-                  ✓ Indagini materiali<br />
-                  ✓ Modellazione FEM<br />
-                  ✓ Progetto miglioramento
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/sismica">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-VULN-SISMICA">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 5: Ampliamento */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🏗️
-              </div>
-              <CardTitle className="text-lg">Ampliamento</CardTitle>
-              <CardDescription className="text-sm">
-                Progetto ampliamento residenziale
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Progetto architettonico<br />
-                  ✓ Permesso di costruire<br />
-                  ✓ Progetto strutturale<br />
-                  ✓ Verifica fattibilità
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/ampliamento">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-AMPLIAMENTO">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 6: Collaudo */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                ✅
-              </div>
-              <CardTitle className="text-lg">Collaudo Statico</CardTitle>
-              <CardDescription className="text-sm">
-                Certificazione opere strutturali
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Ispezione opere<br />
-                  ✓ Verifica calcoli<br />
-                  ✓ Prove carico<br />
-                  ✓ Certificato collaudo
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/collaudo">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-COLLAUDO">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 7: Antincendio */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                🔥
-              </div>
-              <CardTitle className="text-lg">Antincendio</CardTitle>
-              <CardDescription className="text-sm">
-                Progettazione prevenzione incendi
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Valutazione rischio<br />
-                  ✓ Progetto antincendio<br />
-                  ✓ SCIA VVF<br />
-                  ✓ Assistenza sopralluogo
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/antincendio">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-ANTINCENDIO">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 8: Efficientamento Energetico */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-emerald-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                ⚡
-              </div>
-              <CardTitle className="text-lg">Efficientamento Energetico</CardTitle>
-              <CardDescription className="text-sm">
-                Riqualificazione energetica edifici
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Privati/Aziende/P.A.</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ APE ante/post<br />
-                  ✓ Diagnosi energetica<br />
-                  ✓ Progetto interventi<br />
-                  ✓ Accesso incentivi
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/efficientamento">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-EFF-ENERGETICO">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          {/* Bundle 9: PropTech/Blockchain R&D */}
-          <Card className="hover:shadow-xl transition-shadow border-2 hover:border-blue-300">
-            <CardHeader>
-              <div className="w-12 h-12 bg-teal-100 rounded-lg flex items-center justify-center text-3xl mb-4">
-                ✨
-              </div>
-              <CardTitle className="text-lg">PropTech/Blockchain R&D</CardTitle>
-              <CardDescription className="text-sm">
-                Ricerca tokenizzazione immobiliare
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div>
-                  <Badge variant="secondary" className="text-xs">Aziende/Fondi/Start-up</Badge>
-                </div>
-                <div className="text-2xl font-bold text-gray-900">
-                  Su Preventivo
-                </div>
-                <div className="text-xs text-gray-600">
-                  ✓ Studio fattibilità tokenizzazione<br />
-                  ✓ PoC Smart Contract + Dashboard<br />
-                  ✓ Linee guida architettura<br />
-                  ✓ Servizi R&D (ATECO 72.19)
-                </div>
-                <div className="space-y-2">
-                  <Button asChild className="w-full" size="sm">
-                    <Link href="/configuratore/proptech-blockchain">
-                      ⚙️ Configura Servizio →
-                    </Link>
-                  </Button>
-                  <Button asChild className="w-full" size="sm" variant="outline">
-                    <Link href="/bundle/BDL-PROPTECH-BLOCKCHAIN">
-                      ℹ️ Info Dettagliate
-                    </Link>
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </section>
-
-      {/* Demand-Driven Explanation */}
-      <section className="bg-gradient-to-r from-purple-50 to-blue-50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-12">
-              <Badge className="mb-4 bg-purple-600 text-white">E-Commerce Demand-Driven</Badge>
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">
-                Non un E-Commerce Tradizionale
-              </h2>
-              <p className="text-lg text-gray-600">
-                A differenza degli e-commerce standard, non vendiamo prodotti "a scaffale". <br/>
-                <span className="font-semibold">Ogni servizio è personalizzato sulle tue esigenze specifiche.</span>
-              </p>
+          {/* Testo hero */}
+          <div>
+            {/* Hook originale */}
+            <div className="inline-flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 rounded-full px-4 py-1.5 mb-6">
+              <span className="text-amber-400 text-xs font-semibold uppercase tracking-wider">
+                ⚡ Il tuo immobile ti sta nascondendo qualcosa
+              </span>
             </div>
 
-            <div className="grid md:grid-cols-2 gap-8">
-              <div className="bg-white rounded-lg p-6 border-2 border-gray-200">
-                <div className="text-red-600 font-bold mb-2">❌ E-Commerce Tradizionale</div>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>• Prodotto fisso a catalogo</li>
-                  <li>• Prezzo non negoziabile</li>
-                  <li>• "Aggiungi al carrello" immediato</li>
-                  <li>• Pagamento unico anticipato</li>
-                  <li>• Nessuna personalizzazione</li>
-                </ul>
-              </div>
+            <h1 className="text-4xl lg:text-5xl font-extrabold leading-tight mb-4">
+              Il 74% degli edifici italiani{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">
+                non supererebbe
+              </span>{" "}
+              un controllo tecnico oggi.
+            </h1>
 
-              <div className="bg-white rounded-lg p-6 border-2 border-green-500">
-                <div className="text-green-600 font-bold mb-2">✅ Technical Advisory Ing. Domenico Romano (Demand-Driven)</div>
-                <ul className="space-y-2 text-sm text-gray-600">
-                  <li>• <strong>Servizio personalizzato</strong> su tue esigenze</li>
-                  <li>• <strong>Preventivo ad-hoc</strong> entro 24 ore</li>
-                  <li>• <strong>Configurazione guidata</strong> via quiz</li>
-                  <li>• <strong>Pagamenti milestone</strong> (acconto + SAL)</li>
-                  <li>• <strong>Dashboard real-time</strong> avanzamento</li>
-                </ul>
-              </div>
-            </div>
-
-            <div className="mt-8 text-center">
-              <p className="text-gray-600 italic">
-                "Prima capiamo le tue esigenze, poi configuriamo il servizio perfetto per te."
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* How It Works */}
-      <section className="bg-gray-50 py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <Badge className="mb-4">Come Funziona</Badge>
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
-              Processo Demand-Driven in 5 Step
-            </h2>
-          </div>
-
-          <div className="grid md:grid-cols-5 gap-6 max-w-6xl mx-auto">
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                1
-              </div>
-              <h3 className="font-bold text-base mb-2">Configura Servizio</h3>
-              <p className="text-gray-600 text-sm">
-                Usa il configuratore online (2-3 min)
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                2
-              </div>
-              <h3 className="font-bold text-base mb-2">Preventivo Personalizzato</h3>
-              <p className="text-gray-600 text-sm">
-                Ricevi preventivo ad-hoc entro 24 ore
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                3
-              </div>
-              <h3 className="font-bold text-base mb-2">Firma Digitale</h3>
-              <p className="text-gray-600 text-sm">
-                Accetti online in piattaforma sicura
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                4
-              </div>
-              <h3 className="font-bold text-base mb-2">Pagamenti Milestone</h3>
-              <p className="text-gray-600 text-sm">
-                Acconto + SAL (Stati Avanzamento Lavori)
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="w-16 h-16 bg-blue-600 text-white rounded-full flex items-center justify-center text-2xl font-bold mx-auto mb-4">
-                5
-              </div>
-              <h3 className="font-bold text-base mb-2">Dashboard Real-Time</h3>
-              <p className="text-gray-600 text-sm">
-                Monitora avanzamento e documenti 24/7
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Final */}
-      <section className="container mx-auto px-4 py-20">
-        <div className="bg-gradient-to-r from-blue-600 to-blue-800 rounded-2xl p-12 text-center text-white">
-          <h2 className="text-4xl font-bold mb-4">
-            Pronto per Configurare il Tuo Servizio?
-          </h2>
-          <p className="text-xl mb-8 text-blue-100">
-            Piattaforma sicura GDPR compliant. Preventivo personalizzato in 24 ore.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild size="lg" variant="secondary" className="text-lg px-8 py-6">
-              <Link href="#servizi">
-                Esplora i 9 Servizi →
-              </Link>
-            </Button>
-            <Button
-              asChild
-              size="lg"
-              variant="outline"
-              className="text-lg px-8 py-6 bg-transparent text-white border-white hover:bg-white hover:text-blue-600"
-            >
-              <a href={whatsappUrl} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-2">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 24 24">
-                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/>
-                </svg>
-                Contattaci su WhatsApp
-              </a>
-            </Button>
-          </div>
-        </div>
-      </section>
-
-      {/* Footer */}
-      <footer className="border-t bg-gray-50 py-12">
-        <div className="container mx-auto px-4">
-          <div className="grid md:grid-cols-3 gap-8">
-            <div>
-              <h3 className="font-bold text-lg mb-4">Technical Advisory Ing. Domenico Romano</h3>
-              <p className="text-gray-600 text-sm mb-4">
-                Consulenza tecnica avanzata con best practices di sicurezza
-              </p>
-              <div className="flex gap-2 flex-wrap">
-                <Badge variant="outline" className="text-xs">GDPR Compliant</Badge>
-                <Badge variant="outline" className="text-xs">Backup Automatici</Badge>
-                <Badge variant="outline" className="text-xs">SSL/TLS</Badge>
-              </div>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-4">Servizi</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="/configuratore/consulenza" className="hover:text-blue-600">Consulenza Tecnica</Link></li>
-                <li><Link href="/configuratore/ristrutturazione" className="hover:text-blue-600">Ristrutturazione</Link></li>
-                <li><Link href="/configuratore/due-diligence" className="hover:text-blue-600">Due Diligence Tecnica</Link></li>
-                <li><Link href="/configuratore/efficientamento" className="hover:text-blue-600">Efficientamento Energetico</Link></li>
-                <li><Link href="/configuratore/ampliamento" className="hover:text-blue-600">Ampliamento</Link></li>
-                <li><Link href="/configuratore/proptech-blockchain" className="hover:text-blue-600">PropTech/Blockchain R&D</Link></li>
-                <li><Link href="/bundle/BDL-COLLAUDO" className="hover:text-blue-600">Collaudo Statico</Link></li>
-                <li><Link href="/bundle/BDL-ANTINCENDIO" className="hover:text-blue-600">Antincendio</Link></li>
-                <li><Link href="/bundle/BDL-VULN-SISMICA" className="hover:text-blue-600">Vulnerabilità Sismica</Link></li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="font-bold text-lg mb-4">Legale & Contatti</h3>
-              <ul className="space-y-2 text-sm text-gray-600">
-                <li><Link href="/legal/privacy" className="hover:text-blue-600">Privacy Policy</Link></li>
-                <li><Link href="/legal/terms" className="hover:text-blue-600">Termini e Condizioni</Link></li>
-                <li><Link href="/legal/garanzia-consulenza" className="hover:text-blue-600">🔒 Garanzia Soddisfatti o Rimborsati</Link></li>
-                <li className="pt-2 border-t">📧 info@studio-romano.it</li>
-                <li>📞 +39 XXX XXXXXXX</li>
-              </ul>
-            </div>
-          </div>
-          <div className="mt-8 pt-8 border-t text-center text-sm text-gray-600">
-            <p>© 2025 Technical Advisory Ing. Domenico Romano - P.IVA IT12345678901</p>
-            <p className="mt-2">
-              <strong>Best Practices Sicurezza</strong> | <strong>PCI-DSS Compliant</strong> (Pagamenti) |
-              <strong> GDPR Compliant</strong> (Privacy) | <strong>Backup Automatici</strong>
+            <p className="text-slate-400 text-lg mb-6 leading-relaxed">
+              Prima ancora di costruire fiducia, costruisco sicurezza. Consulenza tecnica avanzata
+              certificata ISO 9001 · 27001 · 42001. Parla con l&apos;AI dello studio per scoprire
+              i rischi nascosti del tuo immobile — l&apos;Ingegnere prepara tutto il resto.
             </p>
+
+            <LiveTicker />
+
+            <div className="flex flex-wrap gap-3 mt-8">
+              <a href="#chat">
+                <Button className="bg-violet-600 hover:bg-violet-500 text-white gap-2 px-6 py-5 text-sm font-semibold rounded-xl">
+                  <Bot className="w-4 h-4" />
+                  Parla con l&apos;AI dello Studio
+                </Button>
+              </a>
+              <Link href="/configuratore/consulenza">
+                <Button variant="outline" className="border-slate-700 text-slate-300 hover:border-blue-500 hover:text-white gap-2 px-6 py-5 text-sm rounded-xl">
+                  Configura Servizio
+                  <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+
+            {/* Mini stats */}
+            <div className="flex gap-8 mt-10">
+              {[
+                { val: counter.progetti, suffix: "+", label: "Progetti completati" },
+                { val: counter.anni,     suffix: "+", label: "Anni di esperienza" },
+                { val: counter.comuni,   suffix: "",  label: "Comuni coperti" },
+              ].map((s, i) => (
+                <div key={i}>
+                  <p className="text-2xl font-bold text-white tabular-nums">{s.val}{s.suffix}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{s.label}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Chat AI */}
+          <div id="chat" className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden shadow-2xl shadow-violet-900/20">
+            <div className="flex items-center gap-3 px-4 py-3 border-b border-slate-700 bg-slate-900">
+              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-600 to-blue-600 flex items-center justify-center">
+                <Bot className="w-4 h-4 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-white">Assistente AI — Studio Romano</p>
+                <p className="text-xs text-green-400 flex items-center gap-1">
+                  <span className="w-1.5 h-1.5 bg-green-400 rounded-full inline-block animate-pulse" />
+                  Online · Prepara la tua consulenza
+                </p>
+              </div>
+              <div className="ml-auto">
+                <Badge className="bg-violet-900/50 text-violet-300 text-xs border border-violet-700">
+                  ISO 42001
+                </Badge>
+              </div>
+            </div>
+            <AIChatWidget />
+          </div>
+
+        </div>
+      </section>
+
+      {/* ── ISO Standards ── */}
+      <section className="py-20 px-4 border-t border-slate-800">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <Badge className="bg-blue-900/40 text-blue-300 border border-blue-800 mb-4">
+              Certificazioni & Best Practices
+            </Badge>
+            <h2 className="text-3xl font-bold mb-3">
+              Standard internazionali,{" "}
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-violet-400">
+                applicati ogni giorno
+              </span>
+            </h2>
+            <p className="text-slate-400 max-w-xl mx-auto">
+              Ogni incarico segue processi rigorosi basati sulle norme ISO più rilevanti per
+              la consulenza tecnica, la sicurezza dei dati e l&apos;uso etico dell&apos;AI.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {ISO_STANDARDS.map((std, i) => (
+              <div
+                key={i}
+                className="bg-slate-900 border border-slate-700 rounded-2xl overflow-hidden hover:border-slate-500 transition-colors group"
+              >
+                {/* Header card */}
+                <div className={`bg-gradient-to-br ${std.color} p-6`}>
+                  <div className="flex items-start justify-between mb-4">
+                    <div className="text-white/80">{std.icon}</div>
+                    <span className="text-xs font-mono font-bold bg-white/20 text-white px-3 py-1 rounded-full">
+                      {std.code}
+                    </span>
+                  </div>
+                  <h3 className="text-xl font-bold text-white">{std.title}</h3>
+                </div>
+
+                {/* Best practices */}
+                <div className="p-5 space-y-3">
+                  {std.practices.map((p, j) => (
+                    <div key={j} className="flex items-start gap-2.5">
+                      <CheckCircle2 className="w-4 h-4 text-green-400 flex-shrink-0 mt-0.5" />
+                      <span className="text-sm text-slate-300 leading-snug">{p}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Servizi ── */}
+      <section className="py-20 px-4 border-t border-slate-800">
+        <div className="container mx-auto max-w-6xl">
+          <div className="text-center mb-12">
+            <Badge className="bg-slate-800 text-slate-300 border border-slate-700 mb-4">
+              9 Aree di Specializzazione
+            </Badge>
+            <h2 className="text-3xl font-bold mb-3">Configura il tuo servizio</h2>
+            <p className="text-slate-400 max-w-lg mx-auto">
+              Ogni configuratore genera un preventivo trasparente in meno di 3 minuti.
+              Prezzi milestone-based: paghi al completamento di fasi verificabili.
+            </p>
+          </div>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            {SERVIZI.map((s, i) => (
+              <Link key={i} href={s.href}>
+                <div className="group bg-slate-900 border border-slate-700 rounded-xl p-5 hover:border-blue-500 hover:bg-slate-800 transition-all cursor-pointer">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-2xl">{s.icon}</span>
+                    <ArrowRight className="w-4 h-4 text-slate-600 group-hover:text-blue-400 group-hover:translate-x-0.5 transition-all" />
+                  </div>
+                  <p className="font-semibold text-slate-100 text-sm">{s.nome}</p>
+                  <p className="text-xs text-slate-500 mt-1">Configura e ottieni preventivo →</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA finale ── */}
+      <section className="py-20 px-4 border-t border-slate-800">
+        <div className="container mx-auto max-w-2xl text-center">
+          <h2 className="text-3xl font-bold mb-4">
+            Inizia dalla conversazione.
+          </h2>
+          <p className="text-slate-400 mb-8">
+            L&apos;AI raccoglie i dati, l&apos;Ingegnere analizza, tu decidi.
+            Zero burocrazia nella fase preliminare.
+          </p>
+          <div className="flex flex-wrap gap-4 justify-center">
+            <a href="#chat">
+              <Button className="bg-violet-600 hover:bg-violet-500 text-white gap-2 px-8 py-5 text-sm font-semibold rounded-xl">
+                <Bot className="w-4 h-4" />
+                Parla con l&apos;AI ora
+              </Button>
+            </a>
+            <a href={`https://wa.me/393476336545?text=${encodeURIComponent("Ciao, vorrei una consulenza tecnica.")}`} target="_blank" rel="noopener noreferrer">
+              <Button variant="outline" className="border-slate-700 text-slate-300 hover:border-green-500 hover:text-green-400 gap-2 px-8 py-5 text-sm rounded-xl">
+                💬 WhatsApp diretto
+              </Button>
+            </a>
+          </div>
+        </div>
+      </section>
+
+      {/* ── Footer ── */}
+      <footer className="border-t border-slate-800 py-8 px-4">
+        <div className="container mx-auto max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600">
+          <div className="flex items-center gap-2">
+            <div className="w-6 h-6 bg-blue-600 rounded flex items-center justify-center text-white text-xs font-bold">SR</div>
+            <span>© 2025 Studio Ing. Romano — Technical Advisory</span>
+          </div>
+          <div className="flex items-center gap-4">
+            <Link href="/legal/privacy" className="hover:text-slate-400 transition-colors">Privacy</Link>
+            <Link href="/legal/terms" className="hover:text-slate-400 transition-colors">Termini</Link>
+            <Link href="/legal/garanzia-consulenza" className="hover:text-slate-400 transition-colors">Garanzia</Link>
+          </div>
+          <div className="flex items-center gap-2">
+            <Badge className="bg-slate-900 border border-slate-700 text-slate-500 text-xs">ISO 9001</Badge>
+            <Badge className="bg-slate-900 border border-slate-700 text-slate-500 text-xs">ISO 27001</Badge>
+            <Badge className="bg-slate-900 border border-slate-700 text-slate-500 text-xs">ISO 42001</Badge>
           </div>
         </div>
       </footer>
+
     </div>
   );
 }
