@@ -3,9 +3,17 @@ import {query} from '@/lib/db'
 import Stripe from 'stripe'
 import {publicApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-})
+/**
+ * Lazy initialization to avoid build-time errors when STRIPE_SECRET_KEY is not available
+ */
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not configured')
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  })
+}
 
 /**
  * POST /api/checkout/create-session
@@ -96,6 +104,7 @@ export async function POST(request: Request) {
     const importoAcconto = Math.round(prezzoMedio * (primaMilestone.percentuale / 100))
 
     // Crea Stripe Checkout Session
+    const stripe = getStripeClient()
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [

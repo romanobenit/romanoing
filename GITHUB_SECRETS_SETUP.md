@@ -31,7 +31,7 @@ cat ~/.ssh/id_rsa
 ### 2. PRODUCTION_SERVER_IP
 **Descrizione**: IP pubblico del server Hetzner
 
-**Valore**: `116.203.10.59`
+**Valore**: `116.203.109.249`
 
 (Già presente nel DEPLOYMENT_GUIDE.md)
 
@@ -217,7 +217,7 @@ openssl rand -base64 24
 
 **Formato**: 32 caratteri alfanumerici casuali
 
-⚠️ **NOTA**: Userai questa password per accedere a Grafana su `http://116.203.10.59:3001`
+⚠️ **NOTA**: Userai questa password per accedere a Grafana su `http://116.203.109.249:3001`
 
 ---
 
@@ -288,7 +288,7 @@ Prima di procedere al deploy, verifica di aver configurato:
 
 ### Obbligatori (15):
 - [ ] SSH_PRIVATE_KEY
-- [ ] PRODUCTION_SERVER_IP = `116.203.10.59`
+- [ ] PRODUCTION_SERVER_IP = `116.203.109.249`
 - [ ] ANSIBLE_VAULT_PASSWORD
 - [ ] POSTGRESQL_PASSWORD
 - [ ] NEXTAUTH_SECRET

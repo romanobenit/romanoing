@@ -36,7 +36,7 @@ La guida contiene istruzioni dettagliate per tutti i 15+ secrets necessari.
 | # | Nome Secret | Come Ottenerlo | Tempo |
 |---|-------------|----------------|-------|
 | 1 | `SSH_PRIVATE_KEY` | `cat ~/.ssh/id_rsa` | 1 min |
-| 2 | `PRODUCTION_SERVER_IP` | `116.203.10.59` | 1 min |
+| 2 | `PRODUCTION_SERVER_IP` | `116.203.109.249` | 1 min |
 | 3 | `ANSIBLE_VAULT_PASSWORD` | `openssl rand -base64 32` | 1 min |
 | 4 | `POSTGRESQL_PASSWORD` | `openssl rand -base64 32` | 1 min |
 | 5 | `NEXTAUTH_SECRET` | `openssl rand -base64 32` | 1 min |
@@ -77,7 +77,7 @@ echo "GRAFANA_ADMIN_PASSWORD:"
 openssl rand -base64 24
 echo ""
 echo "PRODUCTION_SERVER_IP:"
-echo "116.203.10.59"
+echo "116.203.109.249"
 echo ""
 echo "=== COPIA QUESTI VALORI E SALVALI IN PASSWORD MANAGER ==="
 ```
@@ -90,7 +90,7 @@ Verifica di aver configurato su GitHub:
 
 **Obbligatori** (senza questi il deploy FALLISCE):
 - [ ] SSH_PRIVATE_KEY
-- [ ] PRODUCTION_SERVER_IP = `116.203.10.59`
+- [ ] PRODUCTION_SERVER_IP = `116.203.109.249`
 - [ ] ANSIBLE_VAULT_PASSWORD
 - [ ] POSTGRESQL_PASSWORD
 - [ ] NEXTAUTH_SECRET
@@ -136,7 +136,7 @@ Verifica di aver configurato su GitHub:
    Questo PR configura l'infrastruttura completa per il deploy automatico su Hetzner Cloud.
 
    ### ✅ Modifiche
-   - Inventory Ansible configurato con IP production (116.203.10.59)
+   - Inventory Ansible configurato con IP production (116.203.109.249)
    - Guida setup GitHub Secrets completa
    - Workflow GitHub Actions pronto
 
@@ -155,7 +155,7 @@ Verifica di aver configurato su GitHub:
 
    ### 🔗 URLs dopo deploy
    - Applicazione: https://erp.studioromano.it
-   - Grafana: http://116.203.10.59:3001
+   - Grafana: http://116.203.109.249:3001
    ```
 
 5. **Merge PR**:
@@ -262,14 +262,14 @@ Riceverai email a:
 
 4. **Grafana Dashboard**:
    ```
-   http://116.203.10.59:3001
+   http://116.203.109.249:3001
    ```
    - Username: `admin`
    - Password: `<GRAFANA_ADMIN_PASSWORD>` (secret GitHub)
 
 5. **SSH Server**:
    ```bash
-   ssh root@116.203.10.59
+   ssh root@116.203.109.249
    pm2 status
    systemctl status nginx
    systemctl status postgresql
@@ -324,7 +324,7 @@ Deploy incrementale: ~5-10 minuti (solo applicazione)
 - **Causa**: Applicazione non parte (errore build/runtime)
 - **Soluzione**: Controlla logs PM2 via SSH:
   ```bash
-  ssh root@116.203.10.59
+  ssh root@116.203.109.249
   sudo -u studio pm2 logs studio-erp --lines 100
   ```
 
@@ -345,7 +345,7 @@ Deploy incrementale: ~5-10 minuti (solo applicazione)
 
 **Logs Deploy**:
 - GitHub Actions: https://github.com/romanobenit/romanoing/actions
-- Server SSH: `ssh root@116.203.10.59`
+- Server SSH: `ssh root@116.203.109.249`
 - PM2: `pm2 logs studio-erp`
 - Nginx: `/var/log/nginx/studio-erp-error.log`
 
@@ -370,7 +370,7 @@ Deploy incrementale: ~5-10 minuti (solo applicazione)
 
 4. **Import 8 Bundle**:
    ```bash
-   ssh root@116.203.10.59
+   ssh root@116.203.109.249
    cd /var/www/studio-erp
    sudo -u studio npm run db:update-bundle
    ```

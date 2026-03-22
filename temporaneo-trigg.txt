@@ -1,1 +1,2 @@
 temporaneo-trigg.txt   per innescare il deploy
+Test SSH config fix - chiave ed25519 aggiunta correttamente
