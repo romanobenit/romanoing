@@ -187,8 +187,8 @@ jobs:
           fi
           # Save resolved numeric ID for the close step
           echo "$FW_ID" > /tmp/hetzner_fw_id.txt
-          echo "✅ SSH rule added. Waiting 15s for propagation..."
-          sleep 15
+          echo "✅ SSH rule added. Waiting 30s for propagation..."
+          sleep 30
 
       - name: Verify SSH connectivity
         run: |
@@ -197,18 +197,18 @@ jobs:
             echo "❌ PRODUCTION_SERVER_IP secret is not set"
             exit 1
           fi
-          echo "Checking SSH connectivity to $IP (max 5 attempts, 10s apart)..."
-          for i in $(seq 1 5); do
+          echo "Checking SSH connectivity to $IP (max 10 attempts, 15s apart)..."
+          for i in $(seq 1 10); do
             if nc -z -w 5 "$IP" 22 2>/dev/null; then
               echo "✅ Port 22 reachable on attempt $i"
               mkdir -p ~/.ssh
               ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
               exit 0
             fi
-            echo "Attempt $i/5 failed — waiting 10s..."
-            sleep 10
+            echo "Attempt $i/10 failed — waiting 15s..."
+            sleep 15
           done
-          echo "❌ Cannot reach $IP:22 after 5 attempts."
+          echo "❌ Cannot reach $IP:22 after 10 attempts."
           echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
           echo "   Check: server is provisioned and running"
           echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
@@ -514,8 +514,8 @@ jobs:
           fi
           # Save resolved numeric ID for the close step
           echo "$FW_ID" > /tmp/hetzner_fw_id.txt
-          echo "✅ SSH rule added. Waiting 15s for propagation..."
-          sleep 15
+          echo "✅ SSH rule added. Waiting 30s for propagation..."
+          sleep 30
 
       - name: Verify SSH connectivity
         run: |
@@ -524,18 +524,18 @@ jobs:
             echo "❌ PRODUCTION_SERVER_IP secret is not set"
             exit 1
           fi
-          echo "Checking SSH connectivity to $IP (max 5 attempts, 10s apart)..."
-          for i in $(seq 1 5); do
+          echo "Checking SSH connectivity to $IP (max 10 attempts, 15s apart)..."
+          for i in $(seq 1 10); do
             if nc -z -w 5 "$IP" 22 2>/dev/null; then
               echo "✅ Port 22 reachable on attempt $i"
               mkdir -p ~/.ssh
               ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
               exit 0
             fi
-            echo "Attempt $i/5 failed — waiting 10s..."
-            sleep 10
+            echo "Attempt $i/10 failed — waiting 15s..."
+            sleep 15
           done
-          echo "❌ Cannot reach $IP:22 after 5 attempts."
+          echo "❌ Cannot reach $IP:22 after 10 attempts."
           echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
           echo "   Check: server is provisioned and running"
           echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
