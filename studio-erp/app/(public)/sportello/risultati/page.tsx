@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -74,7 +74,7 @@ function formatEuro(centesimi: number) {
   return new Intl.NumberFormat('it-IT', { style: 'currency', currency: 'EUR' }).format(centesimi / 100);
 }
 
-export default function RisultatiPage() {
+function RisultatiPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const token = searchParams.get('token');
@@ -331,5 +331,13 @@ export default function RisultatiPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function RisultatiPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-950 flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-blue-400" /></div>}>
+      <RisultatiPageInner />
+    </Suspense>
   );
 }

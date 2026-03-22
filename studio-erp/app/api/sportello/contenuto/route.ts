@@ -9,16 +9,15 @@
  */
 
 import { NextResponse } from 'next/server';
-import { getServerSession } from 'next-auth';
-import { authOptions } from '@/lib/auth.config';
+import { auth } from '@/lib/auth';
 import { query } from '@/lib/db';
 import { generateContenutoTecnico } from '@/lib/sportello/agente-4-content';
 import type { Brief } from '@/lib/sportello/agente-1-discovery';
 import type { QuadroNormativo } from '@/lib/sportello/agente-2-normativista';
 
 export async function POST(request: Request) {
-  const session = await getServerSession(authOptions);
-  if (!session?.user || (session.user as any).role !== 'TITOLARE') {
+  const session = await auth();
+  if (!session?.user || (session.user as any).ruolo !== 'TITOLARE') {
     return NextResponse.json({ success: false, error: 'Non autorizzato' }, { status: 401 });
   }
 
