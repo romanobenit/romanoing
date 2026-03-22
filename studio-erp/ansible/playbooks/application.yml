@@ -6,6 +6,9 @@
   hosts: production
   gather_facts: true
   become: true
+  vars_files:
+    - ../group_vars/all/vars.yml
+    - ../group_vars/production/vault.yml
 
   tasks:
     # ═══════════════════════════════════════════════════════
@@ -54,7 +57,7 @@
       ansible.builtin.git:
         repo: "{{ app_repository }}"
         dest: "{{ app_directory }}"
-        version: "{{ app_repository_branch }}"
+        version: "{{ app_repository_version | default(app_repository_branch) }}"
         force: true
       become_user: "{{ app_user }}"
       tags: [deploy, git]

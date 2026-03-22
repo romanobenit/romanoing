@@ -6,6 +6,8 @@
   hosts: production
   gather_facts: true
   become: true
+  vars_files:
+    - ../group_vars/all/vars.yml
 
   tasks:
     - name: Set timezone
