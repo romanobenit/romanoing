@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Send, Bot, User, CheckCircle2, Shield, Award, Cpu, FileText, MapPin, Calendar, Layers, Maximize2, BarChart3 } from "lucide-react";
+import { Send, Bot, User, CheckCircle2, Shield, Award, Cpu, FileText, MapPin, Calendar, Layers, Maximize2, BarChart3, AlertCircle, Loader2, PhoneCall, Euro } from "lucide-react";
 
 // ─── ISO Standards ────────────────────────────────────────────────────────────
 const ISO_STANDARDS = [
@@ -52,35 +52,17 @@ const ISO_STANDARDS = [
   },
 ];
 
-// ─── Risposte AI ──────────────────────────────────────────────────────────────
-const AI_RESPONSES: Record<string, string> = {
-  default:
-    "Benvenuto nello Studio Tecnico Romano. Sono l'assistente AI che prepara la tua consulenza con l'Ingegnere. Dimmi: su quale immobile o progetto posso aiutarti oggi?",
-  sismica:
-    "Per una valutazione della vulnerabilità sismica ho bisogno di: anno di costruzione, comune, tipologia strutturale (muratura/cemento armato/acciaio) e superficie. Vuoi che l'Ing. Romano ti contatti per fissare un sopralluogo?",
-  ristrutturazione:
-    "Per un preventivo di ristrutturazione: mi indica la superficie (mq), il tipo di intervento (ordinaria/straordinaria/integrale) e se prevede accesso a bonus fiscali? Posso calcolare un range di complessità immediato.",
-  energia:
-    "Per l'efficientamento energetico valuto: classe energetica attuale (se nota), tipo di impianto termico, anno costruzione e presenza di isolamento. Con questi dati posso indicare gli incentivi applicabili.",
-  costo:
-    "Il nostro sistema di tariffazione è trasparente e milestone-based: paghi solo al completamento di fasi verificabili. Vuoi che ti invii una stima personalizzata via email, o preferisci parlare direttamente con l'Ingegnere?",
-  contatto:
-    "Posso organizzare una chiamata preliminare gratuita di 15 minuti con l'Ing. Romano. Quando sei disponibile? Oppure scrivi direttamente su WhatsApp: +39 347 633 6545",
-};
+// ─── Tipi per il sistema agentico ────────────────────────────────────────────
+type Phase = 'discovery' | 'analisi' | 'pricing' | 'offerte' | 'lead' | 'lead_inviato';
 
-function getAIResponse(msg: string): string {
-  const m = msg.toLowerCase();
-  if (m.includes("sismic") || m.includes("terremoto") || m.includes("struttur"))
-    return AI_RESPONSES.sismica;
-  if (m.includes("ristrutt") || m.includes("bonus") || m.includes("110"))
-    return AI_RESPONSES.ristrutturazione;
-  if (m.includes("energ") || m.includes("efficien") || m.includes("ecobonus"))
-    return AI_RESPONSES.energia;
-  if (m.includes("cost") || m.includes("prezzo") || m.includes("quanto") || m.includes("tariff"))
-    return AI_RESPONSES.costo;
-  if (m.includes("contatt") || m.includes("appuntament") || m.includes("chiamat") || m.includes("telefon"))
-    return AI_RESPONSES.contatto;
-  return "Ho capito. Per darti la risposta più precisa, preferisci che passi direttamente la tua richiesta all'Ing. Romano, o vuoi approfondire qui con me prima?";
+interface Opzione {
+  id: number;
+  tipo_erogazione: 'PLATFORM' | 'IMMEDIATA' | 'INGEGNERE';
+  titolo_servizio: string;
+  descrizione_deliverable: string;
+  prezzo_finale_centesimi: number;
+  sla_ore: number | null;
+  avviso: string | null;
 }
 
 // ─── Profilo tecnico estratto dalla chat ─────────────────────────────────────
@@ -238,48 +220,285 @@ function SchedaTecnica({ profile, msgCount }: { profile: TechProfile; msgCount: 
   );
 }
 
-// ─── Chat AI ──────────────────────────────────────────────────────────────────
-interface ChatMessage { role: "ai" | "user"; text: string; }
-
-interface AIChatWidgetProps {
-  onProfileUpdate: (p: TechProfile) => void;
-  onMsgCountUpdate: (n: number) => void;
+// Converte Brief (da Agente 1) in TechProfile per la Scheda Tecnica
+function briefToProfile(brief: Record<string, unknown>): TechProfile {
+  const p: TechProfile = {};
+  if (typeof brief.azione === 'string') p.tipoIntervento = brief.azione;
+  if (typeof brief.comune === 'string') p.ubicazione = brief.comune;
+  if (typeof brief.anno_costruzione === 'number') p.annoCostruzione = String(brief.anno_costruzione);
+  if (typeof brief.superficie_mq === 'number') p.superficie = `${brief.superficie_mq} m²`;
+  const comp = brief.complessita as string | undefined;
+  if (comp === 'BASSA') p.complessita = 'Bassa';
+  else if (comp === 'MEDIA') p.complessita = 'Media';
+  else if (comp === 'ALTA' || comp === 'MOLTO_ALTA') p.complessita = 'Alta';
+  return p;
 }
 
-function AIChatWidget({ onProfileUpdate, onMsgCountUpdate }: AIChatWidgetProps) {
+// ─── Chat Agentica ────────────────────────────────────────────────────────────
+interface ChatMessage { role: "ai" | "user"; text: string; }
+
+const TIPO_LABEL: Record<string, string> = {
+  PLATFORM: 'Documento AI',
+  IMMEDIATA: 'Analisi AI',
+  INGEGNERE: 'Parere firmato',
+};
+const TIPO_COLOR: Record<string, string> = {
+  PLATFORM: 'bg-slate-700 border-slate-600',
+  IMMEDIATA: 'bg-blue-900/40 border-blue-700',
+  INGEGNERE: 'bg-violet-900/40 border-violet-700',
+};
+const TIPO_BADGE: Record<string, string> = {
+  PLATFORM: 'bg-slate-800 text-slate-300 border-slate-600',
+  IMMEDIATA: 'bg-blue-900/50 text-blue-300 border-blue-700',
+  INGEGNERE: 'bg-violet-900/50 text-violet-300 border-violet-700',
+};
+
+interface ChatAgenticaProps {
+  onProfileUpdate: (p: TechProfile) => void;
+  onMsgCountUpdate: (n: number) => void;
+  onPhaseChange: (phase: Phase, opzioni?: Opzione[]) => void;
+}
+
+function ChatAgentica({ onProfileUpdate, onMsgCountUpdate, onPhaseChange }: ChatAgenticaProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([
-    { role: "ai", text: AI_RESPONSES.default },
+    { role: "ai", text: "Benvenuto allo Studio Tecnico Ing. Romano. Sono qui per aiutarti a capire di cosa hai bisogno. Dimmi: su quale immobile o progetto posso assisterti oggi?" },
   ]);
   const [input, setInput] = useState("");
   const [thinking, setThinking] = useState(false);
+  const [phase, setPhase] = useState<Phase>('discovery');
+  const [sessionToken, setSessionToken] = useState<string | null>(null);
+  const [opzioni, setOpzioni] = useState<Opzione[]>([]);
+  const [forchettaComplesso, setForchettaComplesso] = useState<{ min: number; max: number } | null>(null);
+  const [leadNome, setLeadNome] = useState("");
+  const [leadEmail, setLeadEmail] = useState("");
+  const [leadTelefono, setLeadTelefono] = useState("");
+  const [leadNote, setLeadNote] = useState("");
+  const [leadLoading, setLeadLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<{ role: 'user' | 'assistant'; content: string }[]>([]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, thinking]);
+  }, [messages, thinking, phase]);
 
-  function sendMessage() {
+  // Crea sessione al primo render
+  useEffect(() => {
+    const stored = localStorage.getItem('sportello_token');
+    if (stored) { setSessionToken(stored); return; }
+
+    fetch('/api/sportello/sessione', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' })
+      .then(r => r.json())
+      .then(d => {
+        if (d.success) {
+          localStorage.setItem('sportello_token', d.data.session_token);
+          setSessionToken(d.data.session_token);
+        }
+      })
+      .catch(console.error);
+  }, []);
+
+  async function runAnalisiEPricing(token: string) {
+    // Agente 2 + 3: routing
+    setPhase('analisi');
+    onPhaseChange('analisi');
+    const routingRes = await fetch('/api/sportello/routing', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then(r => r.json());
+
+    if (!routingRes.success) {
+      setMessages(p => [...p, { role: 'ai', text: 'Si è verificato un errore nell\'analisi normativa. Puoi contattarci direttamente su WhatsApp.' }]);
+      setPhase('discovery');
+      return;
+    }
+
+    if (routingRes.routing === 'COMPLESSO') {
+      const forchetta = { min: 50000, max: 500000 };
+      setForchettaComplesso(forchetta);
+      setPhase('lead');
+      onPhaseChange('lead');
+      setMessages(p => [...p, {
+        role: 'ai',
+        text: `Il tuo caso richiede una valutazione personalizzata con sopralluogo o calcoli specifici. Posso passare la tua richiesta direttamente all'Ing. Romano, che ti contatterà per un preventivo su misura. Lasciami i tuoi contatti.`,
+      }]);
+      return;
+    }
+
+    // Agente 5: pricing
+    setPhase('pricing');
+    onPhaseChange('pricing');
+    const pricingRes = await fetch('/api/sportello/pricing', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token }),
+    }).then(r => r.json());
+
+    if (!pricingRes.success || !pricingRes.opzioni?.length) {
+      setMessages(p => [...p, { role: 'ai', text: 'Non sono riuscito a calcolare un\'offerta automatica. Ti metto in contatto con l\'Ingegnere.' }]);
+      setPhase('lead');
+      onPhaseChange('lead');
+      return;
+    }
+
+    setOpzioni(pricingRes.opzioni);
+    setPhase('offerte');
+    onPhaseChange('offerte', pricingRes.opzioni);
+    setMessages(p => [...p, {
+      role: 'ai',
+      text: `Ho analizzato il tuo caso. Ecco cosa posso offrirti: tre opzioni con diversi livelli di approfondimento. Scegli quella più adatta alle tue esigenze.`,
+    }]);
+  }
+
+  async function sendMessage() {
     const trimmed = input.trim();
-    if (!trimmed) return;
+    if (!trimmed || thinking || !sessionToken) return;
 
     const nextMsgs: ChatMessage[] = [...messages, { role: "user", text: trimmed }];
     setMessages(nextMsgs);
     setInput("");
     setThinking(true);
 
-    // Aggiorna scheda tecnica subito con il nuovo messaggio utente
     const userTexts = nextMsgs.filter(m => m.role === "user").map(m => m.text);
     onProfileUpdate(extractProfile(userTexts));
     onMsgCountUpdate(userTexts.length);
 
-    setTimeout(() => {
+    historyRef.current.push({ role: 'user', content: trimmed });
+
+    try {
+      const res = await fetch('/api/sportello/analisi', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          token: sessionToken,
+          message: trimmed,
+          history: historyRef.current.slice(0, -1),
+        }),
+      }).then(r => r.json());
+
       setThinking(false);
-      setMessages(prev => [...prev, { role: "ai", text: getAIResponse(trimmed) }]);
-    }, 1200);
+
+      if (!res.success) {
+        setMessages(p => [...p, { role: 'ai', text: 'Si è verificato un errore. Riprova o contattaci su WhatsApp.' }]);
+        return;
+      }
+
+      setMessages(p => [...p, { role: 'ai', text: res.reply }]);
+      historyRef.current.push({ role: 'assistant', content: res.reply });
+
+      if (res.discovery_done && res.brief) {
+        onProfileUpdate({ ...extractProfile(userTexts), ...briefToProfile(res.brief) });
+        await runAnalisiEPricing(sessionToken);
+      }
+    } catch {
+      setThinking(false);
+      setMessages(p => [...p, { role: 'ai', text: 'Errore di connessione. Controlla la rete e riprova.' }]);
+    }
   }
 
+  async function inviaLead() {
+    if (!leadNome || !leadEmail) return;
+    setLeadLoading(true);
+    try {
+      const res = await fetch('/api/sportello/lead', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: sessionToken, nome: leadNome, email: leadEmail, telefono: leadTelefono, note_aggiuntive: leadNote }),
+      }).then(r => r.json());
+      if (res.success) {
+        setPhase('lead_inviato');
+        onPhaseChange('lead_inviato');
+        setMessages(p => [...p, { role: 'ai', text: `Perfetto ${leadNome}! Ho inoltrato la tua richiesta all'Ing. Romano. Riceverai un contatto entro 24 ore lavorative.` }]);
+        localStorage.removeItem('sportello_token');
+      }
+    } finally {
+      setLeadLoading(false);
+    }
+  }
+
+  // Vista offerte
+  if (phase === 'offerte' && opzioni.length > 0) {
+    return (
+      <div className="flex flex-col h-full overflow-y-auto p-4 gap-3" style={{ maxHeight: 420 }}>
+        {opzioni.map((op) => (
+          <div key={op.id} className={`border rounded-2xl p-4 ${TIPO_COLOR[op.tipo_erogazione]}`}>
+            <div className="flex items-start justify-between gap-2 mb-2">
+              <Badge className={`text-xs border ${TIPO_BADGE[op.tipo_erogazione]}`}>{TIPO_LABEL[op.tipo_erogazione]}</Badge>
+              <span className="text-lg font-bold text-white">€{(op.prezzo_finale_centesimi / 100).toFixed(0)}</span>
+            </div>
+            <p className="text-sm font-semibold text-white mb-1">{op.titolo_servizio}</p>
+            <p className="text-xs text-slate-400 leading-relaxed mb-3">{op.descrizione_deliverable}</p>
+            {op.sla_ore && <p className="text-xs text-slate-500 mb-2">Pronto in {op.sla_ore}h</p>}
+            {op.avviso && (
+              <div className="flex items-start gap-1.5 mb-3">
+                <AlertCircle className="w-3 h-3 text-amber-500 flex-shrink-0 mt-0.5" />
+                <p className="text-xs text-amber-500/80">{op.avviso}</p>
+              </div>
+            )}
+            <a href={`/sportello/acquista/${op.id}`}>
+              <Button size="sm" className="w-full bg-blue-600 hover:bg-blue-500 text-white text-xs rounded-xl">
+                <Euro className="w-3 h-3 mr-1" /> Acquista
+              </Button>
+            </a>
+          </div>
+        ))}
+        <button
+          onClick={() => { setPhase('lead'); onPhaseChange('lead'); }}
+          className="text-xs text-slate-500 hover:text-slate-300 flex items-center justify-center gap-1 pt-2"
+        >
+          <PhoneCall className="w-3.5 h-3.5" /> Preferisco parlare con il tecnico
+        </button>
+        <div ref={bottomRef} />
+      </div>
+    );
+  }
+
+  // Vista lead form
+  if (phase === 'lead' || phase === 'lead_inviato') {
+    return (
+      <div className="flex flex-col h-full overflow-y-auto p-4 gap-3" style={{ maxHeight: 420 }}>
+        {messages.slice(-2).map((m, i) => (
+          <div key={i} className={`flex items-start gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
+            <div className={`w-7 h-7 rounded-full flex-shrink-0 flex items-center justify-center text-white text-xs ${m.role === "ai" ? "bg-violet-600" : "bg-blue-600"}`}>
+              {m.role === "ai" ? <Bot className="w-4 h-4" /> : <User className="w-4 h-4" />}
+            </div>
+            <div className={`max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${m.role === "ai" ? "bg-slate-800 text-slate-100 rounded-tl-sm" : "bg-blue-600 text-white rounded-tr-sm"}`}>
+              {m.text}
+            </div>
+          </div>
+        ))}
+        {forchettaComplesso && (
+          <div className="bg-slate-800 rounded-xl p-3 text-xs text-slate-400">
+            Forchetta orientativa: <span className="text-white font-semibold">€{(forchettaComplesso.min / 100).toFixed(0)}–€{(forchettaComplesso.max / 100).toFixed(0)}</span> (da definire con sopralluogo)
+          </div>
+        )}
+        {phase !== 'lead_inviato' && (
+          <div className="space-y-2">
+            <input value={leadNome} onChange={e => setLeadNome(e.target.value)} placeholder="Nome e cognome *" className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500" />
+            <input value={leadEmail} onChange={e => setLeadEmail(e.target.value)} placeholder="Email *" type="email" className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500" />
+            <input value={leadTelefono} onChange={e => setLeadTelefono(e.target.value)} placeholder="Telefono (opzionale)" className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500" />
+            <textarea value={leadNote} onChange={e => setLeadNote(e.target.value)} placeholder="Note aggiuntive (opzionale)" rows={2} className="w-full bg-slate-800 border border-slate-600 rounded-xl px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 resize-none" />
+            <Button onClick={inviaLead} disabled={!leadNome || !leadEmail || leadLoading} className="w-full bg-violet-600 hover:bg-violet-500 text-white rounded-xl text-sm">
+              {leadLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Invia richiesta preventivo'}
+            </Button>
+          </div>
+        )}
+        <div ref={bottomRef} />
+      </div>
+    );
+  }
+
+  // Vista chat discovery/analisi/pricing
   return (
     <div className="flex flex-col h-full">
+      {/* Indicatore fase */}
+      {(phase === 'analisi' || phase === 'pricing') && (
+        <div className="px-4 py-2 border-b border-slate-700 flex items-center gap-2">
+          <Loader2 className="w-3.5 h-3.5 animate-spin text-violet-400" />
+          <span className="text-xs text-slate-400">
+            {phase === 'analisi' ? 'Analisi normativa in corso...' : 'Calcolo offerte personalizzate...'}
+          </span>
+        </div>
+      )}
+
       <div className="flex-1 overflow-y-auto p-4 space-y-3 min-h-0" style={{ maxHeight: 280 }}>
         {messages.map((m, i) => (
           <div key={i} className={`flex items-start gap-2.5 ${m.role === "user" ? "flex-row-reverse" : ""}`}>
@@ -316,19 +535,26 @@ function AIChatWidget({ onProfileUpdate, onMsgCountUpdate }: AIChatWidgetProps) 
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => e.key === "Enter" && sendMessage()}
             placeholder="Descrivi il tuo immobile o progetto..."
-            className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors"
+            disabled={thinking || phase !== 'discovery'}
+            className="flex-1 bg-slate-800 border border-slate-600 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500 transition-colors disabled:opacity-50"
           />
           <button
             onClick={sendMessage}
-            disabled={!input.trim() || thinking}
+            disabled={!input.trim() || thinking || phase !== 'discovery'}
             className="bg-violet-600 hover:bg-violet-500 disabled:opacity-40 text-white rounded-xl px-4 py-2.5 transition-colors"
           >
             <Send className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-slate-600 mt-2 text-center">
-          L&apos;AI prepara la consulenza · L&apos;Ingegnere la firma
-        </p>
+        <div className="flex items-center justify-between mt-2">
+          <p className="text-xs text-slate-600">AI tracciata · ISO 42001 · POP-AI-01</p>
+          <button
+            onClick={() => { setPhase('lead'); onPhaseChange('lead'); }}
+            className="text-xs text-slate-600 hover:text-slate-400 flex items-center gap-1"
+          >
+            <PhoneCall className="w-3 h-3" /> Parla col tecnico
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -487,7 +713,7 @@ export default function HomePage() {
                 <Badge className="bg-violet-900/50 text-violet-300 text-xs border border-violet-700">ISO 42001</Badge>
               </div>
             </div>
-            <AIChatWidget onProfileUpdate={handleProfileUpdate} onMsgCountUpdate={handleMsgCountUpdate} />
+            <ChatAgentica onProfileUpdate={handleProfileUpdate} onMsgCountUpdate={handleMsgCountUpdate} onPhaseChange={() => {}} />
           </div>
 
           {/* Scheda tecnica + mappa */}

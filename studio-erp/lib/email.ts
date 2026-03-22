@@ -659,3 +659,180 @@ export async function sendTestEmail(to: string): Promise<EmailResult> {
     }
   }
 }
+
+/**
+ * Notifica Titolare: nuovo lead preventivo dal Sportello Virtuale
+ */
+export async function sendLeadNotificationEmail(lead: {
+  nome: string;
+  email: string;
+  telefono?: string;
+  note_aggiuntive?: string;
+  brief?: Record<string, unknown>;
+}): Promise<EmailResult> {
+  if (!SENDGRID_API_KEY) {
+    console.warn('[Email] SendGrid non configurato — lead notifica non inviata');
+    return { success: false, error: 'SendGrid non configurato' };
+  }
+
+  // Recupera email TITOLARE dal DB
+  let titolareEmail = FROM_EMAIL;
+  try {
+    const r = await query(
+      `SELECT u.email FROM utenti u JOIN ruoli r ON u.ruolo_id = r.id WHERE r.codice = 'TITOLARE' LIMIT 1`
+    );
+    if (r.rows[0]) titolareEmail = r.rows[0].email;
+  } catch { /* fallback a FROM_EMAIL */ }
+
+  const briefRows = lead.brief
+    ? Object.entries(lead.brief)
+        .filter(([, v]) => v !== undefined && v !== null)
+        .map(([k, v]) => `<tr><td style="padding:4px 8px;color:#94a3b8;font-size:13px">${k}</td><td style="padding:4px 8px;color:#e2e8f0;font-size:13px">${String(v)}</td></tr>`)
+        .join('')
+    : '';
+
+  const content = `
+    <h2 style="color:#f8fafc;margin:0 0 16px">Nuovo lead preventivo — Sportello Virtuale</h2>
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:4px 8px;color:#94a3b8;font-size:13px">Nome</td><td style="padding:4px 8px;color:#e2e8f0;font-size:13px">${lead.nome}</td></tr>
+      <tr><td style="padding:4px 8px;color:#94a3b8;font-size:13px">Email</td><td style="padding:4px 8px;color:#e2e8f0;font-size:13px">${lead.email}</td></tr>
+      ${lead.telefono ? `<tr><td style="padding:4px 8px;color:#94a3b8;font-size:13px">Telefono</td><td style="padding:4px 8px;color:#e2e8f0;font-size:13px">${lead.telefono}</td></tr>` : ''}
+      ${lead.note_aggiuntive ? `<tr><td style="padding:4px 8px;color:#94a3b8;font-size:13px">Note</td><td style="padding:4px 8px;color:#e2e8f0;font-size:13px">${lead.note_aggiuntive}</td></tr>` : ''}
+    </table>
+    ${briefRows ? `<h3 style="color:#f8fafc;margin:20px 0 8px">Dati tecnici rilevati</h3><table style="width:100%;border-collapse:collapse">${briefRows}</table>` : ''}
+    <div style="margin-top:20px">
+      <a href="${APP_URL}/collaboratore/dashboard" style="background:#3b82f6;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px">
+        Vai alla dashboard →
+      </a>
+    </div>
+  `;
+
+  try {
+    const msg = {
+      to: titolareEmail,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: `[Sportello] Nuovo lead da ${lead.nome} — ${lead.email}`,
+      html: getEmailTemplate(content),
+    };
+    const [response] = await sgMail.send(msg);
+    return { success: true, messageId: response.headers['x-message-id'] };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Notifica Titolare: nuova consulenza acquistata tramite Sportello Virtuale
+ */
+export async function sendNewConsulenzaEmail(consulenza: {
+  incaricoCodice: string;
+  titoloServizio: string;
+  tipoErogazione: string;
+  prezzoCentesimi: number;
+  slaOre: number | null;
+  customerEmail: string;
+}): Promise<EmailResult> {
+  if (!SENDGRID_API_KEY) {
+    console.warn('[Email] SendGrid non configurato — consulenza notifica non inviata');
+    return { success: false, error: 'SendGrid non configurato' };
+  }
+
+  let titolareEmail = FROM_EMAIL;
+  try {
+    const r = await query(
+      `SELECT u.email FROM utenti u JOIN ruoli r ON u.ruolo_id = r.id WHERE r.codice = 'TITOLARE' LIMIT 1`
+    );
+    if (r.rows[0]) titolareEmail = r.rows[0].email;
+  } catch { /* fallback */ }
+
+  const TIPO_DESC: Record<string, string> = {
+    PLATFORM: '📄 Documento AI (generazione automatica)',
+    IMMEDIATA: '🔍 Analisi AI con revisione',
+    INGEGNERE: '✍️ Parere firmato dall\'Ingegnere',
+  };
+
+  const content = `
+    <h2 style="color:#f8fafc;margin:0 0 16px">💰 Nuova consulenza acquistata — Sportello Virtuale</h2>
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Incarico</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px;font-weight:bold">${consulenza.incaricoCodice}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Servizio</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px">${consulenza.titoloServizio}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Tipo</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px">${TIPO_DESC[consulenza.tipoErogazione] ?? consulenza.tipoErogazione}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Importo</td><td style="padding:6px 8px;color:#22c55e;font-size:16px;font-weight:bold">€${(consulenza.prezzoCentesimi / 100).toFixed(2)}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Cliente</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px">${consulenza.customerEmail}</td></tr>
+      ${consulenza.slaOre ? `<tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">SLA</td><td style="padding:6px 8px;color:#f59e0b;font-size:13px;font-weight:bold">⏱ Consegna entro ${consulenza.slaOre}h</td></tr>` : ''}
+    </table>
+    <div style="margin-top:20px">
+      <a href="${APP_URL}/collaboratore/dashboard" style="background:#3b82f6;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px">
+        Gestisci incarico →
+      </a>
+    </div>
+  `;
+
+  try {
+    const [response] = await sgMail.send({
+      to: titolareEmail,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: `[Sportello] Nuova consulenza ${consulenza.incaricoCodice} — €${(consulenza.prezzoCentesimi / 100).toFixed(0)}`,
+      html: getEmailTemplate(content),
+    });
+    return { success: true, messageId: response.headers['x-message-id'] };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Alert SLA: notifica Titolare quando un incarico si avvicina alla scadenza SLA
+ */
+export async function sendSlaAlertEmail(incarico: {
+  codice: string;
+  titoloServizio: string;
+  slaScadenza: Date;
+  oreRimanenti: number;
+  customerEmail: string;
+}): Promise<EmailResult> {
+  if (!SENDGRID_API_KEY) {
+    return { success: false, error: 'SendGrid non configurato' };
+  }
+
+  let titolareEmail = FROM_EMAIL;
+  try {
+    const r = await query(
+      `SELECT u.email FROM utenti u JOIN ruoli r ON u.ruolo_id = r.id WHERE r.codice = 'TITOLARE' LIMIT 1`
+    );
+    if (r.rows[0]) titolareEmail = r.rows[0].email;
+  } catch { /* fallback */ }
+
+  const urgency = incarico.oreRimanenti <= 4 ? '🚨 URGENTE' : '⚠️ ATTENZIONE';
+  const scadenzaStr = incarico.slaScadenza.toLocaleString('it-IT', { dateStyle: 'short', timeStyle: 'short' });
+
+  const content = `
+    <h2 style="color:#f59e0b;margin:0 0 16px">${urgency} — SLA in scadenza</h2>
+    <p style="color:#e2e8f0;font-size:14px;margin:0 0 16px">
+      L'incarico <strong>${incarico.codice}</strong> scade tra <strong>${incarico.oreRimanenti}h</strong> (${scadenzaStr}).
+    </p>
+    <table style="width:100%;border-collapse:collapse">
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Incarico</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px;font-weight:bold">${incarico.codice}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Servizio</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px">${incarico.titoloServizio}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Cliente</td><td style="padding:6px 8px;color:#e2e8f0;font-size:13px">${incarico.customerEmail}</td></tr>
+      <tr><td style="padding:6px 8px;color:#94a3b8;font-size:13px">Scadenza SLA</td><td style="padding:6px 8px;color:#ef4444;font-size:13px;font-weight:bold">${scadenzaStr}</td></tr>
+    </table>
+    <div style="margin-top:20px">
+      <a href="${APP_URL}/collaboratore/dashboard" style="background:#ef4444;color:white;padding:10px 20px;border-radius:8px;text-decoration:none;font-size:14px">
+        Gestisci ora →
+      </a>
+    </div>
+  `;
+
+  try {
+    const [response] = await sgMail.send({
+      to: titolareEmail,
+      from: { email: FROM_EMAIL, name: FROM_NAME },
+      subject: `${urgency} SLA ${incarico.codice} scade in ${incarico.oreRimanenti}h`,
+      html: getEmailTemplate(content),
+    });
+    return { success: true, messageId: response.headers['x-message-id'] };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}
