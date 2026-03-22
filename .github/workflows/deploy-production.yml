@@ -171,8 +171,8 @@ jobs:
           fi
           jq '.firewall.rules' /tmp/hetzner_fw_get.json > /tmp/hetzner_original_rules.json
           echo "Saved $(jq length /tmp/hetzner_original_rules.json) existing rule(s)"
-          # Build new rules: existing + SSH from 0.0.0.0/0
-          NEW_RULES=$(jq '. + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
+          # Build new rules: remove any existing TCP port 22 rule, then add SSH from 0.0.0.0/0
+          NEW_RULES=$(jq '[.[] | select(.protocol != "tcp" or .port != "22")] + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
             /tmp/hetzner_original_rules.json)
           # POST new rules
           HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_set.json -w "%{http_code}" -X POST \
@@ -498,8 +498,8 @@ jobs:
           fi
           jq '.firewall.rules' /tmp/hetzner_fw_get.json > /tmp/hetzner_original_rules.json
           echo "Saved $(jq length /tmp/hetzner_original_rules.json) existing rule(s)"
-          # Build new rules: existing + SSH from 0.0.0.0/0
-          NEW_RULES=$(jq '. + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
+          # Build new rules: remove any existing TCP port 22 rule, then add SSH from 0.0.0.0/0
+          NEW_RULES=$(jq '[.[] | select(.protocol != "tcp" or .port != "22")] + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
             /tmp/hetzner_original_rules.json)
           # POST new rules
           HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_set.json -w "%{http_code}" -X POST \
