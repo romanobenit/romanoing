@@ -395,8 +395,14 @@ Il committente riceve le credenziali in due modi:
 │ id              │     │ id              │     │ id              │
 │ incarico_id     │     │ incarico_id     │     │ utente_id       │
 │ nome_documento  │     │ strumento       │     │ azione          │
-│ stato           │     │ utilizzato_da   │     │ entita          │
-│ documento_id    │     │ verificato      │     │ entita_id       │
+│ stato           │     │ modello_versione│     │ entita          │
+│ documento_id    │     │ utilizzato_da   │     │ entita_id       │
+│                 │     │ ai_system_id    │     │                 │
+│                 │     │ uso_previsto    │     │                 │
+│                 │     │ rischio_livello │     │                 │
+│                 │     │ pii_rilevata    │     │                 │
+│                 │     │ revisione_urg.  │     │                 │
+│                 │     │ verificato      │     │                 │
 │ data_richiesta  │     │ verificato_da   │     │ created_at      │
 └─────────────────┘     └─────────────────┘     └─────────────────┘
 ```
@@ -451,6 +457,112 @@ ALTER TABLE documenti ADD COLUMN data_consegna TIMESTAMP;
 ALTER TABLE documenti ADD COLUMN mime_type VARCHAR(100);
 ALTER TABLE documenti ADD COLUMN antivirus_scanned BOOLEAN DEFAULT false;
 ALTER TABLE documenti ADD COLUMN antivirus_status VARCHAR(20) CHECK (antivirus_status IN ('pending', 'clean', 'infected', 'error'));
+
+-- ════════════════════════════════════════════════════════════
+-- TABELLE SISTEMA AGENTICO — SPORTELLO VIRTUALE
+-- ════════════════════════════════════════════════════════════
+
+-- Sessioni del sistema agentico (una per visita)
+CREATE TABLE sessioni_quiz (
+    id SERIAL PRIMARY KEY,
+    session_token VARCHAR(64) UNIQUE NOT NULL,
+    soggetto_tipo VARCHAR(20),         -- PRIVATO | AZIENDA | CONDOMINIO | ENTE_PUBBLICO
+    nome VARCHAR(255),
+    email VARCHAR(255),
+    brief JSONB,                       -- output Agente 1
+    quadro_normativo JSONB,            -- output Agente 2
+    routing VARCHAR(20),               -- PLATFORM | IMMEDIATA | INGEGNERE | COMPLESSO
+    routing_motivo TEXT,
+    stato VARCHAR(30) DEFAULT 'in_corso', -- in_corso | completato_vendita | completato_lead | abbandonato
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Offerte calcolate da Agente 5 (fino a 3 opzioni per sessione)
+CREATE TABLE offerte_calcolate (
+    id SERIAL PRIMARY KEY,
+    sessione_id INTEGER REFERENCES sessioni_quiz(id),
+    tipo_erogazione VARCHAR(20) NOT NULL CHECK (tipo_erogazione IN ('PLATFORM', 'IMMEDIATA', 'INGEGNERE', 'PREVENTIVO')),
+    titolo_servizio TEXT,
+    descrizione_deliverable TEXT,
+    prezzo_base_centesimi INTEGER,
+    adeguamenti JSONB,                 -- [{motivo, percentuale}]
+    prezzo_finale_centesimi INTEGER,
+    rationale_pricing JSONB,           -- trail completo per explainability e bias audit (ISO 42001)
+    sla_ore INTEGER,
+    avviso TEXT,
+    accettata BOOLEAN DEFAULT false,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Lead preventivi (branch COMPLESSO — Agente 5)
+CREATE TABLE lead_preventivi (
+    id SERIAL PRIMARY KEY,
+    sessione_id INTEGER REFERENCES sessioni_quiz(id),
+    nome VARCHAR(255) NOT NULL,
+    email VARCHAR(255) NOT NULL,
+    telefono VARCHAR(50),
+    brief JSONB,
+    quadro_normativo JSONB,
+    note_aggiuntive TEXT,
+    documenti_allegati JSONB,
+    stato VARCHAR(30) DEFAULT 'nuovo', -- nuovo | in_lavorazione | preventivo_inviato | convertito | perso
+    assegnato_a INTEGER REFERENCES utenti(id),
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Aggiunta colonne a incarichi per consulenze agentiche
+ALTER TABLE incarichi ADD COLUMN tipo VARCHAR(20) DEFAULT 'progetto'
+    CHECK (tipo IN ('progetto', 'consulenza_platform', 'consulenza_immediata', 'consulenza_ingegnere', 'preventivo'));
+ALTER TABLE incarichi ADD COLUMN offerta_id INTEGER REFERENCES offerte_calcolate(id);
+ALTER TABLE incarichi ADD COLUMN sla_scadenza TIMESTAMP;
+ALTER TABLE incarichi ADD COLUMN sessione_quiz_id INTEGER REFERENCES sessioni_quiz(id);
+
+-- ════════════════════════════════════════════════════════════
+-- TABELLE ISO/IEC 42001 — AIMS
+-- ════════════════════════════════════════════════════════════
+
+-- AI System Register: inventario di tutti i sistemi AI in uso (Annex A.6.2.7 + A.10)
+CREATE TABLE ai_systems (
+    id SERIAL PRIMARY KEY,
+    nome VARCHAR(100) NOT NULL,                -- "Claude API", "ChatGPT", "Grok", "Ollama"
+    fornitore VARCHAR(100),                    -- "Anthropic", "OpenAI", "xAI", "Meta"
+    modello_versione VARCHAR(100),             -- "claude-sonnet-4-6"
+    tipo VARCHAR(20) CHECK (tipo IN ('CLOUD', 'LOCALE')),
+    uso_previsto TEXT,                         -- descrizione uso autorizzato
+    classificazione_rischio VARCHAR(20) DEFAULT 'BASSO'
+        CHECK (classificazione_rischio IN ('BASSO', 'MEDIO', 'ALTO', 'PROIBITO')),
+    trattamento_dati_extra_ue BOOLEAN DEFAULT false,
+    valutazione_fornitore JSONB,               -- A.10 supplier assessment
+    data_ultima_revisione DATE,
+    attivo BOOLEAN DEFAULT true,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Aggiunta colonne a log_ai per conformità ISO 42001
+ALTER TABLE log_ai ADD COLUMN modello_versione VARCHAR(100);
+ALTER TABLE log_ai ADD COLUMN ai_system_id INTEGER REFERENCES ai_systems(id);
+ALTER TABLE log_ai ADD COLUMN rischio_livello VARCHAR(20) DEFAULT 'BASSO'
+    CHECK (rischio_livello IN ('BASSO', 'MEDIO', 'ALTO'));
+ALTER TABLE log_ai ADD COLUMN pii_rilevata BOOLEAN DEFAULT false;
+ALTER TABLE log_ai ADD COLUMN revisione_urgente BOOLEAN DEFAULT false;
+ALTER TABLE log_ai ADD COLUMN uso_previsto VARCHAR(100);  -- es. "agente_1_discovery", "pricing"
+
+-- Registro Non Conformità AI (clausola 10.2)
+CREATE TABLE nonconformita_ai (
+    id SERIAL PRIMARY KEY,
+    tipo VARCHAR(50) CHECK (tipo IN ('BIAS', 'HALLUCINATION', 'DATA_LEAK', 'MISUSE', 'PRIVACY', 'OTHER')),
+    descrizione TEXT NOT NULL,
+    log_ai_id INTEGER REFERENCES log_ai(id),
+    rilevato_da INTEGER REFERENCES utenti(id),
+    data_rilevamento TIMESTAMP DEFAULT NOW(),
+    azione_correttiva TEXT,
+    stato VARCHAR(30) DEFAULT 'aperta'
+        CHECK (stato IN ('aperta', 'in_lavorazione', 'chiusa')),
+    data_chiusura TIMESTAMP,
+    chiuso_da INTEGER REFERENCES utenti(id)
+);
 ```
 
 ### Ruolo COMMITTENTE
@@ -621,18 +733,109 @@ const ALLOWED_MIME_TYPES = [
 
 ---
 
-## 🤖 Tracciabilità AI (POP-AI-01)
+## 🤖 Tracciabilità AI (POP-AI-01) e Conformità ISO/IEC 42001:2023
 
-### Requisiti
-1. Ogni utilizzo AI loggato con: data, strumento, prompt, risposta, utente
-2. Verifica obbligatoria da Titolare
+### Procedura POP-AI-01 — Requisiti Operativi
+
+1. Ogni utilizzo AI loggato con: data, strumento, modello_versione, prompt, risposta, utente, uso_previsto
+2. Verifica obbligatoria da Titolare (verificato + verificato_da + data_verifica)
 3. Conservazione: 10 anni
+4. Flag automatico `pii_rilevata` se il prompt contiene dati personali
+5. Flag `revisione_urgente` per log ad alto rischio (attivabile manualmente o automaticamente)
 
 ### Strumenti Autorizzati
-| Strumento | Tipo | Uso |
-|-----------|------|-----|
-| Claude, ChatGPT, Grok | Cloud | Testi non confidenziali |
-| Ollama + Llama/Mistral | Locale | Dati confidenziali |
+| Strumento | Tipo | Uso | Rischio |
+|-----------|------|-----|---------|
+| Claude API (Anthropic) | Cloud | Agenti Sportello, analisi normative, testi non confidenziali | MEDIO |
+| ChatGPT (OpenAI) | Cloud | Testi non confidenziali, drafting | MEDIO |
+| Grok (xAI) | Cloud | Ricerca, analisi | MEDIO |
+| Ollama + Llama/Mistral | Locale | Dati confidenziali, dati clienti sensibili | BASSO |
+
+> **Regola dati personali**: I dati personali identificativi (CF, indirizzo, email cliente) NON devono
+> essere inviati a strumenti Cloud se non strettamente necessario e documentato. Preferire Ollama
+> per elaborazioni che coinvolgono dati sensibili di committenti.
+
+---
+
+## 🏛️ ISO/IEC 42001:2023 — Piano di Conformità e Certificazione
+
+> Standard internazionale per i Sistemi di Gestione dell'Intelligenza Artificiale (AIMS).
+> Prima norma ISO certificabile specificamente per AI. In Italia: ente accreditato ACCREDIA → **CSQA**.
+
+### Stato Conformità Attuale: ~30–35%
+
+| Requisito | Stato | Note |
+|-----------|-------|------|
+| A.6.2.8 Event Logging (log_ai) | ✅ | Implementato in produzione |
+| Cl. 9.1 Monitoraggio (verifica TITOLARE) | ✅ | PATCH /api/log-ai |
+| A.9.2 Responsible Use (POP-AI-01) | ✅ | Strumenti autorizzati, retention 10 anni |
+| A.3.2 Ruoli AIMS | ✅ | RBAC esistente |
+| Cl. 9.2 Audit trail (AuditLog) | ✅ | 12 tipi azioni, 9 entità |
+| A.7.3 Data Protection | ✅ | Rate limiting, CSRF, ClamAV, HTTPS |
+| Disclosure pubblica ISO 42001 | ✅ | Landing page con 6 principi |
+| **AIMS Scope Statement (4.3)** | ❌ | Da creare: `docs/iso-42001/AIMS_SCOPE_STATEMENT.md` |
+| **AI Policy firmata (5.2 + A.2.3)** | ❌ | Da creare: `docs/iso-42001/AI_POLICY.md` |
+| **AI System Register (A.6.2.7)** | ❌ | Tabella `ai_systems` + doc inventario |
+| **AI Risk Assessment (6.1.2)** | ❌ | Distinto da ISO 27001 RA |
+| **Statement of Applicability (6.1.3)** | ❌ | 38 controlli Annex A inclusi/esclusi |
+| **AI Impact Assessment AIIA (6.1.4)** | ❌ | Impatto su individui/gruppi/società |
+| **AI Objectives / KPIs (6.2)** | ❌ | Metriche AIMS misurabili |
+| **Bias/Fairness Testing (A.7)** | ❌ | Procedura test bias agenti |
+| **Third-Party Supplier Assessment (A.10)** | ❌ | Valutazione Anthropic, OpenAI, xAI |
+| **Internal Audit Program (9.2)** | ❌ | Piano annuale audit AIMS |
+| **Management Review AIMS (9.3)** | ❌ | Template verbale revisione periodica |
+| **Nonconformity Register (10.2)** | ❌ | Tabella `nonconformita_ai` |
+
+### Gap Specifici del Sistema Agentico (Sportello Virtuale)
+
+| Rischio | Controllo richiesto |
+|---------|---------------------|
+| Pricing dinamico Agente 5 potenzialmente discriminatorio | Bias assessment su moltiplicatori per `soggetto_tipo`, `zona_sismica` |
+| Dati personali nel BRIEF → Claude API (cloud) | Data minimization + flag `pii_rilevata` automatico |
+| Output AI venduto direttamente (Agente 4A/4B, nessuna verifica umana pre-vendita) | Intended use declaration + disclaimer + log POP-AI-01 obbligatorio |
+| Decisioni tecniche con valore economico generate da AI | Colonna `rationale_pricing JSONB` in `offerte_calcolate` per explainability |
+| Input libero utente Agente 1 | Security testing (prompt injection) |
+
+### Documenti da Creare (`docs/iso-42001/`)
+
+```
+docs/iso-42001/
+├── AIMS_SCOPE_STATEMENT.md          ← 1 pag — perimetro AIMS (clausola 4.3)
+├── AI_POLICY.md                     ← firmata TITOLARE (clausola 5.2 + A.2.3)
+├── AI_SYSTEM_REGISTER.md            ← inventario: Claude/ChatGPT/Grok/Ollama
+├── AI_RISK_ASSESSMENT.md            ← rischi AI-specifici (bias, hallucination, misuse)
+├── AI_IMPACT_ASSESSMENT.md          ← AIIA: impatto su individui/gruppi/società (6.1.4)
+├── STATEMENT_OF_APPLICABILITY.md    ← 38 controlli Annex A — incluso/escluso + motivazione
+├── AI_OBJECTIVES_KPIS.md            ← KPIs: % log verificati >95%, tempo verifica <48h, ecc.
+├── RESPONSIBLE_USE_POLICY.md        ← collaboratori + clienti
+├── THIRD_PARTY_AI_SUPPLIERS.md      ← scheda Anthropic, OpenAI, xAI
+├── BIAS_TESTING_PROCEDURE.md        ← come/quando testare bias, chi approva
+├── INTERNAL_AUDIT_PROGRAM.md        ← piano annuale audit AIMS
+├── MANAGEMENT_REVIEW_TEMPLATE.md    ← verbale revisione periodica
+└── NONCONFORMITY_PROCEDURE.md       ← registro NC + azioni correttive
+```
+
+### Piano Certificazione ACCREDIA (6–9 mesi)
+
+| Mese | Attività |
+|------|---------|
+| 1–2 | Produzione tutti i documenti obbligatori (`docs/iso-42001/`) |
+| 3–4 | Implementazione codice AIMS (tabelle, dashboard KPIs, PII detector) |
+| 5 | Internal audit simulato + chiusura NC minori |
+| 6 | Stage 1 audit CSQA (revisione documentazione) |
+| 7–8 | Chiusura gap Stage 1 |
+| 9 | Stage 2 audit CSQA → certificato valido 3 anni |
+
+**Ente certificatore**: CSQA (primo e unico ACCREDIA-accreditato per ISO 42001 in Italia).
+**Costo indicativo primo anno**: €7.000–12.000 (consulenza + audit + certificato).
+**Certificato valido**: 3 anni con surveillance audit annuali (anni 2 e 3).
+
+### Allineamento EU AI Act
+
+Il Sportello Virtuale rientra in AI **rischio basso-medio** (EU AI Act 2024/1689).
+I deliverable **INGEGNERE** (pareri tecnici firmati in contesti edilizi/strutturali regolamentati)
+potrebbero classificarsi come **alto rischio** (Annex III) — richiede valutazione specifica.
+**ISO 42001 certificata = compliance head-start significativo per EU AI Act 2026+.**
 
 ---
 
@@ -701,7 +904,20 @@ studio-erp/
 │       │   ├── create-session/route.ts
 │       │   ├── create-milestone-session/route.ts
 │       │   └── webhook/route.ts
-│       └── ...
+│       │
+│       ├── sportello/               # ═══ API SISTEMA AGENTICO ═══
+│       │   ├── sessione/route.ts    # Crea/aggiorna sessione agentica
+│       │   ├── analisi/route.ts     # Agente 2: POST brief → quadro normativo
+│       │   ├── routing/route.ts     # Agente 3: POST brief+normativa → tipo
+│       │   ├── pricing/route.ts     # Agente 5: POST brief+tipo → 3 offerte
+│       │   └── lead/route.ts        # POST salva lead preventivo (COMPLESSO)
+│       │
+│       ├── aims/                    # ═══ API ISO 42001 AIMS ═══
+│       │   ├── ai-systems/route.ts  # CRUD AI System Register
+│       │   ├── nonconformita/route.ts # CRUD registro NC
+│       │   └── metriche/route.ts    # KPIs AIMS per dashboard
+│       │
+│       └── log-ai/route.ts          # POP-AI-01 (GET/POST/PATCH verifica)
 │
 ├── components/
 │   ├── cliente/                     # Componenti Committente
@@ -714,6 +930,18 @@ studio-erp/
 │   │   ├── UploadDocumentoRichiesto.tsx
 │   │   ├── ChatMessaggi.tsx
 │   │   └── ProfiloForm.tsx
+│   │
+│   ├── sportello/                   # Componenti Sportello Virtuale
+│   │   ├── ChatAgentica.tsx         # Chat AI reale (sostituisce chat statica homepage)
+│   │   ├── SchedaTecnicaDinamica.tsx # Aggiornata con BRIEF reale da Agente 1
+│   │   ├── OffertaCard.tsx          # Card singola opzione (PLATFORM/IMMEDIATA/INGEGNERE)
+│   │   └── OffertaComparatore.tsx   # 3 opzioni affiancate con prezzi calcolati
+│   │
+│   ├── aims/                        # Componenti Dashboard AIMS (ISO 42001)
+│   │   ├── AimsDashboard.tsx        # KPIs AIMS in tempo reale
+│   │   ├── AiSystemRegister.tsx     # Gestione inventario AI tools
+│   │   └── NonconformitaList.tsx    # Registro NC con workflow
+│   │
 │   └── ...
 │
 ├── lib/
@@ -722,7 +950,16 @@ studio-erp/
 │   ├── db.ts
 │   ├── stripe.ts
 │   ├── qnap.ts
-│   └── email.ts
+│   ├── email.ts
+│   │
+│   ├── sportello/                   # Logica agenti (prompt-chain Claude API)
+│   │   ├── agente-1-discovery.ts    # Intervista Socratic → BRIEF JSON
+│   │   ├── agente-2-normativista.ts # Knowledge base normativa → QUADRO
+│   │   ├── agente-3-router.ts       # Decision matrix → tipo percorso
+│   │   └── agente-5-pricer.ts       # Calcolo prezzo dinamico → 3 opzioni
+│   │
+│   └── aims/
+│       └── pii-detector.ts          # Rilevamento automatico PII nei prompt
 │
 └── middleware.ts
 ```
@@ -764,6 +1001,10 @@ EMAIL_FROM="noreply@tuodominio.it"
 # App
 NEXT_PUBLIC_APP_URL="https://tuodominio.it"
 NEXT_PUBLIC_APP_NAME="Studio Ing. Romano"
+
+# Claude API — Sistema Agentico Sportello Virtuale
+ANTHROPIC_API_KEY="sk-ant-..."
+ANTHROPIC_MODEL="claude-sonnet-4-6"
 ```
 
 ---
@@ -784,7 +1025,33 @@ NEXT_PUBLIC_APP_NAME="Studio Ing. Romano"
 
 ---
 
-## 📅 Roadmap Implementazione MVP (Rivista)
+## 📅 Roadmap Implementazione (Aggiornata)
+
+> **Principio**: Priorità al lancio del prodotto (Sportello Virtuale). ISO 42001 formale
+> dopo il go-live, quando esistono dati reali su cui basare AIIA e KPIs.
+> Il logging ISO 42001-ready viene integrato nel Sportello fin dal primo commit.
+
+---
+
+### 🤖 FASE 0 — Sistema Agentico Sportello Virtuale (ora → lancio)
+
+**Obiettivo**: Sostituire la chat statica homepage con il sistema agentico reale (Claude API).
+L'entry point è la homepage esistente — nessuna route `/sportello` separata.
+
+| Sprint | Contenuto | Deliverable |
+|--------|-----------|-------------|
+| **S.1 — DB + Sessione** | Tabelle `sessioni_quiz`, `offerte_calcolate`, `lead_preventivi` + ALTER `incarichi` + tabelle AIMS (`ai_systems`, `nonconformita_ai`, ALTER `log_ai`) | Schema DB completo |
+| **S.2 — Agenti core** | `lib/sportello/agente-1-discovery.ts`, `agente-2-normativista.ts`, `agente-3-router.ts`, `agente-5-pricer.ts` + API routes `/api/sportello/*` | Agenti funzionanti, testabili via API |
+| **S.3 — Chat agentica homepage** | `ChatAgentica.tsx` sostituisce chat statica. Scheda Tecnica si aggiorna con BRIEF reale. Ogni chiamata Claude loga in `log_ai` con `uso_previsto` + `modello_versione` + `pii_rilevata` | Visitatore interagisce con AI reale |
+| **S.4 — Offerte + Stripe** | `OffertaComparatore.tsx` (3 opzioni), pagina prodotto, Stripe Checkout per consulenze. Webhook crea incarico tipo `consulenza_*` | Prima consulenza vendibile online |
+| **S.5 — Post-vendita + Lead** | Agenti 4A/4B generano documento AI (Platform/Immediata). Agente 4C crea incarico INGEGNERE con SLA. Form lead COMPLESSO. Alert SLA TITOLARE | Flusso completo end-to-end |
+
+**Note implementative**:
+- Ogni chiamata Claude API deve includere: `uso_previsto`, `modello_versione`, `ai_system_id`
+- `offerte_calcolate.rationale_pricing` deve contenere tutti i moltiplicatori applicati (explainability ISO 42001)
+- `pii_rilevata` va flaggato automaticamente se il BRIEF contiene email, nome, CF, indirizzo
+
+---
 
 ### 🚀 FASE 1 - MVP Core (8-10 settimane)
 
@@ -846,6 +1113,30 @@ NEXT_PUBLIC_APP_NAME="Studio Ing. Romano"
 - ✅ Workflow ISO 9001/27001 completo
 - ✅ Check-list e approvazioni
 - ✅ Gestione fornitori e formazione
+
+---
+
+### 🏛️ FASE 4 — Certificazione ISO/IEC 42001:2023 (post go-live, 6–9 mesi)
+
+**Prerequisiti**: Sportello Virtuale live con dati reali di almeno 4–8 settimane.
+
+| Sprint | Contenuto |
+|--------|-----------|
+| **4.1 — Documentazione obbligatoria** | Redazione 13 documenti `docs/iso-42001/`: AIMS Scope, AI Policy (firmata TITOLARE), AI System Register, AI Risk Assessment, AIIA, SoA (38 controlli Annex A), AI Objectives/KPIs, Responsible Use Policy, Third-Party Assessments (Anthropic, OpenAI), Bias Testing Procedure, Internal Audit Program, Management Review Template, Nonconformity Procedure |
+| **4.2 — Dashboard AIMS** | `AimsDashboard.tsx` con KPIs in tempo reale: % log verificati, tempo medio verifica, distribuzione rischio, log con PII, NC aperte. `AiSystemRegister.tsx`. `NonconformitaList.tsx` con workflow. `lib/aims/pii-detector.ts` automatico su POST /api/log-ai |
+| **4.3 — Internal Audit** | Audit AIMS interno (clausole 4–10 + campione Annex A). Chiusura NC minori. Verbale Management Review con KPIs periodo |
+| **4.4 — Certificazione CSQA** | Stage 1 audit (doc review). Chiusura gap. Stage 2 audit implementazione. Ottenimento certificato accreditato ACCREDIA |
+
+**Ente certificatore**: CSQA (primo ACCREDIA-accreditato ISO 42001 in Italia).
+**Costo indicativo**: €7.000–12.000 primo anno (consulenza + audit + certificato).
+**Validità**: 3 anni + surveillance audit annuali.
+
+**KPIs AIMS target (da definire in AI_OBJECTIVES_KPIS.md)**:
+- % log AI verificati entro 48h: **>95%**
+- Log con `pii_rilevata = TRUE` revisionati entro 24h: **100%**
+- NC AI aperte >30gg: **0**
+- AI System Register aggiornato: **mensile**
+- Management Review: **semestrale**
 
 ---
 
@@ -1391,10 +1682,42 @@ app/
 - [x] **File Upload**: Validazione MIME + ClamAV antivirus scan obbligatorio
 - [x] **Security**: Rate limiting API committente (100 req/15min)
 - [x] **Storage**: Migrazione graduale QNAP → Hetzner Object Storage (cloud-first)
-- [x] **Roadmap**: 3 fasi (MVP ridotto → Bundle completi → Collaboratori)
+- [x] **Roadmap**: 4 fasi (Sportello Agentico → MVP ERP → Bundle completi → Collaboratori → ISO 42001)
+- [x] **Sportello**: Chat statica homepage sostituita con agenti reali (Claude API) — nessuna route separata
+- [x] **Agenti**: Prompt-chain su Claude API, non microservizi — contesto accumulato sessione
+- [x] **ISO 42001**: Logging POP-AI-01 esteso (modello_versione, uso_previsto, pii_rilevata, rischio_livello)
+- [x] **ISO 42001**: Tabelle AIMS (ai_systems, nonconformita_ai) incluse nel schema DB
+- [x] **ISO 42001**: rationale_pricing in offerte_calcolate per explainability audit
+- [x] **ISO 42001**: Certificazione target post go-live (ente: CSQA, accreditato ACCREDIA)
+- [x] **EU AI Act**: Valutazione rischio Sportello = basso-medio; deliverable INGEGNERE da rivalutare
 
 ---
 
-*Ultimo aggiornamento: Dicembre 2025*
-*Versione: MVP 1.0 - Roadmap Ottimizzata*
-*Focus: Time-to-Market ridotto con scope essenziale*
+## ⚠️ Note Importanti per lo Sviluppo
+
+> Le note originali si trovano nella sezione precedente. Aggiungere qui solo note relative
+> al Sistema Agentico e all'AIMS.
+
+1. **Logging agenti obbligatorio**: ogni chiamata Claude API nel Sportello deve loggare in `log_ai`
+   con `uso_previsto` (es. `"agente_1_discovery"`), `ai_system_id`, `modello_versione`.
+   Senza questo il sistema non è conforme POP-AI-01.
+
+2. **PII nel BRIEF**: se il BRIEF (output Agente 1) contiene email, nome, CF, telefono, indirizzo →
+   `pii_rilevata = TRUE`. Il `lib/aims/pii-detector.ts` va richiamato prima di ogni POST a `/api/log-ai`.
+
+3. **rationale_pricing**: la colonna `offerte_calcolate.rationale_pricing` deve contenere il JSON
+   completo con tutti i moltiplicatori applicati e le motivazioni. È l'unica traccia di audit
+   per dimostrare che il pricing non è discriminatorio (bias assessment ISO 42001).
+
+4. **Dati personali e Claude API**: inviare il minimo indispensabile. Il nome del committente
+   non è necessario per l'analisi normativa — usare solo dati tecnici (tipo immobile, comune,
+   zona sismica, ecc.) quando possibile.
+
+5. **Fallback umano**: il pulsante "Preferisco parlare con il tecnico" deve essere sempre visibile
+   in ogni step della chat. Genera un lead manuale e notifica il Titolare.
+
+---
+
+*Ultimo aggiornamento: Marzo 2026*
+*Versione: 2.0 — Sistema Agentico + Piano ISO 42001*
+*Focus: Sportello Virtuale (revenue) → Certificazione ISO 42001 (credibilità)*
