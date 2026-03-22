@@ -197,6 +197,20 @@ jobs:
             echo "❌ PRODUCTION_SERVER_IP secret is not set"
             exit 1
           fi
+
+          # Diagnostics: check if firewall step ran
+          if [ -f /tmp/hetzner_fw_id.txt ]; then
+            echo "ℹ️  Firewall was opened for FW_ID=$(cat /tmp/hetzner_fw_id.txt)"
+          else
+            echo "⚠️  Firewall step was skipped (HETZNER_FIREWALL_ID not set or step failed)"
+          fi
+
+          # Diagnostics: basic reachability
+          echo "--- Network diagnostics ---"
+          echo "Runner public IP: $(curl -s --max-time 5 https://api.ipify.org || echo 'unknown')"
+          ping -c 2 -W 3 "$IP" 2>&1 | tail -3 || echo "ping failed (ICMP may be blocked)"
+          echo "---------------------------"
+
           echo "Checking SSH connectivity to $IP (max 10 attempts, 15s apart)..."
           for i in $(seq 1 10); do
             if nc -z -w 5 "$IP" 22 2>/dev/null; then
@@ -208,10 +222,19 @@ jobs:
             echo "Attempt $i/10 failed — waiting 15s..."
             sleep 15
           done
+
+          # Final diagnostics on failure
           echo "❌ Cannot reach $IP:22 after 10 attempts."
+          echo "--- Final diagnostics ---"
+          echo "Is server pingable? $(ping -c 1 -W 3 "$IP" &>/dev/null && echo YES || echo NO)"
+          echo "Port 80 open?  $(nc -z -w 3 "$IP" 80  &>/dev/null && echo YES || echo NO)"
+          echo "Port 443 open? $(nc -z -w 3 "$IP" 443 &>/dev/null && echo YES || echo NO)"
+          echo "Port 22 open?  $(nc -z -w 3 "$IP" 22  &>/dev/null && echo YES || echo NO)"
+          echo "-------------------------"
+          echo "   Check: HETZNER_FIREWALL_ID secret is set and correct"
           echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
           echo "   Check: server is provisioned and running"
-          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
+          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct public IP"
           exit 1
 
       - name: Create Ansible Vault password file
@@ -524,6 +547,20 @@ jobs:
             echo "❌ PRODUCTION_SERVER_IP secret is not set"
             exit 1
           fi
+
+          # Diagnostics: check if firewall step ran
+          if [ -f /tmp/hetzner_fw_id.txt ]; then
+            echo "ℹ️  Firewall was opened for FW_ID=$(cat /tmp/hetzner_fw_id.txt)"
+          else
+            echo "⚠️  Firewall step was skipped (HETZNER_FIREWALL_ID not set or step failed)"
+          fi
+
+          # Diagnostics: basic reachability
+          echo "--- Network diagnostics ---"
+          echo "Runner public IP: $(curl -s --max-time 5 https://api.ipify.org || echo 'unknown')"
+          ping -c 2 -W 3 "$IP" 2>&1 | tail -3 || echo "ping failed (ICMP may be blocked)"
+          echo "---------------------------"
+
           echo "Checking SSH connectivity to $IP (max 10 attempts, 15s apart)..."
           for i in $(seq 1 10); do
             if nc -z -w 5 "$IP" 22 2>/dev/null; then
@@ -535,10 +572,19 @@ jobs:
             echo "Attempt $i/10 failed — waiting 15s..."
             sleep 15
           done
+
+          # Final diagnostics on failure
           echo "❌ Cannot reach $IP:22 after 10 attempts."
+          echo "--- Final diagnostics ---"
+          echo "Is server pingable? $(ping -c 1 -W 3 "$IP" &>/dev/null && echo YES || echo NO)"
+          echo "Port 80 open?  $(nc -z -w 3 "$IP" 80  &>/dev/null && echo YES || echo NO)"
+          echo "Port 443 open? $(nc -z -w 3 "$IP" 443 &>/dev/null && echo YES || echo NO)"
+          echo "Port 22 open?  $(nc -z -w 3 "$IP" 22  &>/dev/null && echo YES || echo NO)"
+          echo "-------------------------"
+          echo "   Check: HETZNER_FIREWALL_ID secret is set and correct"
           echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
           echo "   Check: server is provisioned and running"
-          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
+          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct public IP"
           exit 1
 
       - name: Create Ansible Vault password file
