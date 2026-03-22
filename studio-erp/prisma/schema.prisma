@@ -189,12 +189,20 @@ model Incarico {
   priorita        String        @default("normale") // 'bassa', 'normale', 'alta', 'urgente'
   note            String?       @db.Text
   metadati        Json?         // Dati custom per bundle specifici
+  // Sportello Virtuale
+  tipo            String        @default("progetto") // progetto | consulenza_platform | consulenza_immediata | consulenza_ingegnere | preventivo
+  offertaId       Int?          @map("offerta_id")
+  slaScadenza     DateTime?     @map("sla_scadenza")
+  sessioneQuizId  Int?          @map("sessione_quiz_id")
+  slaAlertInviato DateTime?     @map("sla_alert_inviato")
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
   cliente      Cliente      @relation(fields: [clienteId], references: [id])
   bundle       Bundle?      @relation(fields: [bundleId], references: [id])
   responsabile Utente       @relation("ResponsabileIncarico", fields: [responsabileId], references: [id])
+  offerta      OffertaCalcolata? @relation(fields: [offertaId], references: [id], onDelete: SetNull)
+  sessioneQuiz SessioneQuiz?    @relation(fields: [sessioneQuizId], references: [id], onDelete: SetNull)
 
   // Relazioni
   milestone          Milestone[]
@@ -347,21 +355,29 @@ model Messaggio {
 // ========================================
 
 model LogAI {
-  id             Int      @id @default(autoincrement())
-  incaricoId     Int?     @map("incarico_id")
-  strumento      String   // 'Claude', 'ChatGPT', 'Grok', 'Ollama'
-  modello        String?  // 'gpt-4', 'claude-3-opus', etc
-  prompt         String   @db.Text
-  risposta       String   @db.Text
-  utilizzatoDa   Int      @map("utilizzato_da")
-  verificato     Boolean  @default(false)
-  verificatoDa   Int?     @map("verificato_da")
-  dataVerifica   DateTime? @map("data_verifica")
-  contesto       String?  @db.Text // Contesto di utilizzo
-  createdAt      DateTime @default(now())
+  id               Int       @id @default(autoincrement())
+  incaricoId       Int?      @map("incarico_id")
+  strumento        String    // 'Claude', 'ChatGPT', 'Grok', 'Ollama'
+  modello          String?   // 'gpt-4', 'claude-3-opus', etc
+  modelloVersione  String?   @map("modello_versione")
+  aiSystemId       Int?      @map("ai_system_id")
+  prompt           String    @db.Text
+  risposta         String    @db.Text
+  utilizzatoDa     Int       @map("utilizzato_da")
+  verificato       Boolean   @default(false)
+  verificatoDa     Int?      @map("verificato_da")
+  dataVerifica     DateTime? @map("data_verifica")
+  contesto         String?   @db.Text // Contesto di utilizzo
+  usoPrevisto      String?   @map("uso_previsto")
+  rischioLivello   String    @default("BASSO") @map("rischio_livello")
+  piiRilevata      Boolean   @default(false) @map("pii_rilevata")
+  revisioneUrgente Boolean   @default(false) @map("revisione_urgente")
+  createdAt        DateTime  @default(now())
 
-  incarico    Incarico? @relation(fields: [incaricoId], references: [id])
-  utilizzatore Utente   @relation(fields: [utilizzatoDa], references: [id])
+  incarico       Incarico?       @relation(fields: [incaricoId], references: [id])
+  utilizzatore   Utente          @relation(fields: [utilizzatoDa], references: [id])
+  aiSystem       AiSystem?       @relation(fields: [aiSystemId], references: [id], onDelete: SetNull)
+  nonconformite  NonconformitaAi[]
 
   @@index([incaricoId])
   @@index([utilizzatoDa])
@@ -409,4 +425,119 @@ model PreferenzeNotifiche {
   utente Utente @relation(fields: [utenteId], references: [id], onDelete: Cascade)
 
   @@map("preferenze_notifiche")
+}
+
+// ========================================
+// SPORTELLO VIRTUALE
+// ========================================
+
+model SessioneQuiz {
+  id              Int       @id @default(autoincrement())
+  sessionToken    String    @unique @map("session_token")
+  soggettoTipo    String?   @map("soggetto_tipo")
+  nome            String?
+  email           String?
+  brief           Json?
+  quadroNormativo Json?     @map("quadro_normativo")
+  routing         String?
+  routingMotivo   String?   @map("routing_motivo")
+  stato           String    @default("in_corso")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  offerte   OffertaCalcolata[]
+  lead      LeadPreventivo[]
+  incarichi Incarico[]
+
+  @@index([sessionToken])
+  @@index([email])
+  @@index([stato])
+  @@map("sessioni_quiz")
+}
+
+model OffertaCalcolata {
+  id                     Int      @id @default(autoincrement())
+  sessioneId             Int      @map("sessione_id")
+  tipoErogazione         String   @map("tipo_erogazione")
+  titoloServizio         String?  @map("titolo_servizio")
+  descrizioneDeliverable String?  @map("descrizione_deliverable") @db.Text
+  prezzoBaseCentesimi    Int?     @map("prezzo_base_centesimi")
+  adeguamenti            Json?
+  prezzFinaleCentesimi   Int      @map("prezzo_finale_centesimi")
+  rationalePricing       Json?    @map("rationale_pricing")
+  slaOre                 Int?     @map("sla_ore")
+  avviso                 String?
+  accettata              Boolean  @default(false)
+  stripePaymentIntentId  String?  @map("stripe_payment_intent_id")
+  stripeSessionId        String?  @map("stripe_session_id")
+  createdAt              DateTime @default(now()) @map("created_at")
+
+  sessione  SessioneQuiz @relation(fields: [sessioneId], references: [id], onDelete: Cascade)
+  incarichi Incarico[]
+
+  @@index([sessioneId])
+  @@map("offerte_calcolate")
+}
+
+model LeadPreventivo {
+  id                Int      @id @default(autoincrement())
+  sessioneId        Int?     @map("sessione_id")
+  nome              String
+  email             String
+  telefono          String?
+  brief             Json?
+  quadroNormativo   Json?    @map("quadro_normativo")
+  noteAggiuntive    String?  @map("note_aggiuntive") @db.Text
+  documentiAllegati Json?    @map("documenti_allegati")
+  stato             String   @default("nuovo")
+  assegnatoA        Int?     @map("assegnato_a")
+  createdAt         DateTime @default(now()) @map("created_at")
+  updatedAt         DateTime @updatedAt @map("updated_at")
+
+  sessione SessioneQuiz? @relation(fields: [sessioneId], references: [id], onDelete: SetNull)
+
+  @@index([email])
+  @@index([stato])
+  @@map("lead_preventivi")
+}
+
+// ========================================
+// ISO 42001 — AI SYSTEM REGISTER
+// ========================================
+
+model AiSystem {
+  id                     Int       @id @default(autoincrement())
+  nome                   String
+  fornitore              String?
+  modelloVersione        String?   @map("modello_versione")
+  tipo                   String?
+  usoPrevisto            String?   @map("uso_previsto") @db.Text
+  classificazioneRischio String    @default("BASSO") @map("classificazione_rischio")
+  trattamentoDatiExtraUe Boolean   @default(false) @map("trattamento_dati_extra_ue")
+  valutazioneFornitore   Json?     @map("valutazione_fornitore")
+  dataUltimaRevisione    DateTime? @map("data_ultima_revisione")
+  attivo                 Boolean   @default(true)
+  createdAt              DateTime  @default(now()) @map("created_at")
+
+  logAI LogAI[]
+
+  @@map("ai_systems")
+}
+
+model NonconformitaAi {
+  id               Int       @id @default(autoincrement())
+  tipo             String?
+  descrizione      String    @db.Text
+  logAiId          Int?      @map("log_ai_id")
+  rilevataDa       Int?      @map("rilevato_da")
+  dataRilevamento  DateTime  @default(now()) @map("data_rilevamento")
+  azioneCorrettiva String?   @map("azione_correttiva") @db.Text
+  stato            String    @default("aperta")
+  dataChiusura     DateTime? @map("data_chiusura")
+  chiusoDa         Int?      @map("chiuso_da")
+
+  logAI LogAI? @relation(fields: [logAiId], references: [id], onDelete: SetNull)
+
+  @@index([stato])
+  @@map("nonconformita_ai")
 }

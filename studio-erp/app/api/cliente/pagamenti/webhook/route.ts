@@ -4,7 +4,7 @@ import {query} from '@/lib/db'
 import Stripe from 'stripe'
 import {authenticatedApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 import {logPagamento} from '@/lib/audit-log'
-import {sendWelcomeEmail, sendPaymentConfirmationEmail} from '@/lib/email'
+import {sendWelcomeEmail, sendPaymentConfirmationEmail, sendNewConsulenzaEmail} from '@/lib/email'
 
 /**
  * Lazy initialization to avoid build-time errors when STRIPE_SECRET_KEY is not available
@@ -291,6 +291,129 @@ export async function POST(request: Request) {
           }
 
           console.log(`[Webhook] ✅ Milestone ${milestoneId} marked as paid`)
+        } else if (metadata.type === 'consulenza_sportello') {
+          // ========== ACQUISTO CONSULENZA SPORTELLO VIRTUALE ==========
+          const offertaId = parseInt(metadata.offertaId);
+          const sessioneId = parseInt(metadata.sessioneId);
+          console.log(`[Webhook] Consulenza sportello: offerta ${offertaId}, sessione ${sessioneId}`);
+
+          try {
+            const tipoIncarico = `consulenza_${(metadata.tipoErogazione as string).toLowerCase()}`;
+
+            // Recupera dati offerta e sessione
+            const offertaResult = await query(
+              `SELECT o.*, s.brief, s.quadro_normativo, s.email as sessione_email,
+                      s.nome as sessione_nome
+               FROM offerte_calcolate o
+               JOIN sessioni_quiz s ON o.sessione_id = s.id
+               WHERE o.id = $1`,
+              [offertaId]
+            );
+
+            if (offertaResult.rows.length === 0) {
+              console.error(`[Webhook] Offerta ${offertaId} non trovata`);
+              break;
+            }
+
+            const offerta = offertaResult.rows[0];
+            const customerEmail = session.customer_details?.email || offerta.sessione_email;
+            const customerName = session.customer_details?.name || offerta.sessione_nome || 'Cliente';
+
+            // Crea o recupera Cliente da email
+            let clienteId: number;
+            const clienteExist = await query(
+              `SELECT id FROM clienti WHERE email = $1 LIMIT 1`,
+              [customerEmail]
+            );
+            if (clienteExist.rows.length > 0) {
+              clienteId = clienteExist.rows[0].id;
+            } else {
+              // Crea Cliente minimale (sportello — senza dati anagrafici completi)
+              const parts = customerName.split(' ');
+              const nome = parts[0] ?? 'Cliente';
+              const cognome = parts.slice(1).join(' ') || 'Sportello';
+              const newCliente = await query(
+                `INSERT INTO clienti (tipo, nome, cognome, email, stato_accesso_portale, "createdAt", "updatedAt")
+                 VALUES ('privato', $1, $2, $3, 'disabilitato', NOW(), NOW())
+                 RETURNING id`,
+                [nome, cognome, customerEmail]
+              );
+              clienteId = newCliente.rows[0].id;
+              console.log(`[Webhook] Cliente creato per sportello: ${clienteId}`);
+            }
+
+            // Crea incarico consulenza
+            const incaricoResult = await query(
+              `INSERT INTO incarichi (
+                codice, cliente_id, oggetto, importo_totale, stato, tipo,
+                offerta_id, sessione_quiz_id,
+                sla_scadenza, priorita, "createdAt", "updatedAt"
+              ) VALUES (
+                $1, $2, $3, $4, 'ATTIVO', $5,
+                $6, $7,
+                $8, 'ALTA', NOW(), NOW()
+              ) RETURNING id, codice`,
+              [
+                `CONS${new Date().getFullYear()}${String(offertaId).padStart(5, '0')}`,
+                clienteId,
+                offerta.titolo_servizio,
+                offerta.prezzo_finale_centesimi / 100,
+                tipoIncarico,
+                offertaId,
+                sessioneId,
+                offerta.sla_ore
+                  ? new Date(Date.now() + offerta.sla_ore * 60 * 60 * 1000)
+                  : null,
+              ]
+            );
+
+            const incarico = incaricoResult.rows[0];
+            console.log(`[Webhook] Incarico consulenza creato: ${incarico.codice}`);
+
+            // Aggiorna sessione quiz
+            await query(
+              `UPDATE sessioni_quiz SET stato = 'completato_vendita', updated_at = NOW() WHERE id = $1`,
+              [sessioneId]
+            );
+
+            // Aggiorna offerta: accettata + stripe session id
+            await query(
+              `UPDATE offerte_calcolate SET accettata = TRUE, stripe_session_id = $1 WHERE id = $2`,
+              [session.id, offertaId]
+            );
+
+            // Invia email conferma al cliente + notifica Titolare
+            const emailTasks = [];
+
+            if (customerEmail) {
+              emailTasks.push(
+                sendPaymentConfirmationEmail(
+                  customerEmail,
+                  session.customer_details?.name || 'Cliente',
+                  offerta.titolo_servizio,
+                  offerta.prezzo_finale_centesimi,
+                  incarico.codice
+                ).catch(err => console.error('[Webhook] Email conferma cliente fallita:', err))
+              );
+            }
+
+            emailTasks.push(
+              sendNewConsulenzaEmail({
+                incaricoCodice: incarico.codice,
+                titoloServizio: offerta.titolo_servizio,
+                tipoErogazione: metadata.tipoErogazione,
+                prezzoCentesimi: offerta.prezzo_finale_centesimi,
+                slaOre: offerta.sla_ore,
+                customerEmail: customerEmail || 'N/D',
+              }).catch(err => console.error('[Webhook] Email notifica titolare fallita:', err))
+            );
+
+            await Promise.all(emailTasks);
+
+            console.log(`[Webhook] ✅ Consulenza sportello completata: ${incarico.codice}`);
+          } catch (err: any) {
+            console.error('[Webhook] Errore consulenza sportello:', err);
+          }
         } else {
           console.log('[Webhook] Checkout session without recognized metadata, skipping')
         }
