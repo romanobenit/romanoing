@@ -125,10 +125,29 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add server to known_hosts
+      - name: Verify SSH connectivity
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Could not add server to known_hosts"
+          IP="${{ secrets.PRODUCTION_SERVER_IP }}"
+          if [ -z "$IP" ]; then
+            echo "❌ PRODUCTION_SERVER_IP secret is not set"
+            exit 1
+          fi
+          echo "Checking SSH connectivity to $IP (max 5 attempts, 10s apart)..."
+          for i in $(seq 1 5); do
+            if nc -z -w 5 "$IP" 22 2>/dev/null; then
+              echo "✅ Port 22 reachable on attempt $i"
+              mkdir -p ~/.ssh
+              ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+              exit 0
+            fi
+            echo "Attempt $i/5 failed — waiting 10s..."
+            sleep 10
+          done
+          echo "❌ Cannot reach $IP:22 after 5 attempts."
+          echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
+          echo "   Check: server is provisioned and running"
+          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
+          exit 1
 
       - name: Create Ansible Vault password file
         run: |
@@ -343,10 +362,29 @@ jobs:
         with:
           ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
 
-      - name: Add server to known_hosts
+      - name: Verify SSH connectivity
         run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan -H ${{ secrets.PRODUCTION_SERVER_IP }} >> ~/.ssh/known_hosts 2>/dev/null || echo "Could not add server to known_hosts"
+          IP="${{ secrets.PRODUCTION_SERVER_IP }}"
+          if [ -z "$IP" ]; then
+            echo "❌ PRODUCTION_SERVER_IP secret is not set"
+            exit 1
+          fi
+          echo "Checking SSH connectivity to $IP (max 5 attempts, 10s apart)..."
+          for i in $(seq 1 5); do
+            if nc -z -w 5 "$IP" 22 2>/dev/null; then
+              echo "✅ Port 22 reachable on attempt $i"
+              mkdir -p ~/.ssh
+              ssh-keyscan -H "$IP" >> ~/.ssh/known_hosts 2>/dev/null
+              exit 0
+            fi
+            echo "Attempt $i/5 failed — waiting 10s..."
+            sleep 10
+          done
+          echo "❌ Cannot reach $IP:22 after 5 attempts."
+          echo "   Check: Hetzner Cloud Firewall allows port 22 from 0.0.0.0/0"
+          echo "   Check: server is provisioned and running"
+          echo "   Check: PRODUCTION_SERVER_IP secret contains the correct IP"
+          exit 1
 
       - name: Create Ansible Vault password file
         run: |
