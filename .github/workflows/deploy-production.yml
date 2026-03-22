@@ -7,6 +7,7 @@ on:
       - production
       - develop
       - claude/deploy-hetzner-Hvdwg
+      - claude/review-agentic-system-UMHVx
   workflow_dispatch:  # Permette trigger manuale da UI GitHub
 
 env:
