@@ -391,6 +391,10 @@ jobs:
           echo "⚠️ Rollback verification failed - check server manually"
           exit 1
 
+      - name: Get previous commit hash
+        id: prev_commit
+        run: echo "sha=$(git rev-parse HEAD~1)" >> $GITHUB_OUTPUT
+
       - name: Notify team of rollback
         if: always()
         uses: dawidd6/action-send-mail@v3
@@ -406,7 +410,7 @@ jobs:
             Deployment to production FAILED and automatic rollback was executed.
 
             Failed commit: ${{ github.sha }}
-            Rolled back to: $(git rev-parse HEAD~1)
+            Rolled back to: ${{ steps.prev_commit.outputs.sha }}
 
             Workflow run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
 
