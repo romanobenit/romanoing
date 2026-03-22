@@ -293,7 +293,8 @@ export async function POST(request: Request) {
 
             // Recupera dati offerta e sessione
             const offertaResult = await query(
-              `SELECT o.*, s.brief, s.quadro_normativo, s.email as sessione_email
+              `SELECT o.*, s.brief, s.quadro_normativo, s.email as sessione_email,
+                      s.nome as sessione_nome
                FROM offerte_calcolate o
                JOIN sessioni_quiz s ON o.sessione_id = s.id
                WHERE o.id = $1`,
@@ -307,6 +308,30 @@ export async function POST(request: Request) {
 
             const offerta = offertaResult.rows[0];
             const customerEmail = session.customer_details?.email || offerta.sessione_email;
+            const customerName = session.customer_details?.name || offerta.sessione_nome || 'Cliente';
+
+            // Crea o recupera Cliente da email
+            let clienteId: number;
+            const clienteExist = await query(
+              `SELECT id FROM clienti WHERE email = $1 LIMIT 1`,
+              [customerEmail]
+            );
+            if (clienteExist.rows.length > 0) {
+              clienteId = clienteExist.rows[0].id;
+            } else {
+              // Crea Cliente minimale (sportello — senza dati anagrafici completi)
+              const parts = customerName.split(' ');
+              const nome = parts[0] ?? 'Cliente';
+              const cognome = parts.slice(1).join(' ') || 'Sportello';
+              const newCliente = await query(
+                `INSERT INTO clienti (tipo, nome, cognome, email, stato_accesso_portale, "createdAt", "updatedAt")
+                 VALUES ('privato', $1, $2, $3, 'disabilitato', NOW(), NOW())
+                 RETURNING id`,
+                [nome, cognome, customerEmail]
+              );
+              clienteId = newCliente.rows[0].id;
+              console.log(`[Webhook] Cliente creato per sportello: ${clienteId}`);
+            }
 
             // Crea incarico consulenza
             const incaricoResult = await query(
@@ -315,12 +340,13 @@ export async function POST(request: Request) {
                 offerta_id, sessione_quiz_id,
                 sla_scadenza, priorita, "createdAt", "updatedAt"
               ) VALUES (
-                $1, NULL, $2, $3, 'ATTIVO', $4,
-                $5, $6,
-                $7, 'ALTA', NOW(), NOW()
+                $1, $2, $3, $4, 'ATTIVO', $5,
+                $6, $7,
+                $8, 'ALTA', NOW(), NOW()
               ) RETURNING id, codice`,
               [
                 `CONS${new Date().getFullYear()}${String(offertaId).padStart(5, '0')}`,
+                clienteId,
                 offerta.titolo_servizio,
                 offerta.prezzo_finale_centesimi / 100,
                 tipoIncarico,
@@ -337,13 +363,13 @@ export async function POST(request: Request) {
 
             // Aggiorna sessione quiz
             await query(
-              `UPDATE sessioni_quiz SET stato = 'pagato', updated_at = NOW() WHERE id = $1`,
+              `UPDATE sessioni_quiz SET stato = 'completato_vendita', updated_at = NOW() WHERE id = $1`,
               [sessioneId]
             );
 
-            // Aggiorna offerta con stripe session id
+            // Aggiorna offerta: accettata + stripe session id
             await query(
-              `UPDATE offerte_calcolate SET stripe_session_id = $1 WHERE id = $2`,
+              `UPDATE offerte_calcolate SET accettata = TRUE, stripe_session_id = $1 WHERE id = $2`,
               [session.id, offertaId]
             );
 
