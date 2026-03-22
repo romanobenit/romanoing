@@ -134,16 +134,30 @@ jobs:
             echo "⚠️  HETZNER_FIREWALL_ID not set — skipping firewall open"
             exit 0
           fi
-          curl -sf -H "Authorization: Bearer $TOKEN" "$API/firewalls/$FW_ID" \
-            | jq '.firewall.rules' > /tmp/hetzner_original_rules.json
+          # GET current rules — capture HTTP status separately to get useful error messages
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_get.json -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" "$API/firewalls/$FW_ID")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ GET /firewalls/$FW_ID returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_get.json
+            exit 1
+          fi
+          jq '.firewall.rules' /tmp/hetzner_fw_get.json > /tmp/hetzner_original_rules.json
           echo "Saved $(jq length /tmp/hetzner_original_rules.json) existing rule(s)"
+          # Build new rules: existing + SSH from 0.0.0.0/0
           NEW_RULES=$(jq '. + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
             /tmp/hetzner_original_rules.json)
-          curl -sf -X POST \
+          # POST new rules
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_set.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/firewalls/$FW_ID/actions/set_rules" \
-            -d "{\"rules\": $NEW_RULES}" > /dev/null
+            -d "{\"rules\": $NEW_RULES}")
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "❌ POST set_rules returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_set.json
+            exit 1
+          fi
           echo "✅ SSH rule added. Waiting 15s for propagation..."
           sleep 15
 
@@ -301,13 +315,18 @@ jobs:
           TOKEN="${{ secrets.HETZNER_API_TOKEN }}"
           FW_ID="${{ secrets.HETZNER_FIREWALL_ID }}"
           ORIGINAL_RULES=$(cat /tmp/hetzner_original_rules.json)
-          curl -sf -X POST \
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_restore.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/firewalls/$FW_ID/actions/set_rules" \
-            -d "{\"rules\": $ORIGINAL_RULES}" > /dev/null
+            -d "{\"rules\": $ORIGINAL_RULES}")
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "❌ Restore set_rules returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_restore.json
+            exit 1
+          fi
           echo "✅ Firewall rules restored"
-          rm -f /tmp/hetzner_original_rules.json
+          rm -f /tmp/hetzner_original_rules.json /tmp/hetzner_fw_get.json /tmp/hetzner_fw_set.json
 
   # ═══════════════════════════════════════════════════════
   # JOB 4: Post-Deployment Verification
@@ -412,16 +431,30 @@ jobs:
             echo "⚠️  HETZNER_FIREWALL_ID not set — skipping firewall open"
             exit 0
           fi
-          curl -sf -H "Authorization: Bearer $TOKEN" "$API/firewalls/$FW_ID" \
-            | jq '.firewall.rules' > /tmp/hetzner_original_rules.json
+          # GET current rules — capture HTTP status separately to get useful error messages
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_get.json -w "%{http_code}" \
+            -H "Authorization: Bearer $TOKEN" "$API/firewalls/$FW_ID")
+          if [ "$HTTP_CODE" != "200" ]; then
+            echo "❌ GET /firewalls/$FW_ID returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_get.json
+            exit 1
+          fi
+          jq '.firewall.rules' /tmp/hetzner_fw_get.json > /tmp/hetzner_original_rules.json
           echo "Saved $(jq length /tmp/hetzner_original_rules.json) existing rule(s)"
+          # Build new rules: existing + SSH from 0.0.0.0/0
           NEW_RULES=$(jq '. + [{"direction":"in","port":"22","protocol":"tcp","source_ips":["0.0.0.0/0","::/0"]}]' \
             /tmp/hetzner_original_rules.json)
-          curl -sf -X POST \
+          # POST new rules
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_set.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/firewalls/$FW_ID/actions/set_rules" \
-            -d "{\"rules\": $NEW_RULES}" > /dev/null
+            -d "{\"rules\": $NEW_RULES}")
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "❌ POST set_rules returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_set.json
+            exit 1
+          fi
           echo "✅ SSH rule added. Waiting 15s for propagation..."
           sleep 15
 
@@ -566,13 +599,18 @@ jobs:
           TOKEN="${{ secrets.HETZNER_API_TOKEN }}"
           FW_ID="${{ secrets.HETZNER_FIREWALL_ID }}"
           ORIGINAL_RULES=$(cat /tmp/hetzner_original_rules.json)
-          curl -sf -X POST \
+          HTTP_CODE=$(curl -s -o /tmp/hetzner_fw_restore.json -w "%{http_code}" -X POST \
             -H "Authorization: Bearer $TOKEN" \
             -H "Content-Type: application/json" \
             "$API/firewalls/$FW_ID/actions/set_rules" \
-            -d "{\"rules\": $ORIGINAL_RULES}" > /dev/null
+            -d "{\"rules\": $ORIGINAL_RULES}")
+          if [ "$HTTP_CODE" != "201" ]; then
+            echo "❌ Restore set_rules returned HTTP $HTTP_CODE"
+            cat /tmp/hetzner_fw_restore.json
+            exit 1
+          fi
           echo "✅ Firewall rules restored"
-          rm -f /tmp/hetzner_original_rules.json
+          rm -f /tmp/hetzner_original_rules.json /tmp/hetzner_fw_get.json /tmp/hetzner_fw_set.json
 
 # ═══════════════════════════════════════════════════════
 # Notification (success)
