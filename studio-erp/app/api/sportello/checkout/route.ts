@@ -10,9 +10,14 @@ import { query } from '@/lib/db';
 import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import Stripe from 'stripe';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-});
+function getStripeClient() {
+  if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('STRIPE_SECRET_KEY not configured');
+  }
+  return new Stripe(process.env.STRIPE_SECRET_KEY, {
+    apiVersion: '2025-12-15.clover',
+  });
+}
 
 export async function POST(request: Request) {
   const identifier = getIdentifier(request);
@@ -56,6 +61,7 @@ export async function POST(request: Request) {
       ? `${SLA_LABEL[offerta.tipo_erogazione] ?? 'Consegna entro'} ${offerta.sla_ore}h dall\'acquisto`
       : '';
 
+    const stripe = getStripeClient();
     const checkoutSession = await stripe.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
