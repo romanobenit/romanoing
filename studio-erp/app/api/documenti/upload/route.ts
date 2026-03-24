@@ -2,7 +2,7 @@ import {NextResponse} from 'next/server'
 import {auth} from '@/lib/auth'
 import {query} from '@/lib/db'
 import {writeFile, mkdir, unlink} from 'fs/promises'
-import {join} from 'path'
+import {join, resolve, sep} from 'path'
 import {existsSync} from 'fs'
 import {uploadRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 import {logDocumento} from '@/lib/audit-log'
@@ -65,8 +65,48 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validazione dimensione file (max 50MB per file)
+    const MAX_FILE_SIZE = 50 * 1024 * 1024
+    if (file.size > MAX_FILE_SIZE) {
+      return NextResponse.json(
+        { success: false, error: 'File troppo grande (max 50MB)' },
+        { status: 400 }
+      )
+    }
+
+    // Whitelist tipi MIME accettati (nessun eseguibile)
+    const ALLOWED_MIME_TYPES = new Set([
+      'application/pdf',
+      'application/msword',
+      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      'application/vnd.ms-excel',
+      'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      'application/vnd.ms-powerpoint',
+      'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+      'application/zip',
+      'application/x-zip-compressed',
+      'image/jpeg',
+      'image/png',
+      'image/gif',
+      'image/webp',
+      'image/tiff',
+      'text/plain',
+      'text/csv',
+      'application/acad',   // DWG
+      'application/dxf',    // DXF
+      'application/octet-stream', // DWG/DXF a volte senza MIME specifico
+    ])
+
+    const declaredMime = file.type || 'application/octet-stream'
+    if (!ALLOWED_MIME_TYPES.has(declaredMime)) {
+      return NextResponse.json(
+        { success: false, error: `Tipo file non consentito: ${declaredMime}` },
+        { status: 400 }
+      )
+    }
+
     // Determina MIME type
-    const mimeType = file.type || 'application/octet-stream'
+    const mimeType = declaredMime
 
     // Verifica che l'incarico esista
     const incaricoCheck = await query(
@@ -87,11 +127,22 @@ export async function POST(request: Request) {
       await mkdir(uploadDir, { recursive: true })
     }
 
+    // Sanifica nome file: rimuovi path traversal, caratteri speciali, mantieni solo nome+estensione
+    const rawName = file.name.replace(/[/\\]/g, '_').replace(/\.\./g, '_')
+    const safeName = rawName.replace(/[^a-zA-Z0-9._\-àèéìòùÀÈÉÌÒÙ ]/g, '_').trim() || 'file'
+
     // Genera nome file univoco
     const timestamp = Date.now()
-    const fileName = `${timestamp}-${file.name}`
+    const fileName = `${timestamp}-${safeName}`
     const filePath = join(uploadDir, fileName)
     const pathStorage = `uploads/documenti/${incaricoId.toString()}/${fileName}`
+
+    // Validazione extra: verifica che il path finale sia dentro uploadDir
+    const resolvedFilePath = resolve(filePath)
+    const resolvedUploadDir2 = resolve(uploadDir)
+    if (!resolvedFilePath.startsWith(resolvedUploadDir2 + sep)) {
+      return NextResponse.json({ success: false, error: 'Nome file non valido' }, { status: 400 })
+    }
 
     // Salva file
     const bytes = await file.arrayBuffer()

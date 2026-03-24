@@ -55,6 +55,23 @@ export async function POST(request: Request) {
       )
     }
 
+    // Validazione formato email
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email)) {
+      return NextResponse.json(
+        {success: false, error: 'Formato email non valido'},
+        {status: 400}
+      )
+    }
+
+    // Sanitizzazione: limita lunghezza campi per prevenire abusi
+    if (nome.length > 100 || cognome.length > 100 || email.length > 254 || telefono.length > 20) {
+      return NextResponse.json(
+        {success: false, error: 'Dati cliente non validi'},
+        {status: 400}
+      )
+    }
+
     // Recupera bundle dal database
     const bundleSql = `
       SELECT
@@ -169,7 +186,11 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error('[Checkout] Error creating Stripe session:', error)
     return NextResponse.json(
-      {success: false, error: 'Errore nella creazione del checkout', details: error.message},
+      {
+        success: false,
+        error: 'Errore nella creazione del checkout',
+        ...(process.env.NODE_ENV === 'development' && { details: error.message }),
+      },
       {status: 500}
     )
   }

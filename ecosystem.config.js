@@ -9,10 +9,14 @@ module.exports = {
     env: {
       NODE_ENV: 'development',
       PORT: 3000,
+      // Le variabili sensibili devono essere nel file .env sul server
+      // NON inserire secrets direttamente qui
     },
     env_production: {
       NODE_ENV: 'production',
       PORT: 3000,
+      // Le variabili sensibili vengono caricate da /var/www/studio-erp/.env
+      // tramite: pm2 start ecosystem.config.js --env production
     },
     // Logs configuration
     error_file: '/var/log/pm2/studio-erp-error.log',
@@ -65,27 +69,10 @@ module.exports = {
     // Log rotation
     log_date_format: 'YYYY-MM-DD HH:mm:ss Z',
     
-    // Environment variables that should be available in all environments
-    env_common: {
-      // Database
-      DATABASE_URL: process.env.DATABASE_URL,
-      
-      // NextAuth
-      NEXTAUTH_URL: process.env.NEXTAUTH_URL,
-      NEXTAUTH_SECRET: process.env.NEXTAUTH_SECRET,
-      
-      // External APIs
-      STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY,
-      STRIPE_WEBHOOK_SECRET: process.env.STRIPE_WEBHOOK_SECRET,
-      SENDGRID_API_KEY: process.env.SENDGRID_API_KEY,
-      
-      // Storage
-      MINIO_ENDPOINT: process.env.MINIO_ENDPOINT,
-      MINIO_ACCESS_KEY: process.env.MINIO_ACCESS_KEY,
-      MINIO_SECRET_KEY: process.env.MINIO_SECRET_KEY,
-      
-      // Security
-      RATE_LIMIT_REDIS_URL: process.env.RATE_LIMIT_REDIS_URL,
-    }
+    // NOTA: env_common NON è una chiave PM2 valida — ignorata silenziosamente.
+    // Tutte le variabili d'ambiente sensibili devono essere configurate
+    // nel file .env in /var/www/studio-erp/.env sul server Hetzner.
+    // Genera il file con: cp .env.template .env && nano .env
+    // Poi avvia con: pm2 start ecosystem.config.js --env production
   }]
 }

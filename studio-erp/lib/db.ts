@@ -64,6 +64,38 @@ export async function closePool(): Promise<void> {
 }
 
 /**
+ * Esegui operazioni multiple in una singola transazione DB.
+ * In caso di errore esegue automaticamente ROLLBACK.
+ *
+ * @example
+ * const result = await withTransaction(async (txQuery) => {
+ *   const a = await txQuery('INSERT INTO ...', [...])
+ *   const b = await txQuery('INSERT INTO ...', [...])
+ *   return { a, b }
+ * })
+ */
+export async function withTransaction<T>(
+  fn: (txQuery: typeof query) => Promise<T>
+): Promise<T> {
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const txQuery = <R extends QueryResultRow = any>(
+      text: string,
+      params?: (string | number | boolean | null | Date)[]
+    ) => client.query<R>(text, params);
+    const result = await fn(txQuery as unknown as typeof query);
+    await client.query('COMMIT');
+    return result;
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
+/**
  * Database utility functions for common queries
  */
 export const db = {
