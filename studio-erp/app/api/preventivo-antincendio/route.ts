@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import sgMail from '@sendgrid/mail'
+import {publicApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 
 // Configurazione SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
@@ -10,6 +11,17 @@ const PREVENTIVI_EMAIL = process.env.PREVENTIVI_EMAIL || 'preventivi@studio-roma
 // Inizializza SendGrid
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY)
+}
+
+/** Escape HTML per prevenire XSS nelle email HTML */
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 /**
@@ -169,6 +181,11 @@ function getEmailTemplate(content: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — prevenzione spam email
+  const identifier = getIdentifier(request)
+  const rl = await applyRateLimit(publicApiRateLimit, identifier)
+  if (rl) return rl
+
   try {
     const body = await request.json()
     const {configurazione, preventivo, cliente} = body
@@ -180,6 +197,12 @@ export async function POST(request: NextRequest) {
 
     if (!cliente.email || !cliente.nome || !cliente.cognome) {
       return NextResponse.json({error: 'Dati cliente incompleti'}, {status: 400})
+    }
+
+    // Validazione email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(cliente.email)) {
+      return NextResponse.json({error: 'Formato email non valido'}, {status: 400})
     }
 
     // Verifica SendGrid
@@ -200,17 +223,17 @@ export async function POST(request: NextRequest) {
           <h3>👤 Dati Cliente</h3>
           <div class="data-row">
             <span class="data-label">Nome:</span>
-            <span class="data-value">${cliente.nome} ${cliente.cognome}</span>
+            <span class="data-value">${escapeHtml(cliente.nome)} ${escapeHtml(cliente.cognome)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Email:</span>
-            <span class="data-value">${cliente.email}</span>
+            <span class="data-value">${escapeHtml(cliente.email)}</span>
           </div>
           ${
             cliente.telefono
               ? `<div class="data-row">
             <span class="data-label">Telefono:</span>
-            <span class="data-value">${cliente.telefono}</span>
+            <span class="data-value">${escapeHtml(cliente.telefono)}</span>
           </div>`
               : ''
           }
@@ -218,7 +241,7 @@ export async function POST(request: NextRequest) {
             cliente.note
               ? `<div class="data-row">
             <span class="data-label">Note:</span>
-            <span class="data-value">${cliente.note}</span>
+            <span class="data-value">${escapeHtml(cliente.note)}</span>
           </div>`
               : ''
           }
@@ -264,25 +287,25 @@ export async function POST(request: NextRequest) {
           <h3>📍 Localizzazione</h3>
           <div class="data-row">
             <span class="data-label">Indirizzo:</span>
-            <span class="data-value">${configurazione.indirizzo}</span>
+            <span class="data-value">${escapeHtml(configurazione.indirizzo)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Comune:</span>
-            <span class="data-value">${configurazione.cap} ${configurazione.comune} (${configurazione.provincia})</span>
+            <span class="data-value">${escapeHtml(configurazione.cap)} ${escapeHtml(configurazione.comune)} (${escapeHtml(configurazione.provincia)})</span>
           </div>
           <div class="data-row">
             <span class="data-label">Regione:</span>
-            <span class="data-value">${configurazione.regione}</span>
+            <span class="data-value">${escapeHtml(configurazione.regione)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Categoria Attività:</span>
-            <span class="data-value">${configurazione.categoriaAttivita}</span>
+            <span class="data-value">${escapeHtml(configurazione.categoriaAttivita)}</span>
           </div>
           ${
             configurazione.descrizioneAttivita
               ? `<div class="data-row">
             <span class="data-label">Descrizione:</span>
-            <span class="data-value">${configurazione.descrizioneAttivita}</span>
+            <span class="data-value">${escapeHtml(configurazione.descrizioneAttivita)}</span>
           </div>`
               : ''
           }
@@ -293,49 +316,49 @@ export async function POST(request: NextRequest) {
           <h3>📐 Dimensionamento</h3>
           <div class="data-row">
             <span class="data-label">Superficie Lorda:</span>
-            <span class="data-value">${configurazione.superficieLorda} m²</span>
+            <span class="data-value">${escapeHtml(configurazione.superficieLorda)} m²</span>
           </div>
           <div class="data-row">
             <span class="data-label">Superficie Netta:</span>
-            <span class="data-value">${configurazione.superficieNetta} m²</span>
+            <span class="data-value">${escapeHtml(configurazione.superficieNetta)} m²</span>
           </div>
           <div class="data-row">
             <span class="data-label">Affollamento Max:</span>
-            <span class="data-value">${configurazione.affollamentoMax} persone</span>
+            <span class="data-value">${escapeHtml(configurazione.affollamentoMax)} persone</span>
           </div>
           <div class="data-row">
             <span class="data-label">Numero Piani:</span>
-            <span class="data-value">${configurazione.numeroPiani}</span>
+            <span class="data-value">${escapeHtml(configurazione.numeroPiani)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Altezza Edificio:</span>
-            <span class="data-value">${configurazione.altezzaEdificio} m</span>
+            <span class="data-value">${escapeHtml(configurazione.altezzaEdificio)} m</span>
           </div>
           <div class="data-row">
             <span class="data-label">Piano Ubicazione:</span>
-            <span class="data-value">${configurazione.pianoUbicazione}</span>
+            <span class="data-value">${escapeHtml(configurazione.pianoUbicazione)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Struttura Portante:</span>
-            <span class="data-value">${configurazione.strutturaPortante}</span>
+            <span class="data-value">${escapeHtml(configurazione.strutturaPortante)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Anno Costruzione:</span>
-            <span class="data-value">${configurazione.annoCostruzione}</span>
+            <span class="data-value">${escapeHtml(configurazione.annoCostruzione)}</span>
           </div>
           ${
-            configurazione.tipoUtenza.length > 0
+            Array.isArray(configurazione.tipoUtenza) && configurazione.tipoUtenza.length > 0
               ? `<div class="data-row">
             <span class="data-label">Tipo Utenza:</span>
-            <span class="data-value">${configurazione.tipoUtenza.map((u: string) => `<span class="badge">${u}</span>`).join(' ')}</span>
+            <span class="data-value">${configurazione.tipoUtenza.map((u: string) => `<span class="badge">${escapeHtml(u)}</span>`).join(' ')}</span>
           </div>`
               : ''
           }
           ${
-            configurazione.compartimentazioneEsistente.length > 0
+            Array.isArray(configurazione.compartimentazioneEsistente) && configurazione.compartimentazioneEsistente.length > 0
               ? `<div class="data-row">
             <span class="data-label">Compartimentazione:</span>
-            <span class="data-value">${configurazione.compartimentazioneEsistente.map((c: string) => `<span class="badge">${c}</span>`).join(' ')}</span>
+            <span class="data-value">${configurazione.compartimentazioneEsistente.map((c: string) => `<span class="badge">${escapeHtml(c)}</span>`).join(' ')}</span>
           </div>`
               : ''
           }
@@ -346,14 +369,14 @@ export async function POST(request: NextRequest) {
           <h3>🔧 Servizi Richiesti</h3>
           <div class="data-row">
             <span class="data-label">Servizio Principale:</span>
-            <span class="data-value"><strong>${configurazione.servizioprincipale}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.servizioprincipale)}</strong></span>
           </div>
           ${
-            configurazione.serviziAggiuntivi.length > 0
+            Array.isArray(configurazione.serviziAggiuntivi) && configurazione.serviziAggiuntivi.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Servizi Aggiuntivi:</p>
             <ul>
-              ${configurazione.serviziAggiuntivi.map((s: string) => `<li>${s}</li>`).join('')}
+              ${configurazione.serviziAggiuntivi.map((s: string) => `<li>${escapeHtml(s)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -362,25 +385,26 @@ export async function POST(request: NextRequest) {
 
         <!-- Impianti e Certificazioni -->
         ${
-          configurazione.impiantiEsistenti.length > 0 || configurazione.certificazioniEsistenti.length > 0
+          (Array.isArray(configurazione.impiantiEsistenti) && configurazione.impiantiEsistenti.length > 0) ||
+          (Array.isArray(configurazione.certificazioniEsistenti) && configurazione.certificazioniEsistenti.length > 0)
             ? `<div class="section">
           <h3>⚡ Impianti e Certificazioni Esistenti</h3>
           ${
-            configurazione.impiantiEsistenti.length > 0
+            Array.isArray(configurazione.impiantiEsistenti) && configurazione.impiantiEsistenti.length > 0
               ? `<div style="margin-bottom: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Impianti:</p>
             <ul>
-              ${configurazione.impiantiEsistenti.map((i: string) => `<li>${i}</li>`).join('')}
+              ${configurazione.impiantiEsistenti.map((i: string) => `<li>${escapeHtml(i)}</li>`).join('')}
             </ul>
           </div>`
               : ''
           }
           ${
-            configurazione.certificazioniEsistenti.length > 0
+            Array.isArray(configurazione.certificazioniEsistenti) && configurazione.certificazioniEsistenti.length > 0
               ? `<div>
             <p class="data-label" style="margin-bottom: 10px;">Certificazioni:</p>
             <ul>
-              ${configurazione.certificazioniEsistenti.map((c: string) => `<li>${c}</li>`).join('')}
+              ${configurazione.certificazioniEsistenti.map((c: string) => `<li>${escapeHtml(c)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -394,28 +418,28 @@ export async function POST(request: NextRequest) {
           <h3>⚠️ Urgenza e Criticità</h3>
           <div class="data-row">
             <span class="data-label">Situazione Attuale:</span>
-            <span class="data-value"><strong>${configurazione.situazioneAttuale}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.situazioneAttuale)}</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Vincoli Temporali:</span>
-            <span class="data-value">${configurazione.vincoliTemporali}</span>
+            <span class="data-value">${escapeHtml(configurazione.vincoliTemporali)}</span>
           </div>
           ${
-            configurazione.criticitaNote.length > 0
+            Array.isArray(configurazione.criticitaNote) && configurazione.criticitaNote.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Criticità Note:</p>
             <ul>
-              ${configurazione.criticitaNote.map((c: string) => `<li>${c}</li>`).join('')}
+              ${configurazione.criticitaNote.map((c: string) => `<li>${escapeHtml(c)}</li>`).join('')}
             </ul>
           </div>`
               : ''
           }
           ${
-            configurazione.depositiSpeciali.length > 0
+            Array.isArray(configurazione.depositiSpeciali) && configurazione.depositiSpeciali.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Depositi Speciali:</p>
             <ul>
-              ${configurazione.depositiSpeciali.map((d: string) => `<li>${d}</li>`).join('')}
+              ${configurazione.depositiSpeciali.map((d: string) => `<li>${escapeHtml(d)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -433,7 +457,7 @@ export async function POST(request: NextRequest) {
       <div class="content">
         <h2>Richiesta Preventivo Ricevuta</h2>
 
-        <p>Gentile <strong>${cliente.nome} ${cliente.cognome}</strong>,</p>
+        <p>Gentile <strong>${escapeHtml(cliente.nome)} ${escapeHtml(cliente.cognome)}</strong>,</p>
 
         <p>Abbiamo ricevuto la tua richiesta di preventivo per i servizi di prevenzione incendi. Ti ringraziamo per averci contattato!</p>
 
@@ -452,15 +476,15 @@ export async function POST(request: NextRequest) {
           <h3>📋 Riepilogo Servizio</h3>
           <div class="data-row">
             <span class="data-label">Servizio Richiesto:</span>
-            <span class="data-value">${configurazione.servizioprincipale}</span>
+            <span class="data-value">${escapeHtml(configurazione.servizioprincipale)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Localizzazione:</span>
-            <span class="data-value">${configurazione.comune} (${configurazione.provincia})</span>
+            <span class="data-value">${escapeHtml(configurazione.comune)} (${escapeHtml(configurazione.provincia)})</span>
           </div>
           <div class="data-row">
             <span class="data-label">Categoria Attività:</span>
-            <span class="data-value">${configurazione.categoriaAttivita}</span>
+            <span class="data-value">${escapeHtml(configurazione.categoriaAttivita)}</span>
           </div>
         </div>
 
@@ -523,7 +547,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Errore durante l\'invio della richiesta',
-        details: error.message,
+        ...(process.env.NODE_ENV === 'development' && { details: error.message }),
       },
       {status: 500}
     )

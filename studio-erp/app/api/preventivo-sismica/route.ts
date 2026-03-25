@@ -1,5 +1,6 @@
 import {NextRequest, NextResponse} from 'next/server'
 import sgMail from '@sendgrid/mail'
+import {publicApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 
 // Configurazione SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
@@ -10,6 +11,17 @@ const PREVENTIVI_EMAIL = process.env.PREVENTIVI_EMAIL || 'preventivi@studio-roma
 // Inizializza SendGrid
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY)
+}
+
+/** Escape HTML per prevenire XSS nelle email HTML */
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 /**
@@ -176,6 +188,11 @@ function getEmailTemplate(content: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — prevenzione spam email
+  const identifier = getIdentifier(request)
+  const rl = await applyRateLimit(publicApiRateLimit, identifier)
+  if (rl) return rl
+
   try {
     const body = await request.json()
     const {configurazione, preventivo, cliente} = body
@@ -242,17 +259,17 @@ export async function POST(request: NextRequest) {
           <h3>👤 Dati Cliente</h3>
           <div class="data-row">
             <span class="data-label">Nome:</span>
-            <span class="data-value">${cliente.nome} ${cliente.cognome}</span>
+            <span class="data-value">${escapeHtml(cliente.nome)} ${escapeHtml(cliente.cognome)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Email:</span>
-            <span class="data-value">${cliente.email}</span>
+            <span class="data-value">${escapeHtml(cliente.email)}</span>
           </div>
           ${
             cliente.telefono
               ? `<div class="data-row">
             <span class="data-label">Telefono:</span>
-            <span class="data-value">${cliente.telefono}</span>
+            <span class="data-value">${escapeHtml(cliente.telefono)}</span>
           </div>`
               : ''
           }
@@ -260,7 +277,7 @@ export async function POST(request: NextRequest) {
             cliente.note
               ? `<div class="data-row">
             <span class="data-label">Note:</span>
-            <span class="data-value">${cliente.note}</span>
+            <span class="data-value">${escapeHtml(cliente.note)}</span>
           </div>`
               : ''
           }
@@ -306,31 +323,31 @@ export async function POST(request: NextRequest) {
           <h3>📍 Localizzazione</h3>
           <div class="data-row">
             <span class="data-label">Indirizzo:</span>
-            <span class="data-value">${configurazione.indirizzo || 'Non specificato'}</span>
+            <span class="data-value">${escapeHtml(configurazione.indirizzo) || 'Non specificato'}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Comune:</span>
-            <span class="data-value">${configurazione.cap} ${configurazione.comune} (${configurazione.provincia})</span>
+            <span class="data-value">${escapeHtml(configurazione.cap)} ${escapeHtml(configurazione.comune)} (${escapeHtml(configurazione.provincia)})</span>
           </div>
           <div class="data-row">
             <span class="data-label">Regione:</span>
-            <span class="data-value">${configurazione.regione}</span>
+            <span class="data-value">${escapeHtml(configurazione.regione)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Zona Sismica:</span>
-            <span class="data-value"><strong>Zona ${configurazione.zonaSismica}</strong></span>
+            <span class="data-value"><strong>Zona ${escapeHtml(configurazione.zonaSismica)}</strong></span>
           </div>
           ${
             configurazione.categoriaSottosuolo
               ? `<div class="data-row">
             <span class="data-label">Categoria Sottosuolo:</span>
-            <span class="data-value">${configurazione.categoriaSottosuolo}</span>
+            <span class="data-value">${escapeHtml(configurazione.categoriaSottosuolo)}</span>
           </div>`
               : ''
           }
           <div class="data-row">
             <span class="data-label">Categoria Topografica:</span>
-            <span class="data-value">${configurazione.categoriaTopografica}</span>
+            <span class="data-value">${escapeHtml(configurazione.categoriaTopografica)}</span>
           </div>
         </div>
 
@@ -339,27 +356,27 @@ export async function POST(request: NextRequest) {
           <h3>🏗️ Caratteristiche Edificio</h3>
           <div class="data-row">
             <span class="data-label">Tipologia Strutturale:</span>
-            <span class="data-value"><strong>${tipologieStrutturali[configurazione.tipologiaStrutturale] || configurazione.tipologiaStrutturale}</strong></span>
+            <span class="data-value"><strong>${tipologieStrutturali[configurazione.tipologiaStrutturale] || escapeHtml(configurazione.tipologiaStrutturale)}</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Superficie Totale:</span>
-            <span class="data-value">${configurazione.superficieTotale} m²</span>
+            <span class="data-value">${escapeHtml(configurazione.superficieTotale)} m²</span>
           </div>
           <div class="data-row">
             <span class="data-label">Piani fuori terra / interrati:</span>
-            <span class="data-value">${configurazione.numeroPianiFuoriTerra} / ${configurazione.numeroPianiInterrati}</span>
+            <span class="data-value">${escapeHtml(configurazione.numeroPianiFuoriTerra)} / ${escapeHtml(configurazione.numeroPianiInterrati)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Altezza totale:</span>
-            <span class="data-value">${configurazione.altezzaTotale} m</span>
+            <span class="data-value">${escapeHtml(configurazione.altezzaTotale)} m</span>
           </div>
           <div class="data-row">
             <span class="data-label">Anno di Costruzione:</span>
-            <span class="data-value"><strong>${periodiCostruzione[configurazione.annoCostruzione] || configurazione.annoCostruzione}</strong></span>
+            <span class="data-value"><strong>${periodiCostruzione[configurazione.annoCostruzione] || escapeHtml(configurazione.annoCostruzione)}</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Destinazione d'Uso:</span>
-            <span class="data-value">${destinazioniUso[configurazione.destinazioneUso] || configurazione.destinazioneUso}</span>
+            <span class="data-value">${destinazioniUso[configurazione.destinazioneUso] || escapeHtml(configurazione.destinazioneUso)}</span>
           </div>
         </div>
 
@@ -368,14 +385,14 @@ export async function POST(request: NextRequest) {
           <h3>📄 Stato di Conservazione</h3>
           <div class="data-row">
             <span class="data-label">Stato:</span>
-            <span class="data-value"><strong>${statiConservazione[configurazione.statoConservazione] || configurazione.statoConservazione}</strong></span>
+            <span class="data-value"><strong>${statiConservazione[configurazione.statoConservazione] || escapeHtml(configurazione.statoConservazione)}</strong></span>
           </div>
           ${
             configurazione.documentazioneDisponibile.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Documentazione disponibile:</p>
             <ul>
-              ${configurazione.documentazioneDisponibile.map((doc: string) => `<li>${doc}</li>`).join('')}
+              ${configurazione.documentazioneDisponibile.map((doc: string) => `<li>${escapeHtml(doc)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -385,7 +402,7 @@ export async function POST(request: NextRequest) {
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Interventi pregressi:</p>
             <ul>
-              ${configurazione.interventiPregressi.map((int: string) => `<li>${int}</li>`).join('')}
+              ${configurazione.interventiPregressi.map((int: string) => `<li>${escapeHtml(int)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -397,14 +414,14 @@ export async function POST(request: NextRequest) {
           <h3>🔧 Servizi Richiesti</h3>
           <div class="data-row">
             <span class="data-label">Servizio Principale:</span>
-            <span class="data-value"><strong>${preventivo.nomeServizio}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(preventivo.nomeServizio)}</strong></span>
           </div>
           ${
             configurazione.serviziAggiuntivi.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Servizi Aggiuntivi:</p>
             <ul>
-              ${preventivo.serviziAggiuntivi.map((s: any) => `<li>${s.descrizione} - €${s.importo.toLocaleString('it-IT')}</li>`).join('')}
+              ${preventivo.serviziAggiuntivi.map((s: any) => `<li>${escapeHtml(s.descrizione)} - €${s.importo.toLocaleString('it-IT')}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -416,18 +433,18 @@ export async function POST(request: NextRequest) {
           <h3>⚙️ Complessità Strutturale</h3>
           <div class="data-row">
             <span class="data-label">Irregolarità Planimetrica:</span>
-            <span class="data-value">${configurazione.irregolaritaPlanimetrica}</span>
+            <span class="data-value">${escapeHtml(configurazione.irregolaritaPlanimetrica)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Irregolarità in Altezza:</span>
-            <span class="data-value">${configurazione.irregolaritaAltezza}</span>
+            <span class="data-value">${escapeHtml(configurazione.irregolaritaAltezza)}</span>
           </div>
           ${
             configurazione.elementiCritici.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Elementi Critici (${configurazione.elementiCritici.length}):</p>
             <ul>
-              ${configurazione.elementiCritici.map((elem: string) => `<li>${elem}</li>`).join('')}
+              ${configurazione.elementiCritici.map((elem: string) => `<li>${escapeHtml(elem)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -439,18 +456,18 @@ export async function POST(request: NextRequest) {
           <h3>⏰ Urgenza e Tempistiche</h3>
           <div class="data-row">
             <span class="data-label">Situazione Attuale:</span>
-            <span class="data-value">${configurazione.situazioneAttuale || 'Non specificata'}</span>
+            <span class="data-value">${escapeHtml(configurazione.situazioneAttuale) || 'Non specificata'}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Tempistiche:</span>
-            <span class="data-value"><strong>${configurazione.vincoliTemporali}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.vincoliTemporali)}</strong></span>
           </div>
           ${
             configurazione.criticitaParticolari.length > 0
               ? `<div style="margin-top: 15px;">
             <p class="data-label" style="margin-bottom: 10px;">Criticità particolari:</p>
             <ul>
-              ${configurazione.criticitaParticolari.map((crit: string) => `<li>${crit}</li>`).join('')}
+              ${configurazione.criticitaParticolari.map((crit: string) => `<li>${escapeHtml(crit)}</li>`).join('')}
             </ul>
           </div>`
               : ''
@@ -463,19 +480,19 @@ export async function POST(request: NextRequest) {
           <h3 style="color: #16a34a;">💰 Sismabonus</h3>
           <div class="data-row">
             <span class="data-label">Classe Ante:</span>
-            <span class="data-value"><strong>${configurazione.classeRischioAnte}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.classeRischioAnte)}</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Classe Post (prevista):</span>
-            <span class="data-value"><strong>${configurazione.classeRischioPost}</strong></span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.classeRischioPost)}</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Salto di Classe:</span>
-            <span class="data-value"><strong>+${preventivo.sismabonus.saltoClassi} classi</strong></span>
+            <span class="data-value"><strong>+${escapeHtml(preventivo.sismabonus.saltoClassi)} classi</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Detrazione Fiscale:</span>
-            <span class="data-value"><strong>${preventivo.sismabonus.percentualeDetrazione}%</strong> (${preventivo.sismabonus.descrizione})</span>
+            <span class="data-value"><strong>${escapeHtml(preventivo.sismabonus.percentualeDetrazione)}%</strong> (${escapeHtml(preventivo.sismabonus.descrizione)})</span>
           </div>
           <div class="alert-box" style="margin-top: 15px;">
             <p style="margin: 0; font-size: 14px;"><strong>⚠️ Nota:</strong> I dati sul Sismabonus sono indicativi. La classe effettiva sarà determinata dopo valutazione strutturale completa.</p>
@@ -495,7 +512,7 @@ export async function POST(request: NextRequest) {
       <div class="content">
         <h2>Richiesta Preventivo Ricevuta</h2>
 
-        <p>Gentile <strong>${cliente.nome} ${cliente.cognome}</strong>,</p>
+        <p>Gentile <strong>${escapeHtml(cliente.nome)} ${escapeHtml(cliente.cognome)}</strong>,</p>
 
         <p>Abbiamo ricevuto la tua richiesta di preventivo per la valutazione di vulnerabilità sismica. Ti ringraziamo per averci contattato!</p>
 
@@ -514,19 +531,19 @@ export async function POST(request: NextRequest) {
           <h3>📋 Riepilogo Servizio</h3>
           <div class="data-row">
             <span class="data-label">Servizio Richiesto:</span>
-            <span class="data-value">${preventivo.nomeServizio}</span>
+            <span class="data-value">${escapeHtml(preventivo.nomeServizio)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Localizzazione:</span>
-            <span class="data-value">${configurazione.comune} (${configurazione.provincia}) - Zona Sismica ${configurazione.zonaSismica}</span>
+            <span class="data-value">${escapeHtml(configurazione.comune)} (${escapeHtml(configurazione.provincia)}) - Zona Sismica ${escapeHtml(configurazione.zonaSismica)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Tipologia Strutturale:</span>
-            <span class="data-value">${tipologieStrutturali[configurazione.tipologiaStrutturale] || configurazione.tipologiaStrutturale}</span>
+            <span class="data-value">${tipologieStrutturali[configurazione.tipologiaStrutturale] || escapeHtml(configurazione.tipologiaStrutturale)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Anno Costruzione:</span>
-            <span class="data-value">${periodiCostruzione[configurazione.annoCostruzione] || configurazione.annoCostruzione}</span>
+            <span class="data-value">${periodiCostruzione[configurazione.annoCostruzione] || escapeHtml(configurazione.annoCostruzione)}</span>
           </div>
         </div>
 
@@ -539,11 +556,11 @@ export async function POST(request: NextRequest) {
           </p>
           <div class="data-row">
             <span class="data-label">Salto di Classe Stimato:</span>
-            <span class="data-value"><strong>${configurazione.classeRischioAnte} → ${configurazione.classeRischioPost}</strong> (+${preventivo.sismabonus.saltoClassi})</span>
+            <span class="data-value"><strong>${escapeHtml(configurazione.classeRischioAnte)} → ${escapeHtml(configurazione.classeRischioPost)}</strong> (+${escapeHtml(preventivo.sismabonus.saltoClassi)})</span>
           </div>
           <div class="data-row">
             <span class="data-label">Detrazione Fiscale:</span>
-            <span class="data-value"><strong>${preventivo.sismabonus.percentualeDetrazione}%</strong></span>
+            <span class="data-value"><strong>${escapeHtml(preventivo.sismabonus.percentualeDetrazione)}%</strong></span>
           </div>
           <div class="data-row">
             <span class="data-label">Detrazione Massima:</span>
@@ -615,7 +632,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: "Errore durante l'invio della richiesta",
-        details: error.message,
+        ...(process.env.NODE_ENV === 'development' && { details: error.message }),
       },
       {status: 500}
     )
