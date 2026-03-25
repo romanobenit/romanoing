@@ -23,6 +23,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'token e message richiesti' }, { status: 400 });
     }
 
+    // Limite dimensione messaggio (prevenzione abuse / costi Claude)
+    if (typeof message !== 'string' || message.length > 2000) {
+      return NextResponse.json({ success: false, error: 'Messaggio troppo lungo (max 2000 caratteri)' }, { status: 400 });
+    }
+
+    // Limite storia (max 14 turni = 7 scambi user+assistant, come da spec agente)
+    if (!Array.isArray(history) || history.length > 14) {
+      return NextResponse.json({ success: false, error: 'Cronologia conversazione non valida' }, { status: 400 });
+    }
+
     // Carica sessione
     const sessResult = await query(
       `SELECT id, stato FROM sessioni_quiz WHERE session_token = $1 LIMIT 1`,

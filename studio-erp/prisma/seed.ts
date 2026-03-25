@@ -58,14 +58,26 @@ async function main() {
   // ========================================
   console.log('👤 Creazione utente Titolare...')
 
-  // IMPORTANTE: Cambiare password in produzione!
-  const passwordHash = await hash('admin123', 10)
+  // Legge credenziali da env vars; in production SEED_ADMIN_PASSWORD è obbligatoria
+  const seedEmail = process.env.SEED_ADMIN_EMAIL || 'romano@studio-ingegneria.it'
+  const seedPassword = process.env.SEED_ADMIN_PASSWORD
+  if (!seedPassword) {
+    console.error('❌ SEED_ADMIN_PASSWORD non configurata!')
+    console.error('   Imposta: SEED_ADMIN_PASSWORD=<password-sicura> npm run db:seed')
+    process.exit(1)
+  }
+  if (seedPassword.length < 12) {
+    console.error('❌ SEED_ADMIN_PASSWORD troppo corta (minimo 12 caratteri)')
+    process.exit(1)
+  }
+
+  const passwordHash = await hash(seedPassword, 12)
 
   const titolare = await prisma.utente.upsert({
-    where: { email: 'romano@studio-ingegneria.it' },
+    where: { email: seedEmail },
     update: {},
     create: {
-      email: 'romano@studio-ingegneria.it',
+      email: seedEmail,
       passwordHash,
       nome: 'Giovanni',
       cognome: 'Romano',
@@ -76,9 +88,9 @@ async function main() {
   })
 
   console.log('✅ Utente Titolare creato')
-  console.log('   📧 Email: romano@studio-ingegneria.it')
-  console.log('   🔑 Password: admin123')
-  console.log('   ⚠️  IMPORTANTE: Cambiare password in produzione!\n')
+  console.log(`   📧 Email: ${seedEmail}`)
+  console.log('   🔑 Password: [da SEED_ADMIN_PASSWORD env var]')
+  console.log('   ⚠️  Conserva le credenziali in un password manager sicuro\n')
 
   // ========================================
   // 3. BUNDLE (Fase 1 MVP)
@@ -200,8 +212,10 @@ async function main() {
   // ========================================
   console.log('👥 Creazione cliente demo...')
 
-  const clienteDemo = await prisma.cliente.create({
-    data: {
+  const clienteDemo = await prisma.cliente.upsert({
+    where: { codice: 'CLI25001' },
+    update: {},
+    create: {
       codice: 'CLI25001',
       tipo: 'privato',
       nome: 'Mario',
@@ -227,12 +241,11 @@ async function main() {
   console.log('═══════════════════════════════════════════════════════')
   console.log('📝 CREDENZIALI ACCESSO')
   console.log('═══════════════════════════════════════════════════════')
-  console.log('Email:    romano@studio-ingegneria.it')
-  console.log('Password: admin123')
+  console.log(`Email:    ${seedEmail}`)
+  console.log('Password: [quella impostata in SEED_ADMIN_PASSWORD]')
   console.log('Ruolo:    TITOLARE (accesso completo)')
   console.log('═══════════════════════════════════════════════════════')
   console.log('\n⚠️  IMPORTANTE:')
-  console.log('   Cambiare password in produzione!')
   console.log('   Eliminare cliente demo prima del go-live\n')
   console.log('🚀 Prossimi step:')
   console.log('   1. npm run dev')

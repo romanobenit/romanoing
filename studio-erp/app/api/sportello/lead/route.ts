@@ -22,6 +22,18 @@ export async function POST(request: Request) {
       return NextResponse.json({ success: false, error: 'nome e email sono obbligatori' }, { status: 400 });
     }
 
+    // Validazione formato e limiti
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+    if (!emailRegex.test(email) || email.length > 254) {
+      return NextResponse.json({ success: false, error: 'Formato email non valido' }, { status: 400 });
+    }
+    if (typeof nome !== 'string' || nome.length > 200) {
+      return NextResponse.json({ success: false, error: 'Nome non valido' }, { status: 400 });
+    }
+    if (telefono && (typeof telefono !== 'string' || telefono.length > 30)) {
+      return NextResponse.json({ success: false, error: 'Telefono non valido' }, { status: 400 });
+    }
+
     // Recupera sessione con brief e quadro
     const sessResult = await query(
       `SELECT id, brief, quadro_normativo FROM sessioni_quiz WHERE session_token = $1 LIMIT 1`,

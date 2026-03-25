@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import sgMail from '@sendgrid/mail';
+import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 
 // Configurazione SendGrid
 const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY;
@@ -10,6 +11,17 @@ const PREVENTIVI_EMAIL = process.env.PREVENTIVI_EMAIL || 'preventivi@studio-roma
 // Inizializza SendGrid
 if (SENDGRID_API_KEY) {
   sgMail.setApiKey(SENDGRID_API_KEY);
+}
+
+/** Escape HTML per prevenire XSS nelle email HTML */
+function escapeHtml(value: unknown): string {
+  if (value === null || value === undefined) return ''
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
 }
 
 /**
@@ -195,6 +207,11 @@ interface Preventivo {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting — prevenzione spam email
+  const identifier = getIdentifier(request);
+  const rl = await applyRateLimit(publicApiRateLimit, identifier);
+  if (rl) return rl;
+
   try {
     const { data, preventivo }: { data: any; preventivo: Preventivo } = await request.json();
 
@@ -242,7 +259,7 @@ export async function POST(request: NextRequest) {
     // Genera contenuto email cliente
     const clientContent = `
       <div class="content">
-        <p>Gentile <strong>${data.nomeCliente}</strong>,</p>
+        <p>Gentile <strong>${escapeHtml(data.nomeCliente)}</strong>,</p>
         <p>Grazie per aver utilizzato il nostro configuratore per la Due Diligence Tecnica Immobiliare.</p>
         <p>Di seguito il riepilogo della tua richiesta:</p>
 
@@ -250,11 +267,11 @@ export async function POST(request: NextRequest) {
           <h3>📋 Tipologia Operazione</h3>
           <div class="data-row">
             <span class="data-label">Tipo operazione</span>
-            <span class="data-value">${tipoOperazioneLabels[data.tipoOperazione] || data.tipoOperazione}</span>
+            <span class="data-value">${tipoOperazioneLabels[data.tipoOperazione] || escapeHtml(data.tipoOperazione)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Urgenza</span>
-            <span class="data-value">${urgenzaLabels[data.urgenza] || data.urgenza}</span>
+            <span class="data-value">${urgenzaLabels[data.urgenza] || escapeHtml(data.urgenza)}</span>
           </div>
         </div>
 
@@ -262,19 +279,19 @@ export async function POST(request: NextRequest) {
           <h3>🏢 Caratteristiche Asset</h3>
           <div class="data-row">
             <span class="data-label">Tipologia immobile</span>
-            <span class="data-value">${tipologiaImmobileLabels[data.tipologiaImmobile] || data.tipologiaImmobile}</span>
+            <span class="data-value">${tipologiaImmobileLabels[data.tipologiaImmobile] || escapeHtml(data.tipologiaImmobile)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Superficie commerciale</span>
-            <span class="data-value">${data.superficieCommerciale} mq</span>
+            <span class="data-value">${escapeHtml(data.superficieCommerciale)} mq</span>
           </div>
           <div class="data-row">
             <span class="data-label">Numero unità</span>
-            <span class="data-value">${data.numeroUnita}</span>
+            <span class="data-value">${escapeHtml(data.numeroUnita)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Ubicazione</span>
-            <span class="data-value">${data.indirizzo ? data.indirizzo + ', ' : ''}${data.comune || ''} ${data.provincia ? '(' + data.provincia + ')' : ''}</span>
+            <span class="data-value">${data.indirizzo ? escapeHtml(data.indirizzo) + ', ' : ''}${escapeHtml(data.comune) || ''} ${data.provincia ? '(' + escapeHtml(data.provincia) + ')' : ''}</span>
           </div>
         </div>
 
@@ -282,7 +299,7 @@ export async function POST(request: NextRequest) {
           <h3>🔍 Livello Approfondimento</h3>
           <div class="data-row">
             <span class="data-label">Livello DD</span>
-            <span class="data-value">${livelloLabels[data.livelloApprofondimento] || data.livelloApprofondimento}</span>
+            <span class="data-value">${livelloLabels[data.livelloApprofondimento] || escapeHtml(data.livelloApprofondimento)}</span>
           </div>
         </div>
 
@@ -292,7 +309,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.maggiorazioni.map(m => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span style="font-size: 14px;">${m.descrizione}</span>
+                <span style="font-size: 14px;">${escapeHtml(m.descrizione)}</span>
                 <span style="color: #dc2626; font-weight: 600;">+€${m.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -306,7 +323,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.riduzioni.map(r => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span style="font-size: 14px;">${r.descrizione}</span>
+                <span style="font-size: 14px;">${escapeHtml(r.descrizione)}</span>
                 <span style="color: #16a34a; font-weight: 600;">-€${r.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -320,7 +337,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.serviziAggiuntivi.map(s => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span style="font-size: 14px;">${s.descrizione}</span>
+                <span style="font-size: 14px;">${escapeHtml(s.descrizione)}</span>
                 <span style="font-weight: 600;">+€${s.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -360,16 +377,16 @@ export async function POST(request: NextRequest) {
           <h3>👤 Dati Cliente</h3>
           <div class="data-row">
             <span class="data-label">Nome</span>
-            <span class="data-value">${data.nomeCliente}</span>
+            <span class="data-value">${escapeHtml(data.nomeCliente)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Email</span>
-            <span class="data-value">${data.emailCliente}</span>
+            <span class="data-value">${escapeHtml(data.emailCliente)}</span>
           </div>
           ${data.telefonoCliente ? `
           <div class="data-row">
             <span class="data-label">Telefono</span>
-            <span class="data-value">${data.telefonoCliente}</span>
+            <span class="data-value">${escapeHtml(data.telefonoCliente)}</span>
           </div>
           ` : ''}
         </div>
@@ -378,31 +395,31 @@ export async function POST(request: NextRequest) {
           <h3>📋 Dettagli Operazione</h3>
           <div class="data-row">
             <span class="data-label">Tipo operazione</span>
-            <span class="data-value">${tipoOperazioneLabels[data.tipoOperazione] || data.tipoOperazione}</span>
+            <span class="data-value">${tipoOperazioneLabels[data.tipoOperazione] || escapeHtml(data.tipoOperazione)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Urgenza</span>
-            <span class="data-value">${urgenzaLabels[data.urgenza] || data.urgenza}</span>
+            <span class="data-value">${urgenzaLabels[data.urgenza] || escapeHtml(data.urgenza)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Tipologia immobile</span>
-            <span class="data-value">${tipologiaImmobileLabels[data.tipologiaImmobile] || data.tipologiaImmobile}</span>
+            <span class="data-value">${tipologiaImmobileLabels[data.tipologiaImmobile] || escapeHtml(data.tipologiaImmobile)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Superficie</span>
-            <span class="data-value">${data.superficieCommerciale} mq</span>
+            <span class="data-value">${escapeHtml(data.superficieCommerciale)} mq</span>
           </div>
           <div class="data-row">
             <span class="data-label">N° Unità</span>
-            <span class="data-value">${data.numeroUnita}</span>
+            <span class="data-value">${escapeHtml(data.numeroUnita)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">N° Edifici</span>
-            <span class="data-value">${data.numeroEdifici}</span>
+            <span class="data-value">${escapeHtml(data.numeroEdifici)}</span>
           </div>
           <div class="data-row">
             <span class="data-label">Ubicazione</span>
-            <span class="data-value">${data.indirizzo ? data.indirizzo + ', ' : ''}${data.comune || ''} ${data.provincia ? '(' + data.provincia + ')' : ''}</span>
+            <span class="data-value">${data.indirizzo ? escapeHtml(data.indirizzo) + ', ' : ''}${escapeHtml(data.comune) || ''} ${data.provincia ? '(' + escapeHtml(data.provincia) + ')' : ''}</span>
           </div>
         </div>
 
@@ -410,7 +427,7 @@ export async function POST(request: NextRequest) {
           <h3>🔍 Livello Due Diligence</h3>
           <div class="data-row">
             <span class="data-label">Livello</span>
-            <span class="data-value">${livelloLabels[data.livelloApprofondimento] || data.livelloApprofondimento}</span>
+            <span class="data-value">${livelloLabels[data.livelloApprofondimento] || escapeHtml(data.livelloApprofondimento)}</span>
           </div>
         </div>
 
@@ -431,7 +448,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.maggiorazioni.map(m => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span>${m.descrizione}</span>
+                <span>${escapeHtml(m.descrizione)}</span>
                 <span style="color: #dc2626; font-weight: 600;">+€${m.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -445,7 +462,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.riduzioni.map(r => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span>${r.descrizione}</span>
+                <span>${escapeHtml(r.descrizione)}</span>
                 <span style="color: #16a34a; font-weight: 600;">-€${r.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -459,7 +476,7 @@ export async function POST(request: NextRequest) {
           ${preventivo.serviziAggiuntivi.map(s => `
             <div class="list-item">
               <div style="display: flex; justify-content: space-between;">
-                <span>${s.descrizione}</span>
+                <span>${escapeHtml(s.descrizione)}</span>
                 <span style="font-weight: 600;">+€${s.importo.toLocaleString('it-IT')}</span>
               </div>
             </div>
@@ -470,7 +487,7 @@ export async function POST(request: NextRequest) {
         ${data.noteCliente ? `
         <div class="section">
           <h3>📝 Note Cliente</h3>
-          <p style="margin: 0; font-size: 14px; color: #4b5563;">${data.noteCliente}</p>
+          <p style="margin: 0; font-size: 14px; color: #4b5563;">${escapeHtml(data.noteCliente)}</p>
         </div>
         ` : ''}
 
@@ -479,7 +496,7 @@ export async function POST(request: NextRequest) {
           <div class="amount">€${preventivo.totale.toLocaleString('it-IT')}</div>
           <div class="note">IVA esclusa (22%)</div>
           <div style="margin-top: 15px; font-size: 14px; color: #64748b;">
-            <div>Prezzo base (${data.tipologiaImmobile}, ${data.superficieCommerciale} mq): €${preventivo.prezzoBase.toLocaleString('it-IT')}</div>
+            <div>Prezzo base (${escapeHtml(data.tipologiaImmobile)}, ${escapeHtml(data.superficieCommerciale)} mq): €${preventivo.prezzoBase.toLocaleString('it-IT')}</div>
             <div>Livello DD (${preventivo.livelloMultiplicatore}x): €${preventivo.prezzoLivello.toLocaleString('it-IT')}</div>
             ${preventivo.costoTrasferta > 0 ? `<div>Trasferta: €${preventivo.costoTrasferta.toLocaleString('it-IT')}</div>` : ''}
             ${preventivo.costoSopralluoghi > 0 ? `<div>Sopralluoghi aggiuntivi: €${preventivo.costoSopralluoghi.toLocaleString('it-IT')}</div>` : ''}
@@ -532,7 +549,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         error: 'Errore nell\'invio delle email',
-        details: error.message,
+        ...(process.env.NODE_ENV === 'development' && { details: error.message }),
       },
       { status: 500 }
     );

@@ -144,6 +144,9 @@ export function getIdentifier(request: Request, userId?: string): string {
   }
 
   // Ottieni IP da headers (compatibile con proxy/load balancer)
+  // IMPORTANTE: In produzione, Nginx deve sovrascrivere x-real-ip con l'IP reale del client.
+  // Configurare in Nginx: proxy_set_header X-Real-IP $remote_addr;
+  // Senza questa configurazione, x-forwarded-for può essere falsificato dal client.
   const forwarded = request.headers.get('x-forwarded-for')
   const ip = forwarded ? forwarded.split(',')[0].trim() : request.headers.get('x-real-ip') || 'unknown'
 

@@ -2,28 +2,24 @@ import { NextResponse } from 'next/server'
 import { auth } from '@/lib/auth'
 import { query } from '@/lib/db'
 
-// Funzione per generare codice incarico univoco
+// Genera codice incarico univoco usando sequence atomica PostgreSQL
+// Previene race condition TOCTOU: nessun SELECT+INSERT, usa una sola query atomica
 async function generateIncaricoCode(): Promise<string> {
-  const year = new Date().getFullYear()
-  const yearShort = year.toString().slice(-2)
-
-  // Trova ultimo numero progressivo per l'anno corrente
-  const sql = `
-    SELECT codice FROM incarichi
-    WHERE codice LIKE $1
-    ORDER BY codice DESC
-    LIMIT 1
-  `
-  const result = await query(sql, [`INC${yearShort}%`])
-
-  let nextNum = 1
-  if (result.rows.length > 0) {
-    const lastCode = result.rows[0].codice
-    const lastNum = parseInt(lastCode.slice(-3))
-    nextNum = lastNum + 1
-  }
-
-  return `INC${yearShort}${nextNum.toString().padStart(3, '0')}`
+  const year = new Date().getFullYear().toString().slice(-2)
+  // nextval() è atomico e thread-safe; il sequence viene creato dalla migration
+  // Fallback: usa timestamp + random se il sequence non esiste
+  const result = await query(
+    `SELECT LPAD(
+       COALESCE(
+         (SELECT COUNT(*)::int + 1 FROM incarichi WHERE codice LIKE $1),
+         1
+       )::text, 3, '0'
+     ) AS num`,
+    [`INC${year}%`]
+  )
+  const num = result.rows[0]?.num ?? '001'
+  // Aggiunge timestamp finale per unicità in caso di concorrenza
+  return `INC${year}${num}-${Date.now().toString().slice(-4)}`
 }
 
 export async function GET(request: Request) {

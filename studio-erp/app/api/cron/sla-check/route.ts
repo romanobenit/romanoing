@@ -13,12 +13,14 @@ import { sendSlaAlertEmail } from '@/lib/email';
 const CRON_SECRET = process.env.CRON_SECRET;
 
 export async function GET(request: Request) {
-  // Verifica autorizzazione cron
-  if (CRON_SECRET) {
-    const auth = request.headers.get('authorization');
-    if (auth !== `Bearer ${CRON_SECRET}`) {
-      return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 });
-    }
+  // Verifica autorizzazione cron — OBBLIGATORIA
+  if (!CRON_SECRET) {
+    console.error('[SLA Check] CRON_SECRET non configurato: endpoint bloccato per sicurezza')
+    return NextResponse.json({ error: 'Configurazione server incompleta' }, { status: 503 })
+  }
+  const authHeader = request.headers.get('authorization')
+  if (authHeader !== `Bearer ${CRON_SECRET}`) {
+    return NextResponse.json({ error: 'Non autorizzato' }, { status: 401 })
   }
 
   try {

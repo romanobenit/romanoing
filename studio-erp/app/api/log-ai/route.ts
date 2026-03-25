@@ -248,7 +248,21 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ success: false, error: 'logIds richiesto' }, { status: 400 })
     }
 
-    const placeholders = logIds.map((_, i) => `$${i + 2}`).join(', ')
+    // Limite massimo per prevenire DoS
+    if (logIds.length > 100) {
+      return NextResponse.json({ success: false, error: 'Massimo 100 log per richiesta' }, { status: 400 })
+    }
+
+    // Valida che tutti i logIds siano interi positivi
+    const validatedIds = logIds.map((id: unknown) => {
+      const n = Number(id)
+      if (!Number.isInteger(n) || n <= 0) {
+        throw new Error(`ID non valido: ${id}`)
+      }
+      return n
+    })
+
+    const placeholders = validatedIds.map((_, i) => `$${i + 2}`).join(', ')
     const sql = `
       UPDATE log_ai
       SET
@@ -259,7 +273,7 @@ export async function PATCH(request: Request) {
       RETURNING id
     `
 
-    const result = await query(sql, [parseInt(session.user.id), ...logIds])
+    const result = await query(sql, [parseInt(session.user.id), ...validatedIds])
 
     return NextResponse.json({
       success: true,

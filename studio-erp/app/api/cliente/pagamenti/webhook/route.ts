@@ -1,7 +1,8 @@
 import {NextResponse} from 'next/server'
 import {headers} from 'next/headers'
-import {query} from '@/lib/db'
+import {query, withTransaction} from '@/lib/db'
 import Stripe from 'stripe'
+import {hash} from 'bcryptjs'
 import {authenticatedApiRateLimit, getIdentifier, applyRateLimit} from '@/lib/rate-limit'
 import {logPagamento} from '@/lib/audit-log'
 import {sendWelcomeEmail, sendPaymentConfirmationEmail, sendNewConsulenzaEmail} from '@/lib/email'
@@ -53,163 +54,156 @@ export async function POST(request: Request) {
           console.log(`[Webhook] Initial purchase for bundle ${metadata.bundleCode}`)
 
           try {
-            // 1. Crea CLIENTE
-            const clienteResult = await query(
-              `INSERT INTO clienti (
-                tipo, nome, cognome, email, telefono,
-                codice_fiscale, indirizzo, citta, cap, note,
-                stato_accesso_portale, "createdAt", "updatedAt"
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
-              RETURNING id, codice`,
-              [
-                'PRIVATO', // Tipo default
-                metadata.clienteNome,
-                metadata.clienteCognome,
-                metadata.clienteEmail,
-                metadata.clienteTelefono,
-                metadata.clienteCodiceFiscale || null,
-                metadata.clienteIndirizzo || null,
-                metadata.clienteCitta || null,
-                metadata.clienteCap || null,
-                metadata.clienteNote || null,
-                'in_attivazione', // Stato accesso portale
-              ]
-            )
+            // Genera password prima della transazione (operazione CPU-bound)
+            const tempPassword = Math.random().toString(36).slice(-8) +
+              Math.random().toString(36).slice(-4).toUpperCase()
+            const passwordHash = await hash(tempPassword, 12)
 
-            const cliente = clienteResult.rows[0]
-            console.log(`[Webhook] Cliente created: ${cliente.id} (${cliente.codice})`)
-
-            // 2. Crea INCARICO
-            const incaricoResult = await query(
-              `INSERT INTO incarichi (
-                codice, cliente_id, bundle_id, oggetto, descrizione,
-                importo_totale, stato, data_inizio, priorita,
-                "createdAt", "updatedAt"
-              ) VALUES (
-                $1, $2, $3, $4, $5, $6, $7, NOW(), $8, NOW(), NOW()
+            // Esegui tutte le operazioni DB in un'unica transazione atomica
+            const { utente, incarico, cliente } = await withTransaction(async (txQuery) => {
+              // 1. Verifica prerequisiti
+              const titolareResult = await txQuery(
+                `SELECT u.id FROM utenti u
+                 JOIN ruoli r ON u.ruolo_id = r.id
+                 WHERE r.codice = 'TITOLARE' AND u.attivo = true
+                 ORDER BY u.id ASC LIMIT 1`
               )
-              RETURNING id, codice`,
-              [
-                `INC${new Date().getFullYear()}${String(cliente.id).padStart(4, '0')}`, // Codice incarico
-                cliente.id,
-                parseInt(metadata.bundleId),
-                metadata.bundleName,
-                `Acquisto bundle ${metadata.bundleName} - Stripe Session ${session.id}`,
-                parseFloat(metadata.prezzoMedio),
-                'ATTIVO',
-                'ALTA', // Priorità default
-              ]
-            )
-
-            const incarico = incaricoResult.rows[0]
-            console.log(`[Webhook] Incarico created: ${incarico.id} (${incarico.codice})`)
-
-            // 3. Recupera milestone dal bundle
-            const bundleResult = await query(
-              `SELECT milestone FROM bundle WHERE id = $1`,
-              [parseInt(metadata.bundleId)]
-            )
-
-            if (bundleResult.rows.length > 0) {
-              const bundleMilestones = bundleResult.rows[0].milestone as Array<{
-                codice: string
-                nome: string
-                percentuale: number
-              }>
-
-              // 4. Crea MILESTONE per incarico
-              for (const [index, m] of bundleMilestones.entries()) {
-                const importoMilestone = Math.round(
-                  parseFloat(metadata.prezzoMedio) * (m.percentuale / 100)
-                )
-
-                const milestoneResult = await query(
-                  `INSERT INTO milestone (
-                    incarico_id, codice, nome, descrizione,
-                    percentuale, importo, stato,
-                    data_scadenza, "createdAt", "updatedAt"
-                  ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
-                  RETURNING id`,
-                  [
-                    incarico.id,
-                    m.codice,
-                    m.nome,
-                    `Milestone ${m.nome} - ${m.percentuale}%`,
-                    m.percentuale,
-                    importoMilestone,
-                    index === 0 ? 'PAGATO' : 'NON_PAGATO', // Prima milestone già pagata
-                    index === 0 ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000), // +30gg per successive
-                  ]
-                )
-
-                // Se è la prima milestone (appena pagata), aggiorna data pagamento
-                if (index === 0) {
-                  await query(
-                    `UPDATE milestone SET data_pagamento = NOW() WHERE id = $1`,
-                    [milestoneResult.rows[0].id]
-                  )
-                }
-
-                console.log(
-                  `[Webhook] Milestone ${m.codice} created (${index === 0 ? 'PAID' : 'UNPAID'})`
-                )
+              if (titolareResult.rows.length === 0) {
+                throw new Error('Nessun utente TITOLARE trovato: impossibile creare incarico')
               }
-            }
+              const responsabileId = titolareResult.rows[0].id
 
-            // 5. Crea UTENTE COMMITTENTE
-            // Genera password temporanea (verrà richiesto reset al primo login)
-            const bcrypt = require('bcryptjs')
-            const tempPassword = Math.random().toString(36).slice(-12) // Password casuale
-            const passwordHash = await bcrypt.hash(tempPassword, 10)
-
-            const utenteResult = await query(
-              `INSERT INTO utenti (
-                email, password_hash, nome, cognome, ruolo,
-                cliente_id, attivo, "createdAt", "updatedAt"
-              ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
-              RETURNING id, email`,
-              [
-                metadata.clienteEmail,
-                passwordHash,
-                metadata.clienteNome,
-                metadata.clienteCognome,
-                'COMMITTENTE',
-                cliente.id,
-                true,
-              ]
-            )
-
-            const utente = utenteResult.rows[0]
-            console.log(`[Webhook] Utente COMMITTENTE created: ${utente.id} (${utente.email})`)
-
-            // 6. Aggiorna stato accesso portale cliente
-            await query(
-              `UPDATE clienti SET stato_accesso_portale = 'attivo' WHERE id = $1`,
-              [cliente.id]
-            )
-
-            // 7. Invia email con credenziali
-            try {
-              await sendWelcomeEmail(
-                utente.email,
-                metadata.clienteNome,
-                tempPassword,
-                incarico.codice
+              const ruoloResult = await txQuery(
+                `SELECT id FROM ruoli WHERE codice = 'COMMITTENTE' LIMIT 1`
               )
-              console.log(`[Webhook] Welcome email sent to ${utente.email}`)
-            } catch (emailError: any) {
-              // Email non critico, non blocca creazione
-              console.error('[Webhook] Error sending welcome email:', emailError.message)
-            }
+              if (ruoloResult.rows.length === 0) {
+                throw new Error("Ruolo COMMITTENTE non trovato nella tabella ruoli")
+              }
+              const committienteRuoloId = ruoloResult.rows[0].id
+
+              // 2. Crea CLIENTE
+              const clienteResult = await txQuery(
+                `INSERT INTO clienti (
+                  tipo, nome, cognome, email, telefono,
+                  codice_fiscale, indirizzo, citta, cap, note,
+                  stato_accesso_portale, "createdAt", "updatedAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW(), NOW())
+                RETURNING id, codice`,
+                [
+                  'PRIVATO',
+                  metadata.clienteNome,
+                  metadata.clienteCognome,
+                  metadata.clienteEmail,
+                  metadata.clienteTelefono,
+                  metadata.clienteCodiceFiscale || null,
+                  metadata.clienteIndirizzo || null,
+                  metadata.clienteCitta || null,
+                  metadata.clienteCap || null,
+                  metadata.clienteNote || null,
+                  'in_attivazione',
+                ]
+              )
+              const cliente = clienteResult.rows[0]
+
+              // 3. Crea INCARICO
+              const incaricoResult = await txQuery(
+                `INSERT INTO incarichi (
+                  codice, cliente_id, bundle_id, responsabile_id, oggetto, descrizione,
+                  importo_totale, stato, data_inizio, priorita,
+                  "createdAt", "updatedAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), $9, NOW(), NOW())
+                RETURNING id, codice`,
+                [
+                  `INC${new Date().getFullYear()}${String(cliente.id).padStart(4, '0')}-${Date.now().toString().slice(-4)}`,
+                  cliente.id,
+                  parseInt(metadata.bundleId),
+                  responsabileId,
+                  metadata.bundleName,
+                  `Acquisto bundle ${metadata.bundleName} - Stripe Session ${session.id}`,
+                  parseFloat(metadata.prezzoMedio),
+                  'ATTIVO',
+                  'ALTA',
+                ]
+              )
+              const incarico = incaricoResult.rows[0]
+
+              // 4. Recupera e crea MILESTONE
+              const bundleResult = await txQuery(
+                `SELECT milestone FROM bundle WHERE id = $1`,
+                [parseInt(metadata.bundleId)]
+              )
+              if (bundleResult.rows.length > 0) {
+                const bundleMilestones = bundleResult.rows[0].milestone as Array<{
+                  codice: string; nome: string; percentuale: number
+                }>
+                for (const [index, m] of bundleMilestones.entries()) {
+                  const importoMilestone = Math.round(
+                    parseFloat(metadata.prezzoMedio) * (m.percentuale / 100)
+                  )
+                  const milestoneResult = await txQuery(
+                    `INSERT INTO milestone (
+                      incarico_id, codice, nome, descrizione,
+                      percentuale, importo, stato,
+                      data_scadenza, "createdAt", "updatedAt"
+                    ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW(), NOW())
+                    RETURNING id`,
+                    [
+                      incarico.id, m.codice, m.nome,
+                      `Milestone ${m.nome} - ${m.percentuale}%`,
+                      m.percentuale, importoMilestone,
+                      index === 0 ? 'PAGATO' : 'NON_PAGATO',
+                      index === 0 ? null : new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+                    ]
+                  )
+                  if (index === 0) {
+                    await txQuery(
+                      `UPDATE milestone SET data_pagamento = NOW() WHERE id = $1`,
+                      [milestoneResult.rows[0].id]
+                    )
+                  }
+                }
+              }
+
+              // 5. Crea UTENTE COMMITTENTE
+              const utenteResult = await txQuery(
+                `INSERT INTO utenti (
+                  email, password_hash, nome, cognome, ruolo_id,
+                  cliente_id, attivo, "createdAt", "updatedAt"
+                ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+                RETURNING id, email`,
+                [
+                  metadata.clienteEmail, passwordHash,
+                  metadata.clienteNome, metadata.clienteCognome,
+                  committienteRuoloId, cliente.id, true,
+                ]
+              )
+              const utente = utenteResult.rows[0]
+
+              // 6. Aggiorna stato accesso portale
+              await txQuery(
+                `UPDATE clienti SET stato_accesso_portale = 'attivo' WHERE id = $1`,
+                [cliente.id]
+              )
+
+              return { utente, incarico, cliente }
+            })
 
             console.log(
               `[Webhook] ✅ Initial purchase completed: Cliente ${cliente.codice}, ` +
               `Incarico ${incarico.codice}, Utente ${utente.email}`
             )
+
+            // 7. Invia email (fuori transazione — non critica)
+            try {
+              await sendWelcomeEmail(utente.email, metadata.clienteNome, tempPassword, incarico.codice)
+              console.log(`[Webhook] Welcome email sent to ${utente.email}`)
+            } catch (emailError: any) {
+              console.error('[Webhook] Error sending welcome email:', emailError.message)
+            }
           } catch (error: any) {
-            console.error('[Webhook] Error creating initial purchase:', error)
+            console.error('[Webhook] Error creating initial purchase (transaction rolled back):', error)
             // Non ritorniamo errore a Stripe (già pagato), ma logghiamo
-            // TODO: Implementare retry logic o alert admin
+            // ALERT: Implementare notifica admin per acquisti con errore DB
           }
         } else if (metadata.milestoneId && metadata.incaricoId) {
           // ========== PAGAMENTO MILESTONE SUCCESSIVA ==========
@@ -342,20 +336,33 @@ export async function POST(request: Request) {
               console.log(`[Webhook] Cliente creato per sportello: ${clienteId}`);
             }
 
+            // Recupera il TITOLARE come responsabile
+            const titolareForConsulenza = await query(
+              `SELECT u.id FROM utenti u
+               JOIN ruoli r ON u.ruolo_id = r.id
+               WHERE r.codice = 'TITOLARE' AND u.attivo = true
+               ORDER BY u.id ASC LIMIT 1`
+            )
+            if (titolareForConsulenza.rows.length === 0) {
+              throw new Error('Nessun utente TITOLARE trovato: impossibile creare incarico consulenza')
+            }
+            const responsabileConsulenzaId = titolareForConsulenza.rows[0].id
+
             // Crea incarico consulenza
             const incaricoResult = await query(
               `INSERT INTO incarichi (
-                codice, cliente_id, oggetto, importo_totale, stato, tipo,
+                codice, cliente_id, responsabile_id, oggetto, importo_totale, stato, tipo,
                 offerta_id, sessione_quiz_id,
                 sla_scadenza, priorita, "createdAt", "updatedAt"
               ) VALUES (
-                $1, $2, $3, $4, 'ATTIVO', $5,
-                $6, $7,
-                $8, 'ALTA', NOW(), NOW()
+                $1, $2, $3, $4, $5, 'ATTIVO', $6,
+                $7, $8,
+                $9, 'ALTA', NOW(), NOW()
               ) RETURNING id, codice`,
               [
-                `CONS${new Date().getFullYear()}${String(offertaId).padStart(5, '0')}`,
+                `CONS${new Date().getFullYear()}${String(offertaId).padStart(5, '0')}-${Date.now().toString().slice(-4)}`,
                 clienteId,
+                responsabileConsulenzaId,
                 offerta.titolo_servizio,
                 offerta.prezzo_finale_centesimi / 100,
                 tipoIncarico,

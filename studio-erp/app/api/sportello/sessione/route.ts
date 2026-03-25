@@ -8,8 +8,13 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { randomBytes } from 'crypto';
+import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  const identifier = getIdentifier(request);
+  const rl = await applyRateLimit(publicApiRateLimit, identifier);
+  if (rl) return rl;
+
   try {
     const body = await request.json().catch(() => ({}));
     const { soggetto_tipo, nome, email } = body;
@@ -31,6 +36,10 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
+  const identifier = getIdentifier(request);
+  const rl = await applyRateLimit(publicApiRateLimit, identifier);
+  if (rl) return rl;
+
   try {
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
@@ -53,6 +62,10 @@ export async function GET(request: Request) {
 }
 
 export async function PATCH(request: Request) {
+  const identifier = getIdentifier(request);
+  const rl = await applyRateLimit(publicApiRateLimit, identifier);
+  if (rl) return rl;
+
   try {
     const body = await request.json();
     const { token, ...updates } = body;
