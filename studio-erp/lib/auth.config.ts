@@ -29,12 +29,21 @@ export const authConfig: NextAuthConfig = {
     },
     authorized({ auth, request: { nextUrl } }) {
       const isLoggedIn = !!auth?.user
+
+      // Le API gestiscono la propria autenticazione — non bloccare qui
+      if (nextUrl.pathname.startsWith('/api/')) {
+        return true
+      }
+
       const isOnPublicPage = [
         '/',
         '/login',
         '/bundle',
         '/checkout',
         '/configuratore',
+        '/sportello',
+        '/legal',
+        '/quiz',
       ].some((path) => nextUrl.pathname.startsWith(path))
 
       if (isOnPublicPage) {
