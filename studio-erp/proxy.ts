@@ -26,5 +26,3 @@ export const config = {
   matcher: ['/((?!_next/static|_next/image|favicon.ico).*)'],
 }
 
-// Use Node.js runtime instead of Edge Runtime to support database queries
-export const runtime = 'nodejs'

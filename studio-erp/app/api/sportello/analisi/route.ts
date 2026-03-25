@@ -11,6 +11,15 @@ import { processDiscovery } from '@/lib/sportello/agente-1-discovery';
 import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 
 export async function POST(request: Request) {
+  // Verifica chiave Anthropic configurata prima di procedere (evita timeout 33s)
+  const anthropicKey = process.env.ANTHROPIC_API_KEY;
+  if (!anthropicKey || anthropicKey.startsWith('sk-ant-PLACEHOLDER') || !anthropicKey.startsWith('sk-ant-')) {
+    return NextResponse.json(
+      { success: false, error: 'Servizio AI non configurato. Configura ANTHROPIC_API_KEY nel file .env' },
+      { status: 503 }
+    );
+  }
+
   const identifier = getIdentifier(request);
   const rl = await applyRateLimit(publicApiRateLimit, identifier);
   if (rl) return rl;
