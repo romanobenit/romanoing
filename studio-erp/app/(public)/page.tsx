@@ -646,6 +646,34 @@ function MapPanel({ ubicazione }: { ubicazione?: string }) {
   );
 }
 
+// ─── Reveal section (fade + slide-up on mount) ───────────────────────────────
+function RevealSection({ show, children }: { show: boolean; children: React.ReactNode }) {
+  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    if (show && !mounted) {
+      setMounted(true);
+      // doppio rAF: attende che l'elemento sia nel DOM prima di avviare la transizione
+      requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+    }
+  }, [show, mounted]);
+
+  if (!mounted) return null;
+
+  return (
+    <div
+      style={{
+        opacity: visible ? 1 : 0,
+        transform: visible ? 'translateY(0)' : 'translateY(16px)',
+        transition: 'opacity 0.5s ease-out, transform 0.5s ease-out',
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
 // ─── Pagina principale ────────────────────────────────────────────────────────
 export default function HomePage() {
   const [profile, setProfile] = useState<TechProfile>({});
@@ -718,8 +746,27 @@ export default function HomePage() {
 
           {/* Scheda tecnica + mappa */}
           <div className="lg:col-span-1 flex flex-col gap-4">
-            <SchedaTecnica profile={profile} msgCount={msgCount} />
-            <MapPanel ubicazione={profile.ubicazione} />
+
+            {/* Placeholder visibile solo quando nessun dato è ancora disponibile */}
+            {msgCount === 0 && (
+              <div className="border border-dashed border-slate-800 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 text-center min-h-[200px]">
+                <BarChart3 className="w-8 h-8 text-slate-700" />
+                <p className="text-sm text-slate-600 leading-relaxed">
+                  Descrivi il tuo immobile in chat: la scheda tecnica e la mappa appariranno automaticamente
+                </p>
+              </div>
+            )}
+
+            {/* Scheda tecnica: appare al primo messaggio */}
+            <RevealSection show={msgCount > 0}>
+              <SchedaTecnica profile={profile} msgCount={msgCount} />
+            </RevealSection>
+
+            {/* Mappa: appare solo quando viene rilevata un'ubicazione valida */}
+            <RevealSection show={!!profile.ubicazione}>
+              <MapPanel ubicazione={profile.ubicazione} />
+            </RevealSection>
+
           </div>
 
         </div>
