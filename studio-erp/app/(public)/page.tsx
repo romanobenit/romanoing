@@ -377,7 +377,14 @@ function ChatAgentica({ onProfileUpdate, onMsgCountUpdate, onPhaseChange }: Chat
       setThinking(false);
 
       if (!res.success) {
-        setMessages(p => [...p, { role: 'ai', text: 'Si è verificato un errore. Riprova o contattaci su WhatsApp.' }]);
+        // Sessione scaduta/non trovata → resetta token e invita a riprovare
+        if (res.error?.includes('Sessione non trovata')) {
+          localStorage.removeItem('sportello_token');
+          setSessionToken(null);
+          setMessages(p => [...p, { role: 'ai', text: 'La sessione è scaduta. Ricarica la pagina per ricominciare.' }]);
+        } else {
+          setMessages(p => [...p, { role: 'ai', text: res.error || 'Si è verificato un errore. Riprova o contattaci su WhatsApp.' }]);
+        }
         return;
       }
 

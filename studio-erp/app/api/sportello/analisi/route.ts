@@ -8,14 +8,22 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { processDiscovery } from '@/lib/sportello/agente-1-discovery';
+import { mockDiscovery } from '@/lib/sportello/mock-discovery';
 import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 
+function isAnthropicKeyValid(key: string | undefined): boolean {
+  return !!key && key.startsWith('sk-ant-') && !key.startsWith('sk-ant-PLACEHOLDER');
+}
+
 export async function POST(request: Request) {
-  // Verifica chiave Anthropic configurata prima di procedere (evita timeout 33s)
   const anthropicKey = process.env.ANTHROPIC_API_KEY;
-  if (!anthropicKey || anthropicKey.startsWith('sk-ant-PLACEHOLDER') || !anthropicKey.startsWith('sk-ant-')) {
+  const isDev = process.env.NODE_ENV === 'development';
+  const hasRealKey = isAnthropicKeyValid(anthropicKey);
+
+  // In produzione senza chiave → errore immediato
+  if (!isDev && !hasRealKey) {
     return NextResponse.json(
-      { success: false, error: 'Servizio AI non configurato. Configura ANTHROPIC_API_KEY nel file .env' },
+      { success: false, error: 'Servizio AI non configurato.' },
       { status: 503 }
     );
   }
@@ -53,8 +61,10 @@ export async function POST(request: Request) {
 
     const sessione = sessResult.rows[0];
 
-    // Processa con Agente 1
-    const { reply, brief, done } = await processDiscovery(history, message, sessione.id);
+    // Processa con Agente 1 (mock in dev se manca la chiave reale)
+    const { reply, brief, done } = hasRealKey
+      ? await processDiscovery(history, message, sessione.id)
+      : mockDiscovery(history, message);
 
     // Se BRIEF pronto → salva in sessione
     if (done && brief) {
