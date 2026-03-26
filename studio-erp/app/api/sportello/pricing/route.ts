@@ -7,10 +7,15 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { calculatePricing } from '@/lib/sportello/agente-5-pricer';
+import { mockPricing } from '@/lib/sportello/mock-pricer';
 import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import type { Brief } from '@/lib/sportello/agente-1-discovery';
 import type { QuadroNormativo } from '@/lib/sportello/agente-2-normativista';
 import type { Percorso } from '@/lib/sportello/agente-3-router';
+
+function isAnthropicKeyValid(key: string | undefined): boolean {
+  return !!key && key.startsWith('sk-ant-') && !key.startsWith('sk-ant-PLACEHOLDER');
+}
 
 export async function POST(request: Request) {
   const identifier = getIdentifier(request);
@@ -47,9 +52,11 @@ export async function POST(request: Request) {
       isFirstTime = parseInt(prevResult.rows[0].cnt) === 0;
     }
 
-    const { opzioni, forchetta_complesso } = await calculatePricing(
-      brief, quadro, percorso, isFirstTime, sessione.id
-    );
+    const hasRealKey = isAnthropicKeyValid(process.env.ANTHROPIC_API_KEY);
+    const isDev = process.env.NODE_ENV === 'development';
+    const { opzioni, forchetta_complesso } = (hasRealKey || !isDev)
+      ? await calculatePricing(brief, quadro, percorso, isFirstTime, sessione.id)
+      : mockPricing(brief, quadro, percorso);
 
     // Salva offerte nel DB
     const savedOpzioni = await Promise.all(

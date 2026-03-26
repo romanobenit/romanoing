@@ -9,9 +9,14 @@
 import { NextResponse } from 'next/server';
 import { query } from '@/lib/db';
 import { analyzeNormativa } from '@/lib/sportello/agente-2-normativista';
+import { mockNormativa } from '@/lib/sportello/mock-normativista';
 import { routeCase } from '@/lib/sportello/agente-3-router';
 import { publicApiRateLimit, getIdentifier, applyRateLimit } from '@/lib/rate-limit';
 import type { Brief } from '@/lib/sportello/agente-1-discovery';
+
+function isAnthropicKeyValid(key: string | undefined): boolean {
+  return !!key && key.startsWith('sk-ant-') && !key.startsWith('sk-ant-PLACEHOLDER');
+}
 
 export async function POST(request: Request) {
   const identifier = getIdentifier(request);
@@ -33,8 +38,12 @@ export async function POST(request: Request) {
 
     const brief = sessione.brief as Brief;
 
-    // Agente 2: analisi normativa
-    const quadro = await analyzeNormativa(brief, sessione.id);
+    // Agente 2: analisi normativa (mock in dev se manca la chiave reale)
+    const hasRealKey = isAnthropicKeyValid(process.env.ANTHROPIC_API_KEY);
+    const isDev = process.env.NODE_ENV === 'development';
+    const quadro = (hasRealKey || !isDev)
+      ? await analyzeNormativa(brief, sessione.id)
+      : mockNormativa(brief);
 
     // Agente 3: routing (deterministico, nessuna chiamata AI)
     const { percorso_primario, motivo } = routeCase(brief, quadro);
