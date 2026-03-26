@@ -76,7 +76,7 @@ export async function GET(request: Request) {
           )
           FROM milestone m2
           WHERE m2.incarico_id = i.id AND m2.stato = 'NON_PAGATO'
-          ORDER BY m2.created_at ASC
+          ORDER BY m2."createdAt" ASC
           LIMIT 1
         ) as prossima_milestone
       FROM incarichi i
